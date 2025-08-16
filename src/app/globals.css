@@ -10,25 +10,32 @@
     --card-foreground: 0 0% 3.9%;
     --popover: 0 0% 100%;
     --popover-foreground: 0 0% 3.9%;
-    --primary: 0 0% 9%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 0 0% 96.1%;
-    --secondary-foreground: 0 0% 9%;
-    --muted: 0 0% 96.1%;
-    --muted-foreground: 0 0% 45.1%;
-    --accent: 0 0% 96.1%;
-    --accent-foreground: 0 0% 9%;
-    --destructive: 0 84.2% 60.2%;
+    --primary: 208 100% 36%; /* #005EB8 */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 206 15% 33%; /* #425563 */
+    --secondary-foreground: 0 0% 100%;
+    --muted: 210 20% 96%;
+    --muted-foreground: 0 0% 45%;
+    --accent: 180 25% 25%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 65% 51%;
     --destructive-foreground: 0 0% 98%;
     --border: 0 0% 89.8%;
     --input: 0 0% 89.8%;
-    --ring: 0 0% 3.9%;
+    --ring: 208 100% 36%; /* #005EB8 */
     --radius: 0.5rem;
-    --chart-1: 12 76% 61%;
-    --chart-2: 173 58% 39%;
-    --chart-3: 197 37% 24%;
-    --chart-4: 43 74% 66%;
-    --chart-5: 27 87% 67%;
+    --chart-1: 142 71% 45%;
+    --chart-2: 208 100% 36%; /* Updated to match primary */
+    --chart-3: 180 25% 25%;
+    --chart-4: 38 92% 50%;
+    --chart-5: 0 65% 51%;
+    
+    /* Healthcare-specific colors */
+    --medical-blue: 208 100% 36%; /* #005EB8 */
+    --success-green: 142 71% 45%;
+    --warning-orange: 38 92% 50%;
+    --info-blue: 210 100% 95%;
+    --accent-teal: 180 25% 25%;
   }
 
   .dark {
@@ -65,5 +72,56 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-family: var(--font-noto-sans-kr), 'Noto Sans KR', system-ui, -apple-system, sans-serif;
+  }
+  
+  /* Typography improvements for healthcare context */
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-semibold tracking-tight;
+  }
+  
+  /* Improve readability for medical content */
+  p {
+    @apply leading-relaxed;
+  }
+}
+
+@layer components {
+  /* Healthcare-specific utility classes */
+  .medical-gradient {
+    background: linear-gradient(135deg, hsl(205, 89%, 52%) 0%, hsl(180, 25%, 25%) 100%);
+  }
+  
+  .trust-shadow {
+    box-shadow: 0 4px 20px -2px rgba(59, 130, 246, 0.15);
+  }
+  
+  .healthcare-card {
+    @apply bg-white rounded-xl border border-gray-100 trust-shadow hover:shadow-lg transition-all duration-300;
+  }
+  
+  /* Focus states for accessibility */
+  .focus-medical {
+    @apply focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2;
+  }
+  
+  /* Loading skeleton for better UX */
+  .skeleton {
+    @apply animate-pulse bg-gray-200 rounded;
+  }
+  
+  /* Medical iconography spacing */
+  .medical-icon {
+    @apply w-6 h-6 text-blue-600 flex-shrink-0;
+  }
+  
+  /* Professional button styling */
+  .btn-medical {
+    @apply bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 py-3 rounded-lg transition-colors duration-200 focus-medical;
+  }
+  
+  /* Stats and metrics styling */
+  .metric-card {
+    @apply p-4 rounded-lg border border-gray-100 bg-gradient-to-br from-white to-gray-50;
   }
 }
