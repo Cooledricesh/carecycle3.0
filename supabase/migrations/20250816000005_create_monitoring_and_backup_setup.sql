@@ -136,22 +136,23 @@ SELECT
     'appointments' as unit
 FROM public.patient_schedules WHERE status = 'scheduled' AND scheduled_date >= CURRENT_DATE;
 
--- Performance monitoring view
+-- Performance monitoring view (using information_schema for Supabase compatibility)
 CREATE OR REPLACE VIEW public.performance_metrics AS
 SELECT 
-    schemaname,
-    tablename,
-    n_tup_ins as inserts,
-    n_tup_upd as updates,
-    n_tup_del as deletes,
-    n_live_tup as live_rows,
-    n_dead_tup as dead_rows,
-    last_vacuum,
-    last_autovacuum,
-    last_analyze,
-    last_autoanalyze
-FROM pg_stat_user_tables
-WHERE schemaname = 'public';
+    t.table_name,
+    pg_total_relation_size('public.' || t.table_name) as total_size_bytes,
+    pg_size_pretty(pg_total_relation_size('public.' || t.table_name)) as total_size_pretty,
+    pg_relation_size('public.' || t.table_name) as table_size_bytes,
+    pg_size_pretty(pg_relation_size('public.' || t.table_name)) as table_size_pretty,
+    CASE 
+        WHEN t.table_name = 'profiles' THEN (SELECT COUNT(*) FROM public.profiles)
+        WHEN t.table_name = 'patient_schedules' THEN (SELECT COUNT(*) FROM public.patient_schedules)
+        WHEN t.table_name = 'audit_logs' THEN (SELECT COUNT(*) FROM public.audit_logs)
+        ELSE 0
+    END as row_count
+FROM information_schema.tables t
+WHERE t.table_schema = 'public' 
+    AND t.table_type = 'BASE TABLE';
 
 -- Function to get database statistics (admin only)
 CREATE OR REPLACE FUNCTION public.get_db_stats()

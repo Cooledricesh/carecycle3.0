@@ -105,7 +105,7 @@ export function useAuth() {
           loading: false,
           error: null,
         });
-        router.push("/auth/login");
+        router.push("/");
       }
     });
 
@@ -125,6 +125,34 @@ export function useAuth() {
       });
 
       if (error) throw error;
+
+      // Check user approval status
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('approval_status, is_active, role')
+        .eq('id', data.user!.id)
+        .single();
+
+      if (profileError) {
+        await supabase.auth.signOut();
+        throw new Error('프로필을 불러올 수 없습니다.');
+      }
+
+      // Check approval status
+      if (profile.approval_status === 'pending') {
+        await supabase.auth.signOut();
+        throw new Error('계정이 승인 대기 중입니다. 관리자의 승인을 기다려주세요.');
+      }
+
+      if (profile.approval_status === 'rejected') {
+        await supabase.auth.signOut();
+        throw new Error('계정 승인이 거부되었습니다. 관리자에게 문의하세요.');
+      }
+
+      if (!profile.is_active) {
+        await supabase.auth.signOut();
+        throw new Error('계정이 비활성화되었습니다. 관리자에게 문의하세요.');
+      }
 
       return { data, error: null };
     } catch (error) {
@@ -161,9 +189,23 @@ export function useAuth() {
       setAuthState(prev => ({ ...prev, loading: true, error: null }));
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
+      
+      // Clear the auth state immediately
+      setAuthState({
+        user: null,
+        profile: null,
+        loading: false,
+        error: null,
+      });
+      
+      // Navigate to landing page
+      router.push("/");
+      router.refresh(); // Force a refresh to clear any cached data
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Sign out failed";
       setAuthState(prev => ({ ...prev, loading: false, error: errorMessage }));
+      // Still try to redirect even if there's an error
+      router.push("/");
     }
   };
 

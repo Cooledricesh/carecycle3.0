@@ -55,7 +55,7 @@ export default function SignupPage() {
     });
     
     if (!error) {
-      router.push("/auth/login?message=회원가입이 완료되었습니다. 이메일을 확인해주세요.");
+      router.push("/auth/signin?message=회원가입이 완료되었습니다. 관리자 승인 후 로그인이 가능합니다.");
     } else {
       setIsLoading(false);
     }

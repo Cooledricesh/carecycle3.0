@@ -74,38 +74,42 @@ const certifications: Certification[] = [
 
 export function SecuritySection() {
   return (
-    <section className="bg-white px-4 py-16 sm:px-6 lg:px-8 lg:py-24">
+    <section className="bg-white px-4 py-12 sm:py-16 lg:py-24 sm:px-6 lg:px-8" aria-labelledby="security-section-heading">
       <div className="mx-auto max-w-7xl">
         {/* Section header */}
         <div className="text-center">
-          <Badge variant="outline" className="mb-4 border-green-200 bg-green-50 px-3 py-1 text-green-700">
-            <Shield className="mr-2 h-3 w-3" />
+          <Badge variant="outline" className="mb-3 sm:mb-4 border-green-200 bg-green-50 px-3 py-1 text-green-700" aria-label="엔터프라이즈 보안 배지">
+            <Shield className="mr-2 h-3 w-3" aria-hidden="true" />
             엔터프라이즈 보안
           </Badge>
-          <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
+          <h2 id="security-section-heading" className="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-gray-900">
             의료급 보안 및 컴플라이언스
           </h2>
-          <p className="mx-auto mt-4 max-w-2xl text-lg text-gray-600">
+          <p className="mx-auto mt-3 sm:mt-4 max-w-2xl text-base sm:text-lg text-gray-600">
             환자 데이터는 은행급 보안과 완전한 의료 컴플라이언스로 보호됩니다
           </p>
         </div>
 
         {/* Security features grid */}
-        <div className="mt-16 grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-10 sm:mt-12 lg:mt-16 grid gap-6 sm:gap-8 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3" role="list">
           {securityFeatures.map((feature, index) => {
             const IconComponent = feature.icon;
             return (
-              <Card key={index} className="border-0 shadow-sm transition-all duration-200 hover:shadow-md">
-                <CardHeader className="pb-4">
-                  <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-lg bg-green-100">
-                    <IconComponent className="h-6 w-6 text-green-600" />
+              <Card 
+                key={index} 
+                className="border-0 shadow-sm transition-all duration-200 hover:shadow-md focus-within:ring-2 focus-within:ring-green-500 focus-within:ring-offset-2"
+                role="listitem"
+              >
+                <CardHeader className="p-4 sm:p-6 pb-3 sm:pb-4">
+                  <div className="mb-3 flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-lg bg-green-100" aria-hidden="true">
+                    <IconComponent className="h-5 w-5 sm:h-6 sm:w-6 text-green-600" />
                   </div>
-                  <CardTitle className="text-lg font-semibold text-gray-900">
+                  <CardTitle className="text-base sm:text-lg font-semibold text-gray-900">
                     {feature.title}
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="pt-0">
-                  <p className="text-sm text-gray-600 leading-relaxed">
+                <CardContent className="p-4 sm:p-6 pt-0">
+                  <p className="text-xs sm:text-sm text-gray-600 leading-relaxed">
                     {feature.description}
                   </p>
                 </CardContent>
@@ -115,27 +119,27 @@ export function SecuritySection() {
         </div>
 
         {/* Certifications section */}
-        <div className="mt-20">
+        <div className="mt-12 sm:mt-16 lg:mt-20" role="region" aria-labelledby="certifications-heading">
           <div className="text-center">
-            <h3 className="text-2xl font-bold text-gray-900">
+            <h3 id="certifications-heading" className="text-xl sm:text-2xl font-bold text-gray-900">
               신뢰할 수 있는 인증 및 컴플라이언스
             </h3>
-            <p className="mt-2 text-gray-600">
+            <p className="mt-2 text-sm sm:text-base text-gray-600">
               독립적으로 검증된 보안 및 컴플라이언스 표준
             </p>
           </div>
 
-          <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-6 sm:mt-8 grid gap-4 sm:gap-6 grid-cols-2 sm:grid-cols-2 lg:grid-cols-4" role="list">
             {certifications.map((cert, index) => (
-              <div key={index} className="text-center">
-                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-green-50">
-                  <Award className="h-8 w-8 text-green-600" />
+              <div key={index} className="text-center" role="listitem">
+                <div className="mx-auto flex h-12 w-12 sm:h-16 sm:w-16 items-center justify-center rounded-full bg-green-50" aria-hidden="true">
+                  <Award className="h-6 w-6 sm:h-8 sm:w-8 text-green-600" />
                 </div>
-                <h4 className="mt-4 font-semibold text-gray-900">{cert.name}</h4>
-                <p className="mt-1 text-sm text-gray-600">{cert.description}</p>
+                <h4 className="mt-3 sm:mt-4 text-sm sm:text-base font-semibold text-gray-900">{cert.name}</h4>
+                <p className="mt-1 text-xs sm:text-sm text-gray-600">{cert.description}</p>
                 {cert.verified && (
-                  <div className="mt-2 inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">
-                    <div className="mr-1 h-1.5 w-1.5 rounded-full bg-green-400"></div>
+                  <div className="mt-2 inline-flex items-center rounded-full bg-green-100 px-2 sm:px-2.5 py-0.5 text-xs font-medium text-green-800" aria-label="검증된 인증">
+                    <div className="mr-1 h-1.5 w-1.5 rounded-full bg-green-400" aria-hidden="true"></div>
                     검증됨
                   </div>
                 )}
@@ -145,31 +149,31 @@ export function SecuritySection() {
         </div>
 
         {/* Security commitment section */}
-        <div className="mt-16 rounded-2xl border border-gray-200 bg-gray-50 p-8">
+        <div className="mt-10 sm:mt-12 lg:mt-16 rounded-xl sm:rounded-2xl border border-gray-200 bg-gray-50 p-6 sm:p-8" role="region" aria-labelledby="commitment-heading">
           <div className="text-center">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-blue-100">
-              <Shield className="h-8 w-8 text-blue-600" />
+            <div className="mx-auto flex h-12 w-12 sm:h-16 sm:w-16 items-center justify-center rounded-full bg-blue-100" aria-hidden="true">
+              <Shield className="h-6 w-6 sm:h-8 sm:w-8 text-blue-600" />
             </div>
-            <h3 className="mt-4 text-xl font-bold text-gray-900">
+            <h3 id="commitment-heading" className="mt-3 sm:mt-4 text-lg sm:text-xl font-bold text-gray-900">
               보안에 대한 우리의 약속
             </h3>
-            <p className="mt-4 max-w-2xl mx-auto text-gray-600">
+            <p className="mt-3 sm:mt-4 max-w-2xl mx-auto text-sm sm:text-base text-gray-600">
               우리는 의료 데이터 보호의 중요성을 깊이 이해하고 있습니다. 보안 우선 접근 방식으로 
               환자 정보가 항상 최고 수준의 업계 표준으로 보호되도록 보장합니다.
             </p>
             
-            <div className="mt-8 grid gap-4 sm:grid-cols-3">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-blue-600">24/7</div>
-                <div className="text-sm text-gray-600">보안 모니터링</div>
+            <div className="mt-6 sm:mt-8 grid gap-4 grid-cols-3" role="list">
+              <div className="text-center" role="listitem">
+                <div className="text-xl sm:text-2xl font-bold text-blue-600" aria-label="24시간 7일 보안 모니터링">24/7</div>
+                <div className="text-xs sm:text-sm text-gray-600">보안 모니터링</div>
               </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-blue-600">99.9%</div>
-                <div className="text-sm text-gray-600">가동시간 SLA</div>
+              <div className="text-center" role="listitem">
+                <div className="text-xl sm:text-2xl font-bold text-blue-600" aria-label="99.9% 가동시간 서비스 수준 계약">99.9%</div>
+                <div className="text-xs sm:text-sm text-gray-600">가동시간 SLA</div>
               </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-blue-600">&lt;1s</div>
-                <div className="text-sm text-gray-600">응답 시간</div>
+              <div className="text-center" role="listitem">
+                <div className="text-xl sm:text-2xl font-bold text-blue-600" aria-label="1초 미만 응답 시간">&lt;1s</div>
+                <div className="text-xs sm:text-sm text-gray-600">응답 시간</div>
               </div>
             </div>
           </div>

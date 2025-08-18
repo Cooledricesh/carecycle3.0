@@ -29,10 +29,17 @@ export class ProfileService {
   }
 
   async updateProfile(updates: ProfileUpdate): Promise<Profile> {
+    // Get current user first and handle null case properly
+    const { data: { user }, error: authError } = await this.supabase.auth.getUser()
+    
+    if (authError || !user) {
+      throw new Error('User must be authenticated to update profile')
+    }
+
     const { data, error } = await this.supabase
       .from('profiles')
       .update(updates)
-      .eq('id', (await this.supabase.auth.getUser()).data.user?.id!)
+      .eq('id', user.id)
       .select()
       .single()
     

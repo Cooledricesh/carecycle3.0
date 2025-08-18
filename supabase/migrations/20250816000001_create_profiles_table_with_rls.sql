@@ -1,8 +1,8 @@
 -- Healthcare Scheduler Database Schema
 -- Migration: Create profiles table with RLS and role-based access control
 
--- Enable RLS on auth.users (if not already enabled)
-ALTER TABLE auth.users ENABLE ROW LEVEL SECURITY;
+-- Note: RLS on auth.users is managed by Supabase and cannot be modified directly
+-- The auth.users table already has RLS enabled by default
 
 -- Create enum for user roles
 CREATE TYPE user_role AS ENUM ('nurse', 'admin');
