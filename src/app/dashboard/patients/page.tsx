@@ -1,10 +1,8 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
 import { PatientRegistrationModal } from '@/components/patients/patient-registration-modal'
 import { ScheduleCreateModal } from '@/components/schedules/schedule-create-modal'
-import { patientService } from '@/services/patientService'
-import type { Patient } from '@/types/patient'
+import { usePatients } from '@/hooks/usePatients'
 import {
   Table,
   TableBody,
@@ -17,44 +15,18 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
-import { Users, Calendar } from 'lucide-react'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { Users, Calendar, AlertCircle, RefreshCw } from 'lucide-react'
 
 export default function PatientsPage() {
-  const [patients, setPatients] = useState<Patient[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [isMounted, setIsMounted] = useState(false)
-
-  const fetchPatients = useCallback(async () => {
-    try {
-      setIsLoading(true)
-      const data = await patientService.getAll()
-      console.log('Fetched patients:', data.length)
-      setPatients(data || [])
-    } catch (error) {
-      console.error('Failed to fetch patients:', error)
-      setPatients([])
-    } finally {
-      setIsLoading(false)
-    }
-  }, [])
-
-  useEffect(() => {
-    setIsMounted(true)
-    // Delay initial fetch slightly to ensure proper hydration
-    const timer = setTimeout(() => {
-      fetchPatients()
-    }, 100)
-    
-    return () => clearTimeout(timer)
-  }, [fetchPatients])
+  const { patients, isLoading, error, refetch } = usePatients()
 
   const handleRegistrationSuccess = () => {
-    fetchPatients()
+    refetch()
   }
 
-  // Prevent SSR mismatch
-  if (!isMounted) {
-    return null
+  const handleScheduleSuccess = () => {
+    refetch()
   }
 
   return (
@@ -83,7 +55,24 @@ export default function PatientsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {isLoading ? (
+          {error ? (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>오류</AlertTitle>
+              <AlertDescription className="flex items-center justify-between">
+                <span>환자 목록을 불러오는 중 오류가 발생했습니다.</span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => refetch()}
+                  className="ml-4"
+                >
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  다시 시도
+                </Button>
+              </AlertDescription>
+            </Alert>
+          ) : isLoading ? (
             <div className="space-y-3">
               {[...Array(5)].map((_, i) => (
                 <Skeleton key={i} className="h-12 w-full" />
@@ -131,7 +120,7 @@ export default function PatientsPage() {
                       <TableCell className="text-right">
                         <ScheduleCreateModal
                           presetPatientId={patient.id}
-                          onSuccess={fetchPatients}
+                          onSuccess={handleScheduleSuccess}
                           triggerButton={
                             <Button variant="outline" size="sm">
                               <Calendar className="mr-2 h-4 w-4" />

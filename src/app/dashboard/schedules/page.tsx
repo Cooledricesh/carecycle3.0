@@ -1,18 +1,23 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Calendar, Clock, Plus, Filter, Search, Trash2, Edit } from "lucide-react";
+import { useState } from "react";
+import { Calendar, Clock, Plus, Filter, Search, Trash2, Edit, AlertCircle, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Skeleton } from "@/components/ui/skeleton";
 import { ScheduleCreateModal } from "@/components/schedules/schedule-create-modal";
+import { useSchedules, useOverdueSchedules } from "@/hooks/useSchedules";
 import { scheduleService } from "@/services/scheduleService";
 import type { ScheduleWithDetails } from "@/types/schedule";
 import { format } from "date-fns";
 import { ko } from "date-fns/locale";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { mapErrorToUserMessage } from "@/lib/error-mapper";
 import {
   Table,
   TableBody,
@@ -25,96 +30,76 @@ import {
 export default function SchedulesPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedTab, setSelectedTab] = useState("all");
-  const [schedules, setSchedules] = useState<ScheduleWithDetails[]>([]);
-  const [overdueSchedules, setOverdueSchedules] = useState<ScheduleWithDetails[]>([]);
-  const [loading, setLoading] = useState(true);
   const { toast } = useToast();
-
-  useEffect(() => {
-    loadSchedules();
-  }, []);
-
-  const loadSchedules = async () => {
-    try {
-      setLoading(true);
-      
-      // 모든 스케줄 가져오기 (새로운 메서드 추가 필요)
-      const allSchedules = await scheduleService.getAllSchedules();
-      
-      // 지연된 스케줄 가져오기
-      const overdue = await scheduleService.getOverdueSchedules();
-      
-      console.log('All schedules:', allSchedules);
-      console.log('Overdue schedules:', overdue);
-      
-      setSchedules(allSchedules);
-      setOverdueSchedules(overdue);
-    } catch (error) {
-      console.error('Failed to load schedules:', error);
-      // 에러가 발생해도 빈 배열로 설정
-      setSchedules([]);
-      setOverdueSchedules([]);
-    } finally {
-      setLoading(false);
-    }
+  const queryClient = useQueryClient();
+  
+  const { schedules, isLoading: schedulesLoading, error: schedulesError, refetch: refetchSchedules } = useSchedules();
+  const { data: overdueSchedules = [], isLoading: overdueLoading, error: overdueError, refetch: refetchOverdue } = useOverdueSchedules();
+  
+  const loading = schedulesLoading || overdueLoading;
+  const error = schedulesError || overdueError;
+  
+  const refetchAll = () => {
+    refetchSchedules();
+    refetchOverdue();
   };
+
+  const deleteMutation = useMutation({
+    mutationFn: scheduleService.delete,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['schedules'] });
+      queryClient.invalidateQueries({ queryKey: ['overdueSchedules'] });
+      toast({
+        title: "성공",
+        description: "스케줄이 삭제되었습니다.",
+      });
+    },
+    onError: (error) => {
+      const message = mapErrorToUserMessage(error);
+      toast({
+        title: "오류",
+        description: message,
+        variant: "destructive"
+      });
+    }
+  });
 
   const handleDeleteSchedule = async (id: string) => {
     if (!confirm('정말로 이 스케줄을 삭제하시겠습니까?')) {
       return;
     }
-    
-    try {
-      await scheduleService.delete(id);
-      toast({
-        title: "성공",
-        description: "스케줄이 삭제되었습니다.",
-      });
-      loadSchedules();
-    } catch (error) {
-      console.error('Failed to delete schedule:', error);
-      toast({
-        title: "오류",
-        description: "스케줄 삭제에 실패했습니다.",
-        variant: "destructive"
-      });
-    }
+    deleteMutation.mutate(id);
   };
 
-  const handlePauseSchedule = async (id: string) => {
-    try {
-      await scheduleService.updateStatus(id, 'paused');
+  const statusMutation = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: 'active' | 'paused' }) => 
+      scheduleService.updateStatus(id, status),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['schedules'] });
+      queryClient.invalidateQueries({ queryKey: ['overdueSchedules'] });
       toast({
         title: "성공",
-        description: "스케줄이 일시중지되었습니다.",
+        description: variables.status === 'paused' 
+          ? "스케줄이 일시중지되었습니다."
+          : "스케줄이 재개되었습니다.",
       });
-      loadSchedules();
-    } catch (error) {
-      console.error('Failed to pause schedule:', error);
+    },
+    onError: (error) => {
+      const message = mapErrorToUserMessage(error);
       toast({
         title: "오류",
-        description: "스케줄 일시중지에 실패했습니다.",
+        description: message,
         variant: "destructive"
       });
     }
+  });
+
+  const handlePauseSchedule = (id: string) => {
+    statusMutation.mutate({ id, status: 'paused' });
   };
 
-  const handleResumeSchedule = async (id: string) => {
-    try {
-      await scheduleService.updateStatus(id, 'active');
-      toast({
-        title: "성공",
-        description: "스케줄이 재개되었습니다.",
-      });
-      loadSchedules();
-    } catch (error) {
-      console.error('Failed to resume schedule:', error);
-      toast({
-        title: "오류",
-        description: "스케줄 재개에 실패했습니다.",
-        variant: "destructive"
-      });
-    }
+  const handleResumeSchedule = (id: string) => {
+    statusMutation.mutate({ id, status: 'active' });
   };
 
   const filteredSchedules = schedules.filter((schedule) => {
@@ -157,7 +142,7 @@ export default function SchedulesPage() {
           </p>
         </div>
         <ScheduleCreateModal 
-          onSuccess={loadSchedules}
+          onSuccess={refetchAll}
           triggerClassName="w-full sm:w-auto"
         />
       </div>
@@ -203,9 +188,28 @@ export default function SchedulesPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {loading ? (
-                <div className="text-center py-8 text-gray-500">
-                  스케줄을 불러오는 중...
+              {error ? (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>오류</AlertTitle>
+                  <AlertDescription className="flex items-center justify-between">
+                    <span>스케줄을 불러오는 중 오류가 발생했습니다.</span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={refetchAll}
+                      className="ml-4"
+                    >
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                      다시 시도
+                    </Button>
+                  </AlertDescription>
+                </Alert>
+              ) : loading ? (
+                <div className="space-y-3">
+                  {[...Array(5)].map((_, i) => (
+                    <Skeleton key={i} className="h-12 w-full" />
+                  ))}
                 </div>
               ) : displaySchedules.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">
