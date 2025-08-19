@@ -72,7 +72,7 @@ export const scheduleService = {
             code: itemCode,
             name: input.itemName,
             category: '기타',
-            description: `${input.intervalValue}${input.intervalUnit === 'day' ? '일' : input.intervalUnit === 'week' ? '주' : '개월'} 주기`,
+            description: `${input.intervalValue}주 주기`,
             default_interval_days: input.intervalDays,
             preparation_notes: null
           })
@@ -150,7 +150,8 @@ export const scheduleService = {
     try {
       const today = new Date()
       const futureDate = format(addDays(today, daysAhead), 'yyyy-MM-dd')
-      const todayStr = format(today, 'yyyy-MM-dd')
+      // Include schedules from 7 days before their due date
+      const pastDate = format(addDays(today, -7), 'yyyy-MM-dd')
       
       const { data, error } = await supabase
         .from('schedules')
@@ -160,7 +161,7 @@ export const scheduleService = {
           items (*)
         `)
         .eq('status', 'active')
-        .gte('next_due_date', todayStr)
+        .gte('next_due_date', pastDate)
         .lte('next_due_date', futureDate)
         .order('next_due_date', { ascending: true })
       

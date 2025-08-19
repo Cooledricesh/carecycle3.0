@@ -14,6 +14,7 @@ export interface Patient {
   patientNumber: string
   name: string
   department?: string | null
+  careType?: '외래' | '입원' | '낮병원' | null
   isActive: boolean
   metadata?: Record<string, any>
   createdBy?: string | null
@@ -28,6 +29,7 @@ export interface PatientSecure {
   patientNumber: string | null
   name: string | null
   department?: string | null
+  careType?: '외래' | '입원' | '낮병원' | null
   isActive: boolean
   metadata?: Record<string, any>
   createdBy?: string | null
@@ -40,6 +42,7 @@ export interface PatientCreateInput {
   patientNumber: string
   name: string
   department?: string | null
+  careType?: '외래' | '입원' | '낮병원' | null
   isActive?: boolean
   metadata?: Record<string, any>
 }
@@ -48,6 +51,7 @@ export interface PatientUpdateInput {
   patientNumber?: string
   name?: string
   department?: string | null
+  careType?: '외래' | '입원' | '낮병원' | null
   isActive?: boolean
   metadata?: Record<string, any>
 }
@@ -55,6 +59,7 @@ export interface PatientUpdateInput {
 // List/Filter types
 export interface PatientFilter {
   department?: string
+  careType?: '외래' | '입원' | '낮병원'
   isActive?: boolean
   searchTerm?: string
 }
@@ -64,6 +69,7 @@ export interface PatientListItem {
   patientNumber: string
   name: string
   department?: string | null
+  careType?: '외래' | '입원' | '낮병원' | null
   isActive: boolean
   scheduleCount?: number
   lastExecutionDate?: string | null

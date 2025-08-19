@@ -24,6 +24,7 @@ export const patientService = {
         name: validated.name,
         patient_number: validated.patientNumber,
         department: validated.department || null,
+        care_type: validated.careType || null,
         is_active: validated.isActive ?? true,
         metadata: validated.metadata || {}
       }
@@ -71,7 +72,7 @@ export const patientService = {
       return patients
     } catch (error) {
       console.error('Error fetching patients:', error)
-      return [] // Return empty array instead of throwing on initial load
+      throw error // Throw error instead of returning empty array to trigger React Query retry
     }
   },
 

@@ -18,7 +18,7 @@ export const ScheduleCreateWithIntervalSchema = z.object({
     .max(80, '검사/주사명은 80자 이내로 입력해주세요'),
   
   intervalUnit: z
-    .enum(['day', 'week', 'month'], {
+    .enum(['week'], {
       required_error: '반복 단위를 선택해주세요',
       invalid_type_error: '유효한 반복 단위가 아닙니다'
     }),

@@ -22,6 +22,13 @@ import {
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Plus } from 'lucide-react'
 import { patientService } from '@/services/patientService'
 import { useToast } from '@/hooks/use-toast'
@@ -39,6 +46,11 @@ const PatientRegistrationSchema = z.object({
     .min(1, '환자번호를 입력해주세요')
     .max(50, '환자번호는 50자 이내로 입력해주세요')
     .regex(/^[A-Z0-9]+$/, '환자번호는 영문 대문자와 숫자만 입력 가능합니다'),
+  
+  careType: z
+    .enum(['외래', '입원', '낮병원'], {
+      required_error: '진료구분을 선택해주세요',
+    }),
 })
 
 type PatientRegistrationFormData = z.infer<typeof PatientRegistrationSchema>
@@ -63,6 +75,7 @@ export function PatientRegistrationModal({
     defaultValues: {
       name: '',
       patientNumber: '',
+      careType: '외래',
     },
   })
 
@@ -109,12 +122,14 @@ export function PatientRegistrationModal({
       console.log('Creating patient with data:', {
         name: data.name,
         patientNumber: data.patientNumber,
+        careType: data.careType,
         isActive: true,
       })
       
       const result = await patientService.create({
         name: data.name,
         patientNumber: data.patientNumber,
+        careType: data.careType,
         isActive: true,
       })
       
@@ -205,6 +220,32 @@ export function PatientRegistrationModal({
                       }}
                     />
                   </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="careType"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>진료구분 *</FormLabel>
+                  <Select
+                    onValueChange={field.onChange}
+                    defaultValue={field.value}
+                    disabled={isSubmitting}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="진료구분을 선택하세요" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="외래">외래</SelectItem>
+                      <SelectItem value="입원">입원</SelectItem>
+                      <SelectItem value="낮병원">낮병원</SelectItem>
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}

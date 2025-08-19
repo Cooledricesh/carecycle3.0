@@ -5,6 +5,10 @@ import { z } from 'zod'
 // 환자번호 검증 규칙
 const patientNumberRegex = /^[A-Z0-9]{1,50}$/
 
+// 진료구분 enum
+export const CareTypeEnum = z.enum(['외래', '입원', '낮병원'])
+export type CareType = z.infer<typeof CareTypeEnum>
+
 // Base validation schemas
 export const PatientCreateSchema = z.object({
   patientNumber: z
@@ -25,6 +29,10 @@ export const PatientCreateSchema = z.object({
     .nullable()
     .optional(),
   
+  careType: CareTypeEnum
+    .nullable()
+    .optional(),
+  
   isActive: z
     .boolean()
     .default(true),
@@ -39,6 +47,7 @@ export const PatientUpdateSchema = PatientCreateSchema.partial()
 // Search/Filter validation
 export const PatientFilterSchema = z.object({
   department: z.string().optional(),
+  careType: CareTypeEnum.optional(),
   isActive: z.boolean().optional(),
   searchTerm: z
     .string()

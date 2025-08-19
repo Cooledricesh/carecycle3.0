@@ -41,6 +41,7 @@ export function convertPatientRow(row: any): any {
     patientNumber: row.patient_number, // Will be decrypted by view
     name: row.name, // Will be decrypted by view
     department: row.department,
+    careType: row.care_type,
     isActive: row.is_active,
     metadata: row.metadata,
     createdBy: row.created_by,
@@ -121,6 +122,7 @@ export function toPatientInsert(data: any): any {
     patient_number: data.patientNumber, // Will be encrypted by database
     name: data.name, // Will be encrypted by database
     department: data.department,
+    care_type: data.careType,
     is_active: data.isActive ?? true,
     metadata: data.metadata ?? {},
   }

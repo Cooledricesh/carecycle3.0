@@ -244,7 +244,7 @@ export default function SchedulesPage() {
                           </div>
                         </TableCell>
                         <TableCell>
-                          {schedule.intervalDays}일
+                          {Math.round(schedule.intervalDays / 7)}주
                         </TableCell>
                         <TableCell>
                           {format(new Date(schedule.nextDueDate), 'yyyy-MM-dd', { locale: ko })}

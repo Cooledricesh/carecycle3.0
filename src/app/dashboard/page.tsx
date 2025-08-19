@@ -7,11 +7,13 @@ import { PatientRegistrationModal } from "@/components/patients/patient-registra
 import { useAuthContext } from "@/providers/auth-provider";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
+import { useTodayChecklist, useUpcomingSchedules } from "@/hooks/useSchedules";
 import { scheduleService } from "@/services/scheduleService";
 import type { ScheduleWithDetails } from "@/types/schedule";
 import { format, isToday, isWithinInterval, addDays } from "date-fns";
 import { ko } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   Dialog,
   DialogContent,
@@ -27,9 +29,6 @@ import { Textarea } from "@/components/ui/textarea";
 export default function DashboardPage() {
   const { user } = useAuthContext();
   const [profile, setProfile] = useState<any>(null);
-  const [todaySchedules, setTodaySchedules] = useState<ScheduleWithDetails[]>([]);
-  const [upcomingSchedules, setUpcomingSchedules] = useState<ScheduleWithDetails[]>([]);
-  const [loading, setLoading] = useState(true);
   const [isCompletionDialogOpen, setIsCompletionDialogOpen] = useState(false);
   const [selectedSchedule, setSelectedSchedule] = useState<ScheduleWithDetails | null>(null);
   const [executionDate, setExecutionDate] = useState(format(new Date(), 'yyyy-MM-dd'));
@@ -37,6 +36,13 @@ export default function DashboardPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  // Use React Query hooks for data fetching
+  const { data: todaySchedules = [], isLoading: todayLoading, refetch: refetchToday } = useTodayChecklist();
+  const { data: upcomingSchedules = [], isLoading: upcomingLoading, refetch: refetchUpcoming } = useUpcomingSchedules(7);
+  
+  const loading = todayLoading || upcomingLoading;
 
   useEffect(() => {
     if (user) {
@@ -44,35 +50,12 @@ export default function DashboardPage() {
     }
   }, [user]);
 
-  useEffect(() => {
-    loadSchedules();
-  }, []);
-
   const loadSchedules = async () => {
-    try {
-      setLoading(true);
-      
-      // 오늘 체크리스트와 1주일 이내 예정된 스케줄 가져오기
-      const [todayList, upcomingList] = await Promise.all([
-        scheduleService.getTodayChecklist(),
-        scheduleService.getUpcomingSchedules(7) // 7일 이내
-      ]);
-      
-      console.log('Today schedules:', todayList);
-      console.log('Upcoming schedules:', upcomingList);
-      
-      setTodaySchedules(todayList);
-      setUpcomingSchedules(upcomingList);
-    } catch (error) {
-      console.error('Failed to load schedules:', error);
-      toast({
-        title: "오류",
-        description: "스케줄을 불러오는데 실패했습니다.",
-        variant: "destructive"
-      });
-    } finally {
-      setLoading(false);
-    }
+    // Refetch both queries
+    await Promise.all([
+      refetchToday(),
+      refetchUpcoming()
+    ]);
   };
 
   const handleRegistrationSuccess = () => {
@@ -113,8 +96,9 @@ export default function DashboardPage() {
       // 다이얼로그 닫기
       setIsCompletionDialogOpen(false);
       
-      // 데이터 새로고침
-      await loadSchedules();
+      // Invalidate queries to refresh data
+      queryClient.invalidateQueries({ queryKey: ['todayChecklist'] });
+      queryClient.invalidateQueries({ queryKey: ['upcomingSchedules'] });
     } catch (error) {
       console.error('Failed to mark schedule as completed:', error);
       toast({
@@ -224,7 +208,7 @@ export default function DashboardPage() {
                     </p>
                     <p className="text-xs text-red-600 mt-1">
                       예정일: {format(new Date(schedule.nextDueDate), 'yyyy년 MM월 dd일', { locale: ko })}
-                      {schedule.intervalDays && ` • ${schedule.intervalDays}일 주기`}
+                      {schedule.intervalDays && ` • ${Math.round(schedule.intervalDays / 7)}주 주기`}
                     </p>
                     {schedule.notes && (
                       <p className="text-xs text-gray-500 mt-1">{schedule.notes}</p>
@@ -251,12 +235,12 @@ export default function DashboardPage() {
         </Card>
       )}
 
-      {/* 예정된 스케줄 (1주일 이내) */}
+      {/* 예정된 스케줄 (실행 가능 기간) */}
       <Card>
         <CardHeader>
-          <CardTitle>예정된 스케줄</CardTitle>
+          <CardTitle>실행 가능한 스케줄</CardTitle>
           <CardDescription>
-            1주일 이내 예정된 검사/주사 일정입니다.
+            예정일 1주일 전부터 1주일 후까지 실행 가능한 검사/주사 일정입니다.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -266,7 +250,7 @@ export default function DashboardPage() {
             </div>
           ) : upcomingSchedules.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
-              1주일 이내 예정된 스케줄이 없습니다.
+              실행 가능한 스케줄이 없습니다.
             </div>
           ) : (
             <div className="space-y-4">
@@ -274,6 +258,8 @@ export default function DashboardPage() {
                 const dueDate = new Date(schedule.nextDueDate);
                 const today = new Date();
                 const daysUntil = Math.ceil((dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+                // Check if schedule is within executable window (7 days before to 7 days after)
+                const isExecutable = daysUntil >= -7 && daysUntil <= 7;
                 
                 return (
                   <div key={schedule.id} className="flex items-center justify-between p-4 border rounded-lg">
@@ -284,21 +270,32 @@ export default function DashboardPage() {
                       </p>
                       <p className="text-xs text-gray-500 mt-1">
                         예정일: {format(dueDate, 'yyyy년 MM월 dd일', { locale: ko })}
-                        {schedule.intervalDays && ` • ${schedule.intervalDays}일 주기`}
+                        {schedule.intervalDays && ` • ${Math.round(schedule.intervalDays / 7)}주 주기`}
                       </p>
                       {schedule.notes && (
                         <p className="text-xs text-gray-500 mt-1">{schedule.notes}</p>
                       )}
                     </div>
                     <div className="flex items-center space-x-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleCompleteClick(schedule)}
+                        className="flex items-center gap-1"
+                      >
+                        <Check className="h-4 w-4" />
+                        완료 처리
+                      </Button>
                       <span className={`px-2 py-1 text-xs rounded ${
-                        daysUntil <= 1 
+                        daysUntil < 0
+                          ? 'bg-blue-100 text-blue-700'
+                          : daysUntil === 0 
                           ? 'bg-orange-100 text-orange-700'
                           : daysUntil <= 3
                           ? 'bg-yellow-100 text-yellow-700'
                           : 'bg-green-100 text-green-700'
                       }`}>
-                        {daysUntil === 0 ? '오늘' : daysUntil === 1 ? '내일' : `${daysUntil}일 후`}
+                        {daysUntil < 0 ? `${Math.abs(daysUntil)}일 전` : daysUntil === 0 ? '오늘' : daysUntil === 1 ? '내일' : `${daysUntil}일 후`}
                       </span>
                     </div>
                   </div>

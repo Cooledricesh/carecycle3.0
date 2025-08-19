@@ -95,7 +95,7 @@ export function ScheduleCreateModal({
     defaultValues: {
       patientId: presetPatientId || '',
       itemName: '',
-      intervalUnit: 'day',
+      intervalUnit: 'week',
       intervalValue: 1,
       firstPerformedAt: new Date(),
       notes: ''
@@ -164,29 +164,14 @@ export function ScheduleCreateModal({
   const handleItemSelect = (itemName: string) => {
     form.setValue('itemName', itemName)
     
-    // 선택한 항목의 기본 주기 설정
+    // 선택한 항목의 기본 주기 설정 (주 단위로 변환)
     const selectedItem = items.find(item => item.name === itemName)
     if (selectedItem) {
       const days = selectedItem.defaultIntervalDays
-      
-      // 일/주/월 단위로 변환
-      if (days % 168 === 0) {
-        // 24주(6개월) 단위
-        form.setValue('intervalValue', days / 168 * 4)
-        form.setValue('intervalUnit', 'month')
-      } else if (days % 28 === 0) {
-        // 4주 단위
-        form.setValue('intervalValue', days / 28 * 4)
-        form.setValue('intervalUnit', 'week')
-      } else if (days % 7 === 0) {
-        // 주 단위
-        form.setValue('intervalValue', days / 7)
-        form.setValue('intervalUnit', 'week')
-      } else {
-        // 일 단위
-        form.setValue('intervalValue', days)
-        form.setValue('intervalUnit', 'day')
-      }
+      // 모든 주기를 주 단위로 변환 (최소 1주)
+      const weeks = Math.max(1, Math.round(days / 7))
+      form.setValue('intervalValue', weeks)
+      form.setValue('intervalUnit', 'week')
     }
     
     setItemComboOpen(false)
@@ -206,13 +191,8 @@ export function ScheduleCreateModal({
       // Don't calculate the next cycle yet
       const firstDueDate = data.firstPerformedAt
 
-      // Convert interval to days for database storage
-      let intervalDays = data.intervalValue
-      if (data.intervalUnit === 'week') {
-        intervalDays = data.intervalValue * 7
-      } else if (data.intervalUnit === 'month') {
-        intervalDays = data.intervalValue * 30 // Approximate for now
-      }
+      // Convert weeks to days for database storage
+      const intervalDays = data.intervalValue * 7
 
       // Create schedule
       await scheduleService.createWithCustomItem({
@@ -340,7 +320,7 @@ export function ScheduleCreateModal({
                         />
                         <CommandEmpty>
                           <div className="p-2 text-sm">
-                            "{itemSearchValue}" 항목이 없습니다.
+                            &ldquo;{itemSearchValue}&rdquo; 항목이 없습니다.
                             <br />
                             <span className="text-muted-foreground">
                               Enter를 눌러 새로 추가하세요.
@@ -363,7 +343,7 @@ export function ScheduleCreateModal({
                               <div className="flex-1">
                                 <div>{item.name}</div>
                                 <div className="text-xs text-muted-foreground">
-                                  {item.category} · {item.defaultIntervalDays}일 주기
+                                  {item.category} · {Math.round(item.defaultIntervalDays / 7)}주 주기
                                 </div>
                               </div>
                             </CommandItem>
@@ -380,51 +360,35 @@ export function ScheduleCreateModal({
               )}
             />
 
-            {/* Interval Settings */}
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="intervalValue"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>반복 주기 *</FormLabel>
-                    <FormControl>
+            {/* Interval Settings - Only Weeks */}
+            <FormField
+              control={form.control}
+              name="intervalValue"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>반복 주기 (주) *</FormLabel>
+                  <FormControl>
+                    <div className="flex items-center gap-2">
                       <Input 
                         type="number" 
                         min="1"
                         placeholder="1" 
                         {...field}
                         onChange={e => field.onChange(parseInt(e.target.value) || 1)}
+                        className="flex-1"
                       />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="intervalUnit"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>단위 *</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="day">일</SelectItem>
-                        <SelectItem value="week">주</SelectItem>
-                        <SelectItem value="month">개월</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+                      <span className="text-sm font-medium">주</span>
+                    </div>
+                  </FormControl>
+                  <FormDescription>
+                    몇 주마다 반복할지 입력하세요 (예: 2주, 4주, 12주)
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            {/* Hidden field for intervalUnit - always 'week' */}
+            <input type="hidden" {...form.register('intervalUnit')} value="week" />
 
             {/* First Performed Date */}
             <FormField

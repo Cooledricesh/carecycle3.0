@@ -95,7 +95,7 @@ export default function PatientsPage() {
                   <TableRow>
                     <TableHead>환자번호</TableHead>
                     <TableHead>환자명</TableHead>
-                    <TableHead>부서</TableHead>
+                    <TableHead>진료구분</TableHead>
                     <TableHead>상태</TableHead>
                     <TableHead>등록일</TableHead>
                     <TableHead className="text-right">작업</TableHead>
@@ -108,7 +108,7 @@ export default function PatientsPage() {
                         {patient.patientNumber}
                       </TableCell>
                       <TableCell>{patient.name}</TableCell>
-                      <TableCell>{patient.department || '-'}</TableCell>
+                      <TableCell>{patient.careType || '-'}</TableCell>
                       <TableCell>
                         <Badge variant={patient.isActive ? 'default' : 'secondary'}>
                           {patient.isActive ? '활성' : '비활성'}
