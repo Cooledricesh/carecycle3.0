@@ -40,6 +40,9 @@ export interface ScheduleWithRelations extends Schedule {
   }
 }
 
+// Alias for compatibility
+export type ScheduleWithDetails = ScheduleWithRelations
+
 // Form input types
 export interface ScheduleCreateInput {
   patientId: string

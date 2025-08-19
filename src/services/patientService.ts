@@ -8,47 +8,70 @@ import {
   type PatientUpdateInput 
 } from '@/schemas/patient'
 import type { Patient } from '@/types/patient'
-import { snakeToCamel, camelToSnake } from '@/lib/database-utils'
+import { toCamelCase, toSnakeCase } from '@/lib/database-utils'
 
 const supabase = createClient()
 
 export const patientService = {
   async create(input: PatientCreateInput): Promise<Patient> {
     try {
+      console.log('[patientService.create] Input:', input)
       const validated = PatientCreateSchema.parse(input)
-      const snakeData = camelToSnake(validated)
+      console.log('[patientService.create] Validated:', validated)
+      
+      // Simple insert without encryption
+      const insertData = {
+        name: validated.name,
+        patient_number: validated.patientNumber,
+        department: validated.department || null,
+        is_active: validated.isActive ?? true,
+        metadata: validated.metadata || {}
+      }
+      
+      console.log('[patientService.create] Insert data:', insertData)
       
       const { data, error } = await supabase
         .from('patients')
-        .insert({
-          ...snakeData,
-          name_encrypted: snakeData.name, // Will be encrypted by DB function
-          patient_number_encrypted: snakeData.patient_number
-        })
+        .insert(insertData)
         .select()
         .single()
       
-      if (error) throw error
-      return snakeToCamel(data) as Patient
+      if (error) {
+        console.error('[patientService.create] Supabase error:', error)
+        throw error
+      }
+      
+      console.log('[patientService.create] Response data:', data)
+      return toCamelCase(data) as Patient
     } catch (error) {
-      console.error('Error creating patient:', error)
+      console.error('[patientService.create] Full error:', error)
+      if (error instanceof Error) {
+        throw error
+      }
       throw new Error('환자 등록에 실패했습니다')
     }
   },
 
   async getAll(): Promise<Patient[]> {
     try {
+      console.log('[patientService.getAll] Fetching patients...')
       const { data, error } = await supabase
         .from('patients')
         .select('*')
         .eq('is_active', true)
         .order('created_at', { ascending: false })
       
-      if (error) throw error
-      return (data || []).map(item => snakeToCamel(item) as Patient)
+      if (error) {
+        console.error('[patientService.getAll] Error:', error)
+        throw error
+      }
+      
+      const patients = (data || []).map(item => toCamelCase(item) as Patient)
+      console.log(`[patientService.getAll] Fetched ${patients.length} patients`)
+      return patients
     } catch (error) {
       console.error('Error fetching patients:', error)
-      throw new Error('환자 목록 조회에 실패했습니다')
+      return [] // Return empty array instead of throwing on initial load
     }
   },
 
@@ -65,35 +88,48 @@ export const patientService = {
         throw error
       }
       
-      return snakeToCamel(data) as Patient
+      return toCamelCase(data) as Patient
     } catch (error) {
       console.error('Error fetching patient:', error)
       throw new Error('환자 정보 조회에 실패했습니다')
     }
   },
 
+  async getByPatientNumber(patientNumber: string): Promise<Patient | null> {
+    try {
+      const { data, error } = await supabase
+        .from('patients')
+        .select('*')
+        .eq('patient_number', patientNumber)
+        .eq('is_active', true)
+        .single()
+      
+      if (error) {
+        if (error.code === 'PGRST116') return null // Not found
+        throw error
+      }
+      
+      return toCamelCase(data) as Patient
+    } catch (error) {
+      console.error('Error fetching patient by number:', error)
+      return null
+    }
+  },
+
   async update(id: string, input: PatientUpdateInput): Promise<Patient> {
     try {
       const validated = PatientUpdateSchema.parse(input)
-      const snakeData = camelToSnake(validated)
-      
-      const updateData: any = { ...snakeData }
-      if (validated.name) {
-        updateData.name_encrypted = validated.name
-      }
-      if (validated.patientNumber) {
-        updateData.patient_number_encrypted = validated.patientNumber
-      }
+      const snakeData = toSnakeCase(validated)
       
       const { data, error } = await supabase
         .from('patients')
-        .update(updateData)
+        .update(snakeData)
         .eq('id', id)
         .select()
         .single()
       
       if (error) throw error
-      return snakeToCamel(data) as Patient
+      return toCamelCase(data) as Patient
     } catch (error) {
       console.error('Error updating patient:', error)
       throw new Error('환자 정보 수정에 실패했습니다')
@@ -116,15 +152,23 @@ export const patientService = {
 
   async search(query: string): Promise<Patient[]> {
     try {
+      // Validate minimum query length to prevent expensive searches
+      if (query.trim().length < 2) {
+        return []
+      }
+      
+      // Sanitize query input
+      const sanitizedQuery = query.replace(/[%_]/g, '\\$&')
+      
       const { data, error } = await supabase
         .from('patients')
         .select('*')
         .eq('is_active', true)
-        .or(`name_search.fts.${query},patient_number_encrypted.ilike.%${query}%`)
+        .or(`name.ilike.%${sanitizedQuery}%,patient_number.ilike.%${sanitizedQuery}%`)
         .limit(20)
       
       if (error) throw error
-      return (data || []).map(item => snakeToCamel(item) as Patient)
+      return (data || []).map(item => toCamelCase(item) as Patient)
     } catch (error) {
       console.error('Error searching patients:', error)
       throw new Error('환자 검색에 실패했습니다')

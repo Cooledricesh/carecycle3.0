@@ -1,90 +1,149 @@
 "use client";
 
-import { useState } from "react";
-import { Calendar, Clock, Plus, Filter, Search } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Calendar, Clock, Plus, Filter, Search, Trash2, Edit } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-
-// Placeholder data - will be replaced with Supabase queries
-const schedules = [
-  {
-    id: "1",
-    patientName: "김철수",
-    patientRoom: "301호",
-    type: "injection",
-    medication: "항생제 주사",
-    time: "09:00",
-    frequency: "매일",
-    status: "active",
-    startDate: "2024-01-15",
-    endDate: "2024-01-22",
-  },
-  {
-    id: "2",
-    patientName: "이영희",
-    patientRoom: "205호",
-    type: "test",
-    testName: "혈당 검사",
-    time: "07:00",
-    frequency: "주 3회 (월, 수, 금)",
-    status: "active",
-    startDate: "2024-01-10",
-    endDate: "2024-02-10",
-  },
-  {
-    id: "3",
-    patientName: "박민수",
-    patientRoom: "410호",
-    type: "injection",
-    medication: "인슐린",
-    time: "08:00",
-    frequency: "매일 3회",
-    status: "completed",
-    startDate: "2024-01-01",
-    endDate: "2024-01-14",
-  },
-];
+import { useToast } from "@/hooks/use-toast";
+import { ScheduleCreateModal } from "@/components/schedules/schedule-create-modal";
+import { scheduleService } from "@/services/scheduleService";
+import type { ScheduleWithDetails } from "@/types/schedule";
+import { format } from "date-fns";
+import { ko } from "date-fns/locale";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 export default function SchedulesPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedTab, setSelectedTab] = useState("all");
+  const [schedules, setSchedules] = useState<ScheduleWithDetails[]>([]);
+  const [overdueSchedules, setOverdueSchedules] = useState<ScheduleWithDetails[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    loadSchedules();
+  }, []);
+
+  const loadSchedules = async () => {
+    try {
+      setLoading(true);
+      
+      // 모든 스케줄 가져오기 (새로운 메서드 추가 필요)
+      const allSchedules = await scheduleService.getAllSchedules();
+      
+      // 지연된 스케줄 가져오기
+      const overdue = await scheduleService.getOverdueSchedules();
+      
+      console.log('All schedules:', allSchedules);
+      console.log('Overdue schedules:', overdue);
+      
+      setSchedules(allSchedules);
+      setOverdueSchedules(overdue);
+    } catch (error) {
+      console.error('Failed to load schedules:', error);
+      // 에러가 발생해도 빈 배열로 설정
+      setSchedules([]);
+      setOverdueSchedules([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteSchedule = async (id: string) => {
+    if (!confirm('정말로 이 스케줄을 삭제하시겠습니까?')) {
+      return;
+    }
+    
+    try {
+      await scheduleService.delete(id);
+      toast({
+        title: "성공",
+        description: "스케줄이 삭제되었습니다.",
+      });
+      loadSchedules();
+    } catch (error) {
+      console.error('Failed to delete schedule:', error);
+      toast({
+        title: "오류",
+        description: "스케줄 삭제에 실패했습니다.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handlePauseSchedule = async (id: string) => {
+    try {
+      await scheduleService.updateStatus(id, 'paused');
+      toast({
+        title: "성공",
+        description: "스케줄이 일시중지되었습니다.",
+      });
+      loadSchedules();
+    } catch (error) {
+      console.error('Failed to pause schedule:', error);
+      toast({
+        title: "오류",
+        description: "스케줄 일시중지에 실패했습니다.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleResumeSchedule = async (id: string) => {
+    try {
+      await scheduleService.updateStatus(id, 'active');
+      toast({
+        title: "성공",
+        description: "스케줄이 재개되었습니다.",
+      });
+      loadSchedules();
+    } catch (error) {
+      console.error('Failed to resume schedule:', error);
+      toast({
+        title: "오류",
+        description: "스케줄 재개에 실패했습니다.",
+        variant: "destructive"
+      });
+    }
+  };
 
   const filteredSchedules = schedules.filter((schedule) => {
     const matchesSearch = 
-      schedule.patientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      schedule.patientRoom.toLowerCase().includes(searchTerm.toLowerCase());
+      schedule.patient?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      schedule.item?.name?.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesTab = 
       selectedTab === "all" ||
-      (selectedTab === "active" && schedule.status === "active") ||
-      (selectedTab === "completed" && schedule.status === "completed");
+      (selectedTab === "active" && schedule.status === 'active') ||
+      (selectedTab === "paused" && schedule.status === 'paused') ||
+      (selectedTab === "overdue" && overdueSchedules.some(o => o.id === schedule.id));
     
     return matchesSearch && matchesTab;
   });
 
-  const getTypeLabel = (type: string) => {
-    switch (type) {
-      case "injection":
-        return "주사";
-      case "test":
-        return "검사";
-      default:
-        return type;
-    }
-  };
+  const displaySchedules = selectedTab === "overdue" ? overdueSchedules : filteredSchedules;
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "active":
-        return <Badge className="bg-green-100 text-green-800">진행중</Badge>;
-      case "completed":
-        return <Badge variant="secondary">완료</Badge>;
-      default:
-        return <Badge>{status}</Badge>;
+  const getStatusBadge = (schedule: ScheduleWithDetails) => {
+    if (schedule.status === 'paused') {
+      return <Badge variant="secondary">일시중지</Badge>;
     }
+    if (schedule.status === 'completed') {
+      return <Badge variant="outline">완료</Badge>;
+    }
+    if (overdueSchedules.some(o => o.id === schedule.id)) {
+      return <Badge variant="destructive">지연</Badge>;
+    }
+    return <Badge className="bg-green-100 text-green-800">활성</Badge>;
   };
 
   return (
@@ -94,121 +153,136 @@ export default function SchedulesPage() {
         <div>
           <h1 className="text-3xl font-bold">스케줄 관리</h1>
           <p className="text-gray-500 mt-1">
-            반복 검사 및 주사 스케줄을 관리합니다
+            모든 환자의 반복 검사 및 주사 스케줄을 관리합니다
           </p>
         </div>
-        <Button className="w-full sm:w-auto">
-          <Plus className="mr-2 h-4 w-4" />
-          새 스케줄 추가
-        </Button>
+        <ScheduleCreateModal 
+          onSuccess={loadSchedules}
+          triggerClassName="w-full sm:w-auto"
+        />
       </div>
 
-      {/* Search and Filters */}
-      <Card>
-        <CardHeader>
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input
-                placeholder="환자명 또는 병실 검색..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-            <Button variant="outline" className="w-full sm:w-auto">
-              <Filter className="mr-2 h-4 w-4" />
-              필터
-            </Button>
-          </div>
-        </CardHeader>
-      </Card>
+      {/* Search & Filter */}
+      <div className="flex flex-col sm:flex-row gap-4">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+          <Input
+            placeholder="환자명 또는 검사/주사명으로 검색..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+      </div>
 
-      {/* Tabs and Schedule List */}
+      {/* Tabs */}
       <Tabs value={selectedTab} onValueChange={setSelectedTab}>
-        <TabsList className="grid w-full sm:w-auto grid-cols-3">
-          <TabsTrigger value="all">전체</TabsTrigger>
-          <TabsTrigger value="active">진행중</TabsTrigger>
-          <TabsTrigger value="completed">완료</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="all">
+            전체 ({schedules.length})
+          </TabsTrigger>
+          <TabsTrigger value="active">
+            활성 ({schedules.filter(s => s.status === 'active').length})
+          </TabsTrigger>
+          <TabsTrigger value="paused">
+            일시중지 ({schedules.filter(s => s.status === 'paused').length})
+          </TabsTrigger>
+          <TabsTrigger value="overdue">
+            지연 ({overdueSchedules.length})
+          </TabsTrigger>
         </TabsList>
 
-        <TabsContent value={selectedTab} className="space-y-4 mt-6">
-          {filteredSchedules.length === 0 ? (
-            <Card>
-              <CardContent className="text-center py-12">
-                <Calendar className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-                <h3 className="text-lg font-medium text-gray-900">
-                  스케줄이 없습니다
-                </h3>
-                <p className="text-gray-500 mt-1">
-                  새 스케줄을 추가하여 시작하세요
-                </p>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="grid gap-4">
-              {filteredSchedules.map((schedule) => (
-                <Card key={schedule.id} className="hover:shadow-lg transition-shadow">
-                  <CardContent className="p-6">
-                    <div className="flex flex-col sm:flex-row justify-between gap-4">
-                      {/* Left side - Patient info */}
-                      <div className="space-y-3 flex-1">
-                        <div className="flex items-start justify-between">
+        <TabsContent value={selectedTab} className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>스케줄 목록</CardTitle>
+              <CardDescription>
+                {selectedTab === 'overdue' 
+                  ? '오늘까지 처리해야 할 지연된 스케줄입니다.'
+                  : '등록된 모든 스케줄을 확인하고 관리할 수 있습니다.'}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {loading ? (
+                <div className="text-center py-8 text-gray-500">
+                  스케줄을 불러오는 중...
+                </div>
+              ) : displaySchedules.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  {selectedTab === 'overdue' 
+                    ? '지연된 스케줄이 없습니다.'
+                    : '등록된 스케줄이 없습니다.'}
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>환자</TableHead>
+                      <TableHead>검사/주사</TableHead>
+                      <TableHead>주기</TableHead>
+                      <TableHead>다음 예정일</TableHead>
+                      <TableHead>상태</TableHead>
+                      <TableHead className="text-right">작업</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {displaySchedules.map((schedule) => (
+                      <TableRow key={schedule.id}>
+                        <TableCell className="font-medium">
+                          {schedule.patient?.name || '환자 정보 없음'}
+                        </TableCell>
+                        <TableCell>
                           <div>
-                            <h3 className="text-lg font-semibold">
-                              {schedule.patientName}
-                            </h3>
-                            <p className="text-sm text-gray-500">
-                              {schedule.patientRoom}
-                            </p>
-                          </div>
-                          {getStatusBadge(schedule.status)}
-                        </div>
-
-                        <div className="space-y-2">
-                          <div className="flex items-center text-sm">
-                            <Badge variant="outline" className="mr-2">
-                              {getTypeLabel(schedule.type)}
-                            </Badge>
-                            <span className="font-medium">
-                              {schedule.type === "injection" 
-                                ? schedule.medication 
-                                : schedule.testName}
-                            </span>
-                          </div>
-
-                          <div className="flex items-center gap-4 text-sm text-gray-600">
-                            <div className="flex items-center">
-                              <Clock className="mr-1 h-3 w-3" />
-                              {schedule.time}
-                            </div>
-                            <div className="flex items-center">
-                              <Calendar className="mr-1 h-3 w-3" />
-                              {schedule.frequency}
+                            <div>{schedule.item?.name || '항목 정보 없음'}</div>
+                            <div className="text-xs text-gray-500">
+                              {schedule.item?.category}
                             </div>
                           </div>
-
-                          <div className="text-xs text-gray-500">
-                            {schedule.startDate} ~ {schedule.endDate}
+                        </TableCell>
+                        <TableCell>
+                          {schedule.intervalDays}일
+                        </TableCell>
+                        <TableCell>
+                          {format(new Date(schedule.nextDueDate), 'yyyy-MM-dd', { locale: ko })}
+                        </TableCell>
+                        <TableCell>
+                          {getStatusBadge(schedule)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            {schedule.status === 'active' ? (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handlePauseSchedule(schedule.id)}
+                              >
+                                일시중지
+                              </Button>
+                            ) : schedule.status === 'paused' ? (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleResumeSchedule(schedule.id)}
+                              >
+                                재개
+                              </Button>
+                            ) : null}
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => handleDeleteSchedule(schedule.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
                           </div>
-                        </div>
-                      </div>
-
-                      {/* Right side - Actions */}
-                      <div className="flex gap-2 sm:flex-col">
-                        <Button variant="outline" size="sm" className="flex-1 sm:flex-initial">
-                          수정
-                        </Button>
-                        <Button variant="outline" size="sm" className="flex-1 sm:flex-initial">
-                          상세보기
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>

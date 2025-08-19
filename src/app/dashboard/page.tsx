@@ -1,128 +1,385 @@
-import { getCurrentUserProfile } from "@/lib/supabase/server";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar, Clock, CheckCircle, AlertCircle } from "lucide-react";
+'use client';
 
-export default async function DashboardPage() {
-  const profile = await getCurrentUserProfile();
+import { useEffect, useState } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Calendar, Clock, CheckCircle, AlertCircle, Check } from "lucide-react";
+import { PatientRegistrationModal } from "@/components/patients/patient-registration-modal";
+import { useAuthContext } from "@/providers/auth-provider";
+import { useRouter } from "next/navigation";
+import { useToast } from "@/hooks/use-toast";
+import { scheduleService } from "@/services/scheduleService";
+import type { ScheduleWithDetails } from "@/types/schedule";
+import { format, isToday, isWithinInterval, addDays } from "date-fns";
+import { ko } from "date-fns/locale";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+
+export default function DashboardPage() {
+  const { user } = useAuthContext();
+  const [profile, setProfile] = useState<any>(null);
+  const [todaySchedules, setTodaySchedules] = useState<ScheduleWithDetails[]>([]);
+  const [upcomingSchedules, setUpcomingSchedules] = useState<ScheduleWithDetails[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [isCompletionDialogOpen, setIsCompletionDialogOpen] = useState(false);
+  const [selectedSchedule, setSelectedSchedule] = useState<ScheduleWithDetails | null>(null);
+  const [executionDate, setExecutionDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [executionNotes, setExecutionNotes] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const router = useRouter();
+  const { toast } = useToast();
+
+  useEffect(() => {
+    if (user) {
+      setProfile({ name: user.email?.split('@')[0] || 'User' });
+    }
+  }, [user]);
+
+  useEffect(() => {
+    loadSchedules();
+  }, []);
+
+  const loadSchedules = async () => {
+    try {
+      setLoading(true);
+      
+      // 오늘 체크리스트와 1주일 이내 예정된 스케줄 가져오기
+      const [todayList, upcomingList] = await Promise.all([
+        scheduleService.getTodayChecklist(),
+        scheduleService.getUpcomingSchedules(7) // 7일 이내
+      ]);
+      
+      console.log('Today schedules:', todayList);
+      console.log('Upcoming schedules:', upcomingList);
+      
+      setTodaySchedules(todayList);
+      setUpcomingSchedules(upcomingList);
+    } catch (error) {
+      console.error('Failed to load schedules:', error);
+      toast({
+        title: "오류",
+        description: "스케줄을 불러오는데 실패했습니다.",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRegistrationSuccess = () => {
+    toast({
+      title: "환자 등록 완료",
+      description: "환자가 성공적으로 등록되었습니다. 환자 관리 페이지로 이동합니다.",
+    });
+    
+    setTimeout(() => {
+      router.push('/dashboard/patients');
+    }, 1500);
+  };
+
+  const handleCompleteClick = (schedule: ScheduleWithDetails) => {
+    setSelectedSchedule(schedule);
+    setExecutionDate(format(new Date(), 'yyyy-MM-dd'));
+    setExecutionNotes('');
+    setIsCompletionDialogOpen(true);
+  };
+
+  const handleCompleteSubmit = async () => {
+    if (!selectedSchedule || !user) return;
+
+    setIsSubmitting(true);
+    try {
+      // 완료 처리 API 호출
+      await scheduleService.markAsCompleted(selectedSchedule.id, {
+        executedDate: executionDate,
+        notes: executionNotes,
+        executedBy: user.id
+      });
+
+      toast({
+        title: "완료 처리 성공",
+        description: `${selectedSchedule.patient?.name}님의 ${selectedSchedule.item?.name} 일정이 완료 처리되었습니다.`,
+      });
+
+      // 다이얼로그 닫기
+      setIsCompletionDialogOpen(false);
+      
+      // 데이터 새로고침
+      await loadSchedules();
+    } catch (error) {
+      console.error('Failed to mark schedule as completed:', error);
+      toast({
+        title: "오류",
+        description: "완료 처리 중 오류가 발생했습니다.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   if (!profile) {
-    return null; // This should be handled by the layout
+    return null;
   }
+
+  // 통계 계산
+  const overdueCount = todaySchedules.length;
+  const weekCount = upcomingSchedules.length;
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">
-          안녕하세요, {profile.name}님
-        </h1>
-        <p className="text-gray-600">
-          오늘의 스케줄을 확인해보세요.
-        </p>
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">
+            안녕하세요, {profile.name}님
+          </h1>
+          <p className="text-gray-600">
+            오늘의 스케줄을 확인해보세요.
+          </p>
+        </div>
+        <PatientRegistrationModal onSuccess={handleRegistrationSuccess} />
       </div>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">오늘 예정</CardTitle>
+            <CardTitle className="text-sm font-medium">오늘 체크리스트</CardTitle>
             <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">5</div>
+            <div className="text-2xl font-bold">{overdueCount}</div>
             <p className="text-xs text-muted-foreground">
-              3건 완료, 2건 대기
+              오늘까지 처리할 일정
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">진행 중</CardTitle>
+            <CardTitle className="text-sm font-medium">1주일 이내</CardTitle>
             <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">2</div>
+            <div className="text-2xl font-bold">{weekCount}</div>
             <p className="text-xs text-muted-foreground">
-              현재 진행 중인 예약
+              예정된 일정
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">완료</CardTitle>
+            <CardTitle className="text-sm font-medium">활성 스케줄</CardTitle>
             <CheckCircle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">3</div>
+            <div className="text-2xl font-bold">{overdueCount + weekCount}</div>
             <p className="text-xs text-muted-foreground">
-              오늘 완료된 예약
+              전체 진행 중
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">알림</CardTitle>
+            <CardTitle className="text-sm font-medium">알림 필요</CardTitle>
             <AlertCircle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">1</div>
+            <div className="text-2xl font-bold">{overdueCount}</div>
             <p className="text-xs text-muted-foreground">
-              새로운 알림
+              즉시 확인 필요
             </p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Recent Schedules */}
+      {/* 오늘 체크리스트 */}
+      {todaySchedules.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>오늘 체크리스트</CardTitle>
+            <CardDescription>
+              오늘까지 처리해야 할 검사/주사 일정입니다.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {todaySchedules.map((schedule) => (
+                <div key={schedule.id} className="flex items-center justify-between p-4 border rounded-lg bg-red-50 border-red-200">
+                  <div>
+                    <h4 className="font-medium">{schedule.patient?.name || '환자 정보 없음'}</h4>
+                    <p className="text-sm text-gray-600">
+                      {schedule.item?.name || '항목 정보 없음'} • {schedule.item?.category}
+                    </p>
+                    <p className="text-xs text-red-600 mt-1">
+                      예정일: {format(new Date(schedule.nextDueDate), 'yyyy년 MM월 dd일', { locale: ko })}
+                      {schedule.intervalDays && ` • ${schedule.intervalDays}일 주기`}
+                    </p>
+                    {schedule.notes && (
+                      <p className="text-xs text-gray-500 mt-1">{schedule.notes}</p>
+                    )}
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Button
+                      size="sm"
+                      variant="default"
+                      onClick={() => handleCompleteClick(schedule)}
+                      className="flex items-center gap-1"
+                    >
+                      <Check className="h-4 w-4" />
+                      완료 처리
+                    </Button>
+                    <span className="px-2 py-1 text-xs bg-red-100 text-red-700 rounded">
+                      오늘 처리 필요
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* 예정된 스케줄 (1주일 이내) */}
       <Card>
         <CardHeader>
-          <CardTitle>최근 스케줄</CardTitle>
+          <CardTitle>예정된 스케줄</CardTitle>
           <CardDescription>
-            최근 예약된 환자 스케줄을 확인하세요.
+            1주일 이내 예정된 검사/주사 일정입니다.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between p-4 border rounded-lg">
-              <div>
-                <h4 className="font-medium">김영희 환자</h4>
-                <p className="text-sm text-gray-600">정기 검진 • 14:30</p>
-              </div>
-              <div className="flex items-center space-x-2">
-                <span className="px-2 py-1 text-xs bg-green-100 text-green-700 rounded">
-                  완료
-                </span>
-              </div>
+          {loading ? (
+            <div className="text-center py-8 text-gray-500">
+              스케줄을 불러오는 중...
             </div>
-            
-            <div className="flex items-center justify-between p-4 border rounded-lg">
-              <div>
-                <h4 className="font-medium">박철수 환자</h4>
-                <p className="text-sm text-gray-600">치료 • 15:00</p>
-              </div>
-              <div className="flex items-center space-x-2">
-                <span className="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded">
-                  진행 중
-                </span>
-              </div>
+          ) : upcomingSchedules.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              1주일 이내 예정된 스케줄이 없습니다.
             </div>
-            
-            <div className="flex items-center justify-between p-4 border rounded-lg">
-              <div>
-                <h4 className="font-medium">이미영 환자</h4>
-                <p className="text-sm text-gray-600">상담 • 16:00</p>
-              </div>
-              <div className="flex items-center space-x-2">
-                <span className="px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded">
-                  예정
-                </span>
-              </div>
+          ) : (
+            <div className="space-y-4">
+              {upcomingSchedules.map((schedule) => {
+                const dueDate = new Date(schedule.nextDueDate);
+                const today = new Date();
+                const daysUntil = Math.ceil((dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+                
+                return (
+                  <div key={schedule.id} className="flex items-center justify-between p-4 border rounded-lg">
+                    <div>
+                      <h4 className="font-medium">{schedule.patient?.name || '환자 정보 없음'}</h4>
+                      <p className="text-sm text-gray-600">
+                        {schedule.item?.name || '항목 정보 없음'} • {schedule.item?.category}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        예정일: {format(dueDate, 'yyyy년 MM월 dd일', { locale: ko })}
+                        {schedule.intervalDays && ` • ${schedule.intervalDays}일 주기`}
+                      </p>
+                      {schedule.notes && (
+                        <p className="text-xs text-gray-500 mt-1">{schedule.notes}</p>
+                      )}
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <span className={`px-2 py-1 text-xs rounded ${
+                        daysUntil <= 1 
+                          ? 'bg-orange-100 text-orange-700'
+                          : daysUntil <= 3
+                          ? 'bg-yellow-100 text-yellow-700'
+                          : 'bg-green-100 text-green-700'
+                      }`}>
+                        {daysUntil === 0 ? '오늘' : daysUntil === 1 ? '내일' : `${daysUntil}일 후`}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-          </div>
+          )}
         </CardContent>
       </Card>
+
+      {/* 완료 처리 다이얼로그 */}
+      <Dialog open={isCompletionDialogOpen} onOpenChange={setIsCompletionDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>일정 완료 처리</DialogTitle>
+            <DialogDescription>
+              {selectedSchedule && (
+                <>
+                  <strong>{selectedSchedule.patient?.name}</strong>님의{' '}
+                  <strong>{selectedSchedule.item?.name}</strong> 일정을 완료 처리합니다.
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="execution-date" className="text-right">
+                시행일
+              </Label>
+              <Input
+                id="execution-date"
+                type="date"
+                value={executionDate}
+                onChange={(e) => setExecutionDate(e.target.value)}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="execution-notes" className="text-right">
+                메모
+              </Label>
+              <Textarea
+                id="execution-notes"
+                value={executionNotes}
+                onChange={(e) => setExecutionNotes(e.target.value)}
+                placeholder="시행 관련 메모를 입력하세요 (선택사항)"
+                className="col-span-3"
+                rows={3}
+              />
+            </div>
+            {selectedSchedule && (
+              <div className="text-sm text-gray-600">
+                <p>다음 예정일: {
+                  format(
+                    addDays(new Date(executionDate), selectedSchedule.intervalDays),
+                    'yyyy년 MM월 dd일',
+                    { locale: ko }
+                  )
+                } (자동 계산됨)</p>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsCompletionDialogOpen(false)}
+              disabled={isSubmitting}
+            >
+              취소
+            </Button>
+            <Button
+              type="button"
+              onClick={handleCompleteSubmit}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? '처리 중...' : '완료 처리'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

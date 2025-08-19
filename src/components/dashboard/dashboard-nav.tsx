@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Calendar, Clock, User, LogOut, Menu } from "lucide-react";
+import { Calendar, Clock, User, LogOut, Menu, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Profile } from "@/lib/database.types";
@@ -15,6 +15,7 @@ interface DashboardNavProps {
 
 const navigation = [
   { name: "내 스케줄", href: "/dashboard", icon: Calendar },
+  { name: "환자 관리", href: "/dashboard/patients", icon: Users },
   { name: "스케줄 관리", href: "/dashboard/schedules", icon: Clock },
   { name: "프로필", href: "/dashboard/profile", icon: User },
 ];

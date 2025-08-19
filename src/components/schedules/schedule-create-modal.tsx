@@ -1,0 +1,513 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { CalendarIcon, Plus, Check, ChevronsUpDown } from 'lucide-react'
+import { format } from 'date-fns'
+import { ko } from 'date-fns/locale'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog'
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
+import { Calendar } from '@/components/ui/calendar'
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+} from '@/components/ui/command'
+import { cn } from '@/lib/utils'
+import { useToast } from '@/hooks/use-toast'
+import { createClient } from '@/lib/supabase/client'
+import { 
+  ScheduleCreateWithIntervalSchema, 
+  type ScheduleCreateWithIntervalInput 
+} from '@/schemas/schedule-create'
+import { calculateNextDueDate, formatDateForDB } from '@/lib/date-utils'
+import { scheduleService } from '@/services/scheduleService'
+import { patientService } from '@/services/patientService'
+import type { Patient } from '@/types/patient'
+
+interface ScheduleCreateModalProps {
+  presetPatientId?: string
+  onSuccess?: () => void
+  triggerButton?: React.ReactNode
+  triggerClassName?: string
+}
+
+interface ItemOption {
+  id: string
+  code: string
+  name: string
+  category: string
+  defaultIntervalDays: number
+}
+
+export function ScheduleCreateModal({
+  presetPatientId,
+  onSuccess,
+  triggerButton,
+  triggerClassName
+}: ScheduleCreateModalProps) {
+  const [open, setOpen] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [patients, setPatients] = useState<Patient[]>([])
+  const [loadingPatients, setLoadingPatients] = useState(false)
+  const [items, setItems] = useState<ItemOption[]>([])
+  const [itemComboOpen, setItemComboOpen] = useState(false)
+  const [itemSearchValue, setItemSearchValue] = useState('')
+  const { toast } = useToast()
+  const supabase = createClient()
+
+  const form = useForm<ScheduleCreateWithIntervalInput>({
+    resolver: zodResolver(ScheduleCreateWithIntervalSchema),
+    defaultValues: {
+      patientId: presetPatientId || '',
+      itemName: '',
+      intervalUnit: 'day',
+      intervalValue: 1,
+      firstPerformedAt: new Date(),
+      notes: ''
+    }
+  })
+
+  // Load patients list if not preset and load items
+  useEffect(() => {
+    if (open) {
+      if (!presetPatientId) {
+        loadPatients()
+      }
+      loadItems()
+    }
+  }, [presetPatientId, open])
+
+  // Set preset patient ID when modal opens
+  useEffect(() => {
+    if (presetPatientId && open) {
+      form.setValue('patientId', presetPatientId)
+    }
+  }, [presetPatientId, open, form])
+
+  const loadPatients = async () => {
+    try {
+      setLoadingPatients(true)
+      const data = await patientService.getAll()
+      setPatients(data)
+    } catch (error) {
+      console.error('Failed to load patients:', error)
+      toast({
+        title: '오류',
+        description: '환자 목록을 불러오는데 실패했습니다.',
+        variant: 'destructive'
+      })
+    } finally {
+      setLoadingPatients(false)
+    }
+  }
+
+  const loadItems = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('items')
+        .select('*')
+        .eq('is_active', true)
+        .order('sort_order')
+        .order('name')
+      
+      if (error) throw error
+      
+      const formattedItems: ItemOption[] = (data || []).map(item => ({
+        id: item.id,
+        code: item.code,
+        name: item.name,
+        category: item.category,
+        defaultIntervalDays: item.default_interval_days
+      }))
+      
+      setItems(formattedItems)
+    } catch (error) {
+      console.error('Failed to load items:', error)
+    }
+  }
+
+  const handleItemSelect = (itemName: string) => {
+    form.setValue('itemName', itemName)
+    
+    // 선택한 항목의 기본 주기 설정
+    const selectedItem = items.find(item => item.name === itemName)
+    if (selectedItem) {
+      const days = selectedItem.defaultIntervalDays
+      
+      // 일/주/월 단위로 변환
+      if (days % 168 === 0) {
+        // 24주(6개월) 단위
+        form.setValue('intervalValue', days / 168 * 4)
+        form.setValue('intervalUnit', 'month')
+      } else if (days % 28 === 0) {
+        // 4주 단위
+        form.setValue('intervalValue', days / 28 * 4)
+        form.setValue('intervalUnit', 'week')
+      } else if (days % 7 === 0) {
+        // 주 단위
+        form.setValue('intervalValue', days / 7)
+        form.setValue('intervalUnit', 'week')
+      } else {
+        // 일 단위
+        form.setValue('intervalValue', days)
+        form.setValue('intervalUnit', 'day')
+      }
+    }
+    
+    setItemComboOpen(false)
+  }
+
+  const onSubmit = async (data: ScheduleCreateWithIntervalInput) => {
+    try {
+      setIsSubmitting(true)
+
+      // Verify patient exists
+      const patientExists = await patientService.getById(data.patientId)
+      if (!patientExists) {
+        throw new Error('선택한 환자를 찾을 수 없습니다.')
+      }
+
+      // For the first schedule, use the firstPerformedAt date as the first due date
+      // Don't calculate the next cycle yet
+      const firstDueDate = data.firstPerformedAt
+
+      // Convert interval to days for database storage
+      let intervalDays = data.intervalValue
+      if (data.intervalUnit === 'week') {
+        intervalDays = data.intervalValue * 7
+      } else if (data.intervalUnit === 'month') {
+        intervalDays = data.intervalValue * 30 // Approximate for now
+      }
+
+      // Create schedule
+      await scheduleService.createWithCustomItem({
+        patientId: data.patientId,
+        itemName: data.itemName,
+        intervalDays,
+        intervalUnit: data.intervalUnit,
+        intervalValue: data.intervalValue,
+        startDate: formatDateForDB(data.firstPerformedAt),
+        nextDueDate: formatDateForDB(firstDueDate), // Use first performed date as first due date
+        notes: data.notes || null
+      })
+
+      toast({
+        title: '성공',
+        description: '스케줄이 추가되었습니다.',
+      })
+
+      // Reset form and close modal
+      form.reset()
+      setOpen(false)
+
+      // Call success callback
+      if (onSuccess) {
+        onSuccess()
+      }
+    } catch (error) {
+      console.error('Failed to create schedule:', error)
+      toast({
+        title: '오류',
+        description: error instanceof Error ? error.message : '스케줄 추가에 실패했습니다.',
+        variant: 'destructive'
+      })
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const defaultTrigger = (
+    <Button className={triggerClassName}>
+      <Plus className="mr-2 h-4 w-4" />
+      스케줄 추가
+    </Button>
+  )
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        {triggerButton || defaultTrigger}
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-[500px]">
+        <DialogHeader>
+          <DialogTitle>새 스케줄 추가</DialogTitle>
+          <DialogDescription>
+            반복 검사 또는 주사 스케줄을 추가합니다.
+          </DialogDescription>
+        </DialogHeader>
+
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            {/* Patient Selection - only show if not preset */}
+            {!presetPatientId && (
+              <FormField
+                control={form.control}
+                name="patientId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>환자 선택 *</FormLabel>
+                    <Select 
+                      onValueChange={field.onChange} 
+                      value={field.value}
+                      disabled={loadingPatients}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder={
+                            loadingPatients ? "환자 목록 불러오는 중..." : "환자를 선택하세요"
+                          } />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {patients.map((patient) => (
+                          <SelectItem key={patient.id} value={patient.id}>
+                            {patient.name} ({patient.patientNumber})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
+
+            {/* Item Name with Autocomplete */}
+            <FormField
+              control={form.control}
+              name="itemName"
+              render={({ field }) => (
+                <FormItem className="flex flex-col">
+                  <FormLabel>검사/주사명 *</FormLabel>
+                  <Popover open={itemComboOpen} onOpenChange={setItemComboOpen}>
+                    <PopoverTrigger asChild>
+                      <FormControl>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          aria-expanded={itemComboOpen}
+                          className="w-full justify-between font-normal"
+                        >
+                          {field.value || "검사/주사를 선택하거나 입력하세요"}
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </FormControl>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-full p-0" align="start">
+                      <Command>
+                        <CommandInput 
+                          placeholder="검색 또는 직접 입력..." 
+                          value={itemSearchValue}
+                          onValueChange={(value) => {
+                            setItemSearchValue(value)
+                            field.onChange(value)
+                          }}
+                        />
+                        <CommandEmpty>
+                          <div className="p-2 text-sm">
+                            "{itemSearchValue}" 항목이 없습니다.
+                            <br />
+                            <span className="text-muted-foreground">
+                              Enter를 눌러 새로 추가하세요.
+                            </span>
+                          </div>
+                        </CommandEmpty>
+                        <CommandGroup heading="정신과 항목">
+                          {items.map((item) => (
+                            <CommandItem
+                              key={item.id}
+                              value={item.name}
+                              onSelect={() => handleItemSelect(item.name)}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  field.value === item.name ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                              <div className="flex-1">
+                                <div>{item.name}</div>
+                                <div className="text-xs text-muted-foreground">
+                                  {item.category} · {item.defaultIntervalDays}일 주기
+                                </div>
+                              </div>
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                  <FormDescription>
+                    기존 항목을 선택하거나 새로운 검사/주사명을 입력하세요.
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Interval Settings */}
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="intervalValue"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>반복 주기 *</FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="number" 
+                        min="1"
+                        placeholder="1" 
+                        {...field}
+                        onChange={e => field.onChange(parseInt(e.target.value) || 1)}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="intervalUnit"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>단위 *</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="day">일</SelectItem>
+                        <SelectItem value="week">주</SelectItem>
+                        <SelectItem value="month">개월</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            {/* First Performed Date */}
+            <FormField
+              control={form.control}
+              name="firstPerformedAt"
+              render={({ field }) => (
+                <FormItem className="flex flex-col">
+                  <FormLabel>최초 시행일 *</FormLabel>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <FormControl>
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            "w-full pl-3 text-left font-normal",
+                            !field.value && "text-muted-foreground"
+                          )}
+                        >
+                          {field.value ? (
+                            format(field.value, "PPP", { locale: ko })
+                          ) : (
+                            <span>날짜를 선택하세요</span>
+                          )}
+                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                        </Button>
+                      </FormControl>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={field.value}
+                        onSelect={field.onChange}
+                        disabled={(date) =>
+                          date < new Date(new Date().setHours(0, 0, 0, 0))
+                        }
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                  <FormDescription>
+                    첫 번째 검사/주사를 시행할 날짜를 선택하세요.
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Notes */}
+            <FormField
+              control={form.control}
+              name="notes"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>메모</FormLabel>
+                  <FormControl>
+                    <Textarea 
+                      placeholder="추가 정보나 특이사항을 입력하세요"
+                      className="resize-none"
+                      {...field}
+                      value={field.value || ''}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setOpen(false)}
+                disabled={isSubmitting}
+              >
+                취소
+              </Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? '추가 중...' : '스케줄 추가'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
+  )
+}

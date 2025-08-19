@@ -8,7 +8,7 @@ import {
   type ScheduleUpdateInput 
 } from '@/schemas/schedule'
 import type { Schedule, ScheduleWithDetails } from '@/types/schedule'
-import { snakeToCamel, camelToSnake } from '@/lib/database-utils'
+import { toCamelCase as snakeToCamel, toSnakeCase as camelToSnake } from '@/lib/database-utils'
 import { format, addDays } from 'date-fns'
 
 const supabase = createClient()
@@ -40,6 +40,80 @@ export const scheduleService = {
     }
   },
 
+  async createWithCustomItem(input: {
+    patientId: string
+    itemName: string
+    intervalDays: number
+    intervalUnit: string
+    intervalValue: number
+    startDate: string
+    nextDueDate: string
+    notes?: string | null
+  }): Promise<Schedule> {
+    try {
+      // First, create or find the item
+      let itemId: string
+      
+      // Check if item with this name already exists
+      const { data: existingItem } = await supabase
+        .from('items')
+        .select('id')
+        .eq('name', input.itemName)
+        .maybeSingle()
+      
+      if (existingItem) {
+        itemId = existingItem.id
+      } else {
+        // Create new item (code is optional, so we generate a unique one)
+        const itemCode = `CUSTOM_${Date.now()}`
+        const { data: newItem, error: itemError } = await supabase
+          .from('items')
+          .insert({
+            code: itemCode,
+            name: input.itemName,
+            category: '기타',
+            description: `${input.intervalValue}${input.intervalUnit === 'day' ? '일' : input.intervalUnit === 'week' ? '주' : '개월'} 주기`,
+            default_interval_days: input.intervalDays,
+            preparation_notes: null
+          })
+          .select()
+          .single()
+        
+        if (itemError) throw itemError
+        itemId = newItem.id
+      }
+      
+      // Create the schedule with current user as creator
+      const { data: userData } = await supabase.auth.getUser()
+      const userId = userData?.user?.id
+      
+      const { data, error } = await supabase
+        .from('schedules')
+        .insert({
+          patient_id: input.patientId,
+          item_id: itemId,
+          interval_days: input.intervalDays,
+          start_date: input.startDate,
+          next_due_date: input.nextDueDate,
+          status: 'active',
+          notes: input.notes,
+          priority: 0,
+          requires_notification: true,
+          notification_days_before: 7,
+          created_by: userId,
+          assigned_nurse_id: userId // Assign to the creator by default
+        })
+        .select()
+        .single()
+      
+      if (error) throw error
+      return snakeToCamel(data) as Schedule
+    } catch (error) {
+      console.error('Error creating schedule with custom item:', error)
+      throw new Error('일정 등록에 실패했습니다')
+    }
+  },
+
   async getTodayChecklist(): Promise<ScheduleWithDetails[]> {
     try {
       const today = format(new Date(), 'yyyy-MM-dd')
@@ -48,8 +122,8 @@ export const scheduleService = {
         .from('schedules')
         .select(`
           *,
-          patients!patient_id (*),
-          items!item_id (*)
+          patients (*),
+          items (*)
         `)
         .eq('status', 'active')
         .lte('next_due_date', today)
@@ -62,8 +136,8 @@ export const scheduleService = {
         const schedule = snakeToCamel(item) as any
         return {
           ...schedule,
-          patient: snakeToCamel(item.patients),
-          item: snakeToCamel(item.items)
+          patient: item.patients ? snakeToCamel(item.patients) : null,
+          item: item.items ? snakeToCamel(item.items) : null
         } as ScheduleWithDetails
       })
     } catch (error) {
@@ -82,8 +156,8 @@ export const scheduleService = {
         .from('schedules')
         .select(`
           *,
-          patients!patient_id (*),
-          items!item_id (*)
+          patients (*),
+          items (*)
         `)
         .eq('status', 'active')
         .gte('next_due_date', todayStr)
@@ -96,8 +170,8 @@ export const scheduleService = {
         const schedule = snakeToCamel(item) as any
         return {
           ...schedule,
-          patient: snakeToCamel(item.patients),
-          item: snakeToCamel(item.items)
+          patient: item.patients ? snakeToCamel(item.patients) : null,
+          item: item.items ? snakeToCamel(item.items) : null
         } as ScheduleWithDetails
       })
     } catch (error) {
@@ -112,8 +186,8 @@ export const scheduleService = {
         .from('schedules')
         .select(`
           *,
-          patients!patient_id (*),
-          items!item_id (*)
+          patients (*),
+          items (*)
         `)
         .eq('patient_id', patientId)
         .order('next_due_date', { ascending: true })
@@ -124,8 +198,8 @@ export const scheduleService = {
         const schedule = snakeToCamel(item) as any
         return {
           ...schedule,
-          patient: snakeToCamel(item.patients),
-          item: snakeToCamel(item.items)
+          patient: item.patients ? snakeToCamel(item.patients) : null,
+          item: item.items ? snakeToCamel(item.items) : null
         } as ScheduleWithDetails
       })
     } catch (error) {
@@ -140,8 +214,8 @@ export const scheduleService = {
         .from('schedules')
         .select(`
           *,
-          patients!patient_id (*),
-          items!item_id (*)
+          patients (*),
+          items (*)
         `)
         .eq('id', id)
         .single()
@@ -219,8 +293,8 @@ export const scheduleService = {
         .from('schedules')
         .select(`
           *,
-          patients!patient_id (*),
-          items!item_id (*)
+          patients (*),
+          items (*)
         `)
         .eq('status', 'active')
         .lt('next_due_date', today)
@@ -232,13 +306,119 @@ export const scheduleService = {
         const schedule = snakeToCamel(item) as any
         return {
           ...schedule,
-          patient: snakeToCamel(item.patients),
-          item: snakeToCamel(item.items)
+          patient: item.patients ? snakeToCamel(item.patients) : null,
+          item: item.items ? snakeToCamel(item.items) : null
         } as ScheduleWithDetails
       })
     } catch (error) {
       console.error('Error fetching overdue schedules:', error)
       throw new Error('지연된 일정 조회에 실패했습니다')
+    }
+  },
+
+  async getAllSchedules(): Promise<ScheduleWithDetails[]> {
+    try {
+      const { data, error } = await supabase
+        .from('schedules')
+        .select(`
+          *,
+          patients (
+            id,
+            hospital_id,
+            patient_number,
+            name,
+            department,
+            is_active,
+            metadata,
+            created_by,
+            created_at,
+            updated_at
+          ),
+          items (
+            id,
+            code,
+            name,
+            category,
+            description,
+            default_interval_days,
+            preparation_notes,
+            created_at,
+            updated_at
+          )
+        `)
+        .neq('status', 'cancelled')
+        .order('next_due_date', { ascending: true })
+      
+      if (error) throw error
+      
+      return (data || []).map(item => {
+        const schedule = snakeToCamel(item) as any
+        return {
+          ...schedule,
+          patient: item.patients ? snakeToCamel(item.patients) : null,
+          item: item.items ? snakeToCamel(item.items) : null
+        } as ScheduleWithDetails
+      })
+    } catch (error) {
+      console.error('Error fetching all schedules:', error)
+      throw new Error('전체 일정 조회에 실패했습니다')
+    }
+  },
+
+  async markAsCompleted(scheduleId: string, input: {
+    executedDate: string,
+    notes?: string,
+    executedBy: string
+  }): Promise<void> {
+    try {
+      // 1. 스케줄 정보 조회
+      const { data: schedule, error: scheduleError } = await supabase
+        .from('schedules')
+        .select('*, items(*)')
+        .eq('id', scheduleId)
+        .single()
+      
+      if (scheduleError) throw scheduleError
+      if (!schedule) throw new Error('스케줄을 찾을 수 없습니다')
+
+      // 2. schedule_executions 테이블에 실행 기록 추가
+      const { error: executionError } = await supabase
+        .from('schedule_executions')
+        .insert({
+          schedule_id: scheduleId,
+          planned_date: schedule.next_due_date,
+          executed_date: input.executedDate,
+          executed_time: format(new Date(), 'HH:mm:ss'),
+          status: 'completed',
+          executed_by: input.executedBy,
+          notes: input.notes || null
+        })
+      
+      if (executionError) {
+        console.error('Execution insert error:', executionError)
+        throw executionError
+      }
+
+      // 3. 다음 예정일 계산 (실행일 기준으로)
+      const executedDate = new Date(input.executedDate)
+      const nextDueDate = addDays(executedDate, schedule.interval_days)
+      
+      // 4. schedules 테이블의 next_due_date와 last_executed_date 업데이트
+      const { error: updateError } = await supabase
+        .from('schedules')
+        .update({
+          next_due_date: format(nextDueDate, 'yyyy-MM-dd'),
+          last_executed_date: input.executedDate
+        })
+        .eq('id', scheduleId)
+      
+      if (updateError) {
+        console.error('Schedule update error:', updateError)
+        throw updateError
+      }
+    } catch (error) {
+      console.error('Error marking schedule as completed:', error)
+      throw new Error('일정 완료 처리에 실패했습니다')
     }
   }
 }
