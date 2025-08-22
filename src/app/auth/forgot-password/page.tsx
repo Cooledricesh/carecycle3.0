@@ -101,7 +101,7 @@ export default function ForgotPasswordPage() {
               </Button>
 
               <Link 
-                href="/auth/login"
+                href="/auth/signin"
                 className="flex items-center justify-center text-sm text-gray-600 hover:text-gray-900"
               >
                 <ArrowLeft className="mr-2 h-4 w-4" />
@@ -126,7 +126,7 @@ export default function ForgotPasswordPage() {
               <Button
                 variant="outline"
                 className="w-full"
-                onClick={() => router.push("/auth/login")}
+                onClick={() => router.push("/auth/signin")}
               >
                 로그인으로 돌아가기
               </Button>

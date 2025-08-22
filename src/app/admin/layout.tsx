@@ -11,7 +11,7 @@ export default async function AdminLayout({ children }: AdminLayoutProps) {
   const profile = await getCurrentUserProfile();
 
   if (!profile) {
-    redirect("/auth/login");
+    redirect("/auth/signin");
   }
 
   // Only admins can access admin routes

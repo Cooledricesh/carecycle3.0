@@ -31,10 +31,13 @@ function SignInForm() {
     e.preventDefault();
     setIsLoading(true);
 
-    const { error } = await signIn(email, password);
+    const { error, data } = await signIn(email, password);
     
-    if (!error) {
-      // Redirect will be handled by the useEffect
+    if (!error && data) {
+      // Directly redirect after successful login
+      const destination = redirectTo || "/dashboard";
+      router.push(destination);
+      router.refresh();
     } else {
       setIsLoading(false);
     }

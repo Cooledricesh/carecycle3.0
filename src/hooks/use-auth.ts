@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { User } from "@supabase/supabase-js";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
+import { getSupabaseClient } from "@/lib/supabase/singleton";
 import { Profile } from "@/lib/database.types";
 
 interface AuthState {
@@ -21,7 +21,7 @@ export function useAuth() {
     error: null,
   });
   const router = useRouter();
-  const supabase = createClient();
+  const supabase = getSupabaseClient();
 
   useEffect(() => {
     let mounted = true;
@@ -154,6 +154,19 @@ export function useAuth() {
         throw new Error('계정이 비활성화되었습니다. 관리자에게 문의하세요.');
       }
 
+      // Fetch full profile data
+      const { data: fullProfile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', data.user!.id)
+        .single();
+
+      setAuthState({
+        user: data.user!,
+        profile: fullProfile || null,
+        loading: false,
+        error: null
+      });
       return { data, error: null };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Sign in failed";
