@@ -25,8 +25,12 @@ export default function DashboardNav({ profile }: DashboardNavProps) {
   const pathname = usePathname();
   const { signOut } = useAuth();
 
-  const handleSignOut = async () => {
-    await signOut();
+  const handleSignOut = () => {
+    console.log("Logout button clicked - redirecting immediately");
+    // Skip the async signOut for now and just redirect
+    // This ensures immediate logout response
+    signOut(); // Call without await
+    window.location.href = "/";
   };
 
   return (

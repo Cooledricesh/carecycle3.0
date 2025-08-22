@@ -12,7 +12,7 @@ export default async function DashboardLayout({ children }: DashboardLayoutProps
   const profile = await getCurrentUserProfile();
 
   if (!profile) {
-    redirect("/auth/signin");
+    redirect("/");
   }
 
   // Redirect admin users to admin dashboard

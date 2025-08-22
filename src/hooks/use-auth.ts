@@ -199,9 +199,18 @@ export function useAuth() {
 
   const signOut = async () => {
     try {
+      console.log("SignOut: Starting logout process");
       setAuthState(prev => ({ ...prev, loading: true, error: null }));
+      
+      console.log("SignOut: Calling supabase.auth.signOut()");
       const { error } = await supabase.auth.signOut();
-      if (error) throw error;
+      
+      if (error) {
+        console.error("SignOut: Error from Supabase:", error);
+        throw error;
+      }
+      
+      console.log("SignOut: Successfully signed out from Supabase");
       
       // Clear the auth state immediately
       setAuthState({
@@ -211,14 +220,16 @@ export function useAuth() {
         error: null,
       });
       
-      // Navigate to landing page
-      router.push("/");
-      router.refresh(); // Force a refresh to clear any cached data
+      console.log("SignOut: Redirecting to landing page");
+      // Use window.location for immediate navigation
+      window.location.href = "/";
     } catch (error) {
+      console.error("SignOut: Caught error:", error);
       const errorMessage = error instanceof Error ? error.message : "Sign out failed";
       setAuthState(prev => ({ ...prev, loading: false, error: errorMessage }));
       // Still try to redirect even if there's an error
-      router.push("/");
+      console.log("SignOut: Redirecting to landing page after error");
+      window.location.href = "/";
     }
   };
 
