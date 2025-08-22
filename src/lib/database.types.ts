@@ -11,6 +11,8 @@ export type Json =
 
 export type UserRole = 'nurse' | 'admin'
 
+export type ApprovalStatus = 'pending' | 'approved' | 'rejected'
+
 export type ScheduleStatus = 'scheduled' | 'in_progress' | 'completed' | 'cancelled' | 'no_show'
 
 export type AppointmentType = 'consultation' | 'treatment' | 'follow_up' | 'emergency' | 'routine_check'
@@ -27,6 +29,9 @@ export interface Database {
           department: string | null
           phone: string | null
           is_active: boolean
+          approval_status: ApprovalStatus
+          approved_by: string | null
+          approved_at: string | null
           created_at: string
           updated_at: string
         }
@@ -38,6 +43,9 @@ export interface Database {
           department?: string | null
           phone?: string | null
           is_active?: boolean
+          approval_status?: ApprovalStatus
+          approved_by?: string | null
+          approved_at?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -49,6 +57,9 @@ export interface Database {
           department?: string | null
           phone?: string | null
           is_active?: boolean
+          approval_status?: ApprovalStatus
+          approved_by?: string | null
+          approved_at?: string | null
           created_at?: string
           updated_at?: string
         }

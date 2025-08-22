@@ -8,7 +8,7 @@ import {
   type ItemUpdateInput 
 } from '@/schemas/item'
 import type { Item } from '@/types/item'
-import { snakeToCamel, camelToSnake } from '@/lib/database-utils'
+import { toCamelCase, toSnakeCase } from '@/lib/database-utils'
 
 const supabase = createClient()
 
@@ -16,7 +16,7 @@ export const itemService = {
   async create(input: ItemCreateInput): Promise<Item> {
     try {
       const validated = ItemCreateSchema.parse(input)
-      const snakeData = camelToSnake(validated)
+      const snakeData = toSnakeCase(validated)
       
       const { data, error } = await supabase
         .from('items')
@@ -25,7 +25,7 @@ export const itemService = {
         .single()
       
       if (error) throw error
-      return snakeToCamel(data) as Item
+      return toCamelCase(data) as Item
     } catch (error) {
       console.error('Error creating item:', error)
       throw new Error('항목 등록에 실패했습니다')
@@ -42,7 +42,7 @@ export const itemService = {
         .order('name', { ascending: true })
       
       if (error) throw error
-      return (data || []).map(item => snakeToCamel(item) as Item)
+      return (data || []).map(item => toCamelCase(item) as Item)
     } catch (error) {
       console.error('Error fetching items:', error)
       throw new Error('항목 목록 조회에 실패했습니다')
@@ -59,7 +59,7 @@ export const itemService = {
         .order('sort_order', { ascending: true })
       
       if (error) throw error
-      return (data || []).map(item => snakeToCamel(item) as Item)
+      return (data || []).map(item => toCamelCase(item) as Item)
     } catch (error) {
       console.error('Error fetching items by category:', error)
       throw new Error('카테고리별 항목 조회에 실패했습니다')
@@ -79,7 +79,7 @@ export const itemService = {
         throw error
       }
       
-      return snakeToCamel(data) as Item
+      return toCamelCase(data) as Item
     } catch (error) {
       console.error('Error fetching item:', error)
       throw new Error('항목 정보 조회에 실패했습니다')
@@ -99,7 +99,7 @@ export const itemService = {
         throw error
       }
       
-      return snakeToCamel(data) as Item
+      return toCamelCase(data) as Item
     } catch (error) {
       console.error('Error fetching item by code:', error)
       throw new Error('항목 코드 조회에 실패했습니다')
@@ -109,7 +109,7 @@ export const itemService = {
   async update(id: string, input: ItemUpdateInput): Promise<Item> {
     try {
       const validated = ItemUpdateSchema.parse(input)
-      const snakeData = camelToSnake(validated)
+      const snakeData = toSnakeCase(validated)
       
       const { data, error } = await supabase
         .from('items')
@@ -119,7 +119,7 @@ export const itemService = {
         .single()
       
       if (error) throw error
-      return snakeToCamel(data) as Item
+      return toCamelCase(data) as Item
     } catch (error) {
       console.error('Error updating item:', error)
       throw new Error('항목 정보 수정에 실패했습니다')

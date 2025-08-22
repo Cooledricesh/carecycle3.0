@@ -6,16 +6,21 @@ import type { Patient } from '@/types/patient'
 import type { PatientCreateInput } from '@/schemas/patient'
 import { useToast } from '@/hooks/use-toast'
 import { mapErrorToUserMessage } from '@/lib/error-mapper'
+import { useAuthContext } from '@/providers/auth-provider'
+import { getSupabaseClient } from '@/lib/supabase/singleton'
+import { queryKeys, getRelatedQueryKeys } from '@/lib/query-keys'
 
 export function usePatients() {
   const { toast } = useToast()
   const queryClient = useQueryClient()
+  const { user, initialized } = useAuthContext()
+  const supabase = getSupabaseClient()
 
   const query = useQuery({
-    queryKey: ['patients'],
+    queryKey: queryKeys.patients.lists(),
     queryFn: async () => {
       try {
-        return await patientService.getAll()
+        return await patientService.getAll(supabase)
       } catch (error) {
         const message = mapErrorToUserMessage(error)
         toast({
@@ -26,16 +31,21 @@ export function usePatients() {
         throw error
       }
     },
+    enabled: initialized && !!user,
     retry: 1,
     staleTime: 30 * 1000, // 30 seconds
   })
 
   const createMutation = useMutation({
     mutationFn: async (input: PatientCreateInput) => {
-      return await patientService.create(input)
+      return await patientService.create(input, supabase)
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['patients'] })
+      // Invalidate all patient-related queries
+      const keysToInvalidate = getRelatedQueryKeys('patient.create')
+      keysToInvalidate.forEach(key => {
+        queryClient.invalidateQueries({ queryKey: key })
+      })
       toast({
         title: '성공',
         description: '환자가 성공적으로 등록되었습니다.'
@@ -52,7 +62,7 @@ export function usePatients() {
   })
 
   const refetch = () => {
-    queryClient.invalidateQueries({ queryKey: ['patients'] })
+    queryClient.invalidateQueries({ queryKey: queryKeys.patients.all })
   }
 
   return {
@@ -67,12 +77,14 @@ export function usePatients() {
 
 export function usePatient(id: string) {
   const { toast } = useToast()
+  const { user, initialized } = useAuthContext()
+  const supabase = getSupabaseClient()
   
   return useQuery({
-    queryKey: ['patients', id],
+    queryKey: queryKeys.patients.detail(id),
     queryFn: async () => {
       try {
-        const patient = await patientService.getById(id)
+        const patient = await patientService.getById(id, supabase)
         if (!patient) {
           throw new Error('환자를 찾을 수 없습니다')
         }
@@ -87,16 +99,19 @@ export function usePatient(id: string) {
         throw error
       }
     },
-    enabled: !!id,
+    enabled: initialized && !!user && !!id,
     retry: 1
   })
 }
 
 export function useSearchPatients(query: string) {
+  const { user, initialized } = useAuthContext()
+  const supabase = getSupabaseClient()
+  
   return useQuery({
-    queryKey: ['patients', 'search', query],
-    queryFn: () => patientService.search(query),
-    enabled: query.length >= 2,
+    queryKey: queryKeys.patients.search(query),
+    queryFn: () => patientService.search(query, supabase),
+    enabled: initialized && !!user && query.length >= 2,
     staleTime: 10 * 1000 // 10 seconds
   })
 }

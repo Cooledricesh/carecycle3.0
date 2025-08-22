@@ -32,7 +32,7 @@ import {
 import { Plus } from 'lucide-react'
 import { patientService } from '@/services/patientService'
 import { useToast } from '@/hooks/use-toast'
-import { createClient } from '@/lib/supabase/client'
+import { getSupabaseClient } from '@/lib/supabase/singleton'
 
 const PatientRegistrationSchema = z.object({
   name: z
@@ -84,7 +84,8 @@ export function PatientRegistrationModal({
       console.log('[checkDuplicatePatientNumber] Checking for:', patientNumber)
       
       // Use the new getByPatientNumber function
-      const existingPatient = await patientService.getByPatientNumber(patientNumber)
+      const supabase = getSupabaseClient()
+      const existingPatient = await patientService.getByPatientNumber(patientNumber, supabase)
       console.log('[checkDuplicatePatientNumber] Result:', existingPatient)
       
       return existingPatient !== null
@@ -126,12 +127,13 @@ export function PatientRegistrationModal({
         isActive: true,
       })
       
+      const supabase = getSupabaseClient()
       const result = await patientService.create({
         name: data.name,
         patientNumber: data.patientNumber,
         careType: data.careType,
         isActive: true,
-      })
+      }, supabase)
       
       console.log('Patient created successfully:', result)
 

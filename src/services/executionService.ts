@@ -7,14 +7,14 @@ import {
   type ExecutionCreateInput,
   type ExecutionUpdateInput 
 } from '@/schemas/execution'
-import type { Execution, ExecutionWithDetails } from '@/types/execution'
-import { snakeToCamel, camelToSnake } from '@/lib/database-utils'
+import type { ScheduleExecution, ExecutionWithRelations } from '@/types/execution'
+import { toCamelCase, toSnakeCase } from '@/lib/database-utils'
 import { format } from 'date-fns'
 
 const supabase = createClient()
 
 export const executionService = {
-  async markAsCompleted(scheduleId: string, executedDate?: string): Promise<Execution> {
+  async markAsCompleted(scheduleId: string, executedDate?: string): Promise<ScheduleExecution> {
     try {
       const date = executedDate || format(new Date(), 'yyyy-MM-dd')
       
@@ -38,14 +38,14 @@ export const executionService = {
         throw error
       }
       
-      return snakeToCamel(data) as Execution
+      return toCamelCase(data) as ScheduleExecution
     } catch (error) {
       console.error('Error marking execution:', error)
       throw error instanceof Error ? error : new Error('실행 기록 생성에 실패했습니다')
     }
   },
 
-  async markAsSkipped(scheduleId: string, plannedDate: string, reason?: string): Promise<Execution> {
+  async markAsSkipped(scheduleId: string, plannedDate: string, reason?: string): Promise<ScheduleExecution> {
     try {
       const { data, error } = await supabase
         .from('schedule_executions')
@@ -59,14 +59,14 @@ export const executionService = {
         .single()
       
       if (error) throw error
-      return snakeToCamel(data) as Execution
+      return toCamelCase(data) as ScheduleExecution
     } catch (error) {
       console.error('Error marking as skipped:', error)
       throw new Error('건너뛰기 처리에 실패했습니다')
     }
   },
 
-  async getByScheduleId(scheduleId: string): Promise<Execution[]> {
+  async getByScheduleId(scheduleId: string): Promise<ScheduleExecution[]> {
     try {
       const { data, error } = await supabase
         .from('schedule_executions')
@@ -75,14 +75,14 @@ export const executionService = {
         .order('planned_date', { ascending: false })
       
       if (error) throw error
-      return (data || []).map(item => snakeToCamel(item) as Execution)
+      return (data || []).map(item => toCamelCase(item) as ScheduleExecution)
     } catch (error) {
       console.error('Error fetching executions:', error)
       throw new Error('실행 기록 조회에 실패했습니다')
     }
   },
 
-  async getByDateRange(startDate: string, endDate: string): Promise<ExecutionWithDetails[]> {
+  async getByDateRange(startDate: string, endDate: string): Promise<ExecutionWithRelations[]> {
     try {
       const { data, error } = await supabase
         .from('schedule_executions')
@@ -101,17 +101,17 @@ export const executionService = {
       if (error) throw error
       
       return (data || []).map(item => {
-        const execution = snakeToCamel(item) as any
-        const schedule = snakeToCamel(item.schedules) as any
+        const execution = toCamelCase(item) as any
+        const schedule = toCamelCase(item.schedules) as any
         
         return {
           ...execution,
           schedule: {
             ...schedule,
-            patient: snakeToCamel(item.schedules.patients),
-            item: snakeToCamel(item.schedules.items)
+            patient: toCamelCase(item.schedules.patients),
+            item: toCamelCase(item.schedules.items)
           }
-        } as ExecutionWithDetails
+        } as ExecutionWithRelations
       })
     } catch (error) {
       console.error('Error fetching executions by date:', error)
@@ -119,7 +119,7 @@ export const executionService = {
     }
   },
 
-  async getTodayExecutions(): Promise<ExecutionWithDetails[]> {
+  async getTodayExecutions(): Promise<ExecutionWithRelations[]> {
     try {
       const today = format(new Date(), 'yyyy-MM-dd')
       return await this.getByDateRange(today, today)
@@ -129,10 +129,10 @@ export const executionService = {
     }
   },
 
-  async update(id: string, input: ExecutionUpdateInput): Promise<Execution> {
+  async update(id: string, input: ExecutionUpdateInput): Promise<ScheduleExecution> {
     try {
       const validated = ExecutionUpdateSchema.parse(input)
-      const snakeData = camelToSnake(validated)
+      const snakeData = toSnakeCase(validated)
       
       const { data, error } = await supabase
         .from('schedule_executions')
@@ -142,7 +142,7 @@ export const executionService = {
         .single()
       
       if (error) throw error
-      return snakeToCamel(data) as Execution
+      return toCamelCase(data) as ScheduleExecution
     } catch (error) {
       console.error('Error updating execution:', error)
       throw new Error('실행 기록 수정에 실패했습니다')

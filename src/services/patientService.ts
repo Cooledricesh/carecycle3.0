@@ -1,6 +1,7 @@
 'use client'
 
-import { createClient } from '@/lib/supabase/client'
+import type { SupabaseClient } from '@supabase/supabase-js'
+import { getSupabaseClient } from '@/lib/supabase/singleton'
 import { 
   PatientCreateSchema, 
   PatientUpdateSchema,
@@ -9,11 +10,11 @@ import {
 } from '@/schemas/patient'
 import type { Patient } from '@/types/patient'
 import { toCamelCase, toSnakeCase } from '@/lib/database-utils'
-
-const supabase = createClient()
+import type { Database } from '@/lib/database.types'
 
 export const patientService = {
-  async create(input: PatientCreateInput): Promise<Patient> {
+  async create(input: PatientCreateInput, supabase?: SupabaseClient<Database>): Promise<Patient> {
+    const client = supabase || getSupabaseClient()
     try {
       console.log('[patientService.create] Input:', input)
       const validated = PatientCreateSchema.parse(input)
@@ -31,7 +32,7 @@ export const patientService = {
       
       console.log('[patientService.create] Insert data:', insertData)
       
-      const { data, error } = await supabase
+      const { data, error } = await client
         .from('patients')
         .insert(insertData)
         .select()
@@ -53,10 +54,11 @@ export const patientService = {
     }
   },
 
-  async getAll(): Promise<Patient[]> {
+  async getAll(supabase?: SupabaseClient<Database>): Promise<Patient[]> {
+    const client = supabase || getSupabaseClient()
     try {
       console.log('[patientService.getAll] Fetching patients...')
-      const { data, error } = await supabase
+      const { data, error } = await client
         .from('patients')
         .select('*')
         .eq('is_active', true)
@@ -76,9 +78,10 @@ export const patientService = {
     }
   },
 
-  async getById(id: string): Promise<Patient | null> {
+  async getById(id: string, supabase?: SupabaseClient<Database>): Promise<Patient | null> {
+    const client = supabase || getSupabaseClient()
     try {
-      const { data, error } = await supabase
+      const { data, error } = await client
         .from('patients')
         .select('*')
         .eq('id', id)
@@ -96,9 +99,10 @@ export const patientService = {
     }
   },
 
-  async getByPatientNumber(patientNumber: string): Promise<Patient | null> {
+  async getByPatientNumber(patientNumber: string, supabase?: SupabaseClient<Database>): Promise<Patient | null> {
+    const client = supabase || getSupabaseClient()
     try {
-      const { data, error } = await supabase
+      const { data, error } = await client
         .from('patients')
         .select('*')
         .eq('patient_number', patientNumber)
@@ -117,12 +121,13 @@ export const patientService = {
     }
   },
 
-  async update(id: string, input: PatientUpdateInput): Promise<Patient> {
+  async update(id: string, input: PatientUpdateInput, supabase?: SupabaseClient<Database>): Promise<Patient> {
+    const client = supabase || getSupabaseClient()
     try {
       const validated = PatientUpdateSchema.parse(input)
       const snakeData = toSnakeCase(validated)
       
-      const { data, error } = await supabase
+      const { data, error } = await client
         .from('patients')
         .update(snakeData)
         .eq('id', id)
@@ -137,9 +142,10 @@ export const patientService = {
     }
   },
 
-  async delete(id: string): Promise<void> {
+  async delete(id: string, supabase?: SupabaseClient<Database>): Promise<void> {
+    const client = supabase || getSupabaseClient()
     try {
-      const { error } = await supabase
+      const { error } = await client
         .from('patients')
         .update({ is_active: false })
         .eq('id', id)
@@ -151,7 +157,8 @@ export const patientService = {
     }
   },
 
-  async search(query: string): Promise<Patient[]> {
+  async search(query: string, supabase?: SupabaseClient<Database>): Promise<Patient[]> {
+    const client = supabase || getSupabaseClient()
     try {
       // Validate minimum query length to prevent expensive searches
       if (query.trim().length < 2) {
@@ -161,7 +168,7 @@ export const patientService = {
       // Sanitize query input
       const sanitizedQuery = query.replace(/[%_]/g, '\\$&')
       
-      const { data, error } = await supabase
+      const { data, error } = await client
         .from('patients')
         .select('*')
         .eq('is_active', true)
