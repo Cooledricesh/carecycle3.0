@@ -30,8 +30,15 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
-.env*
+# env files (NEVER commit these - they contain sensitive keys)
+.env
+.env.*
+.env.local
+.env.development
+.env.test
+.env.production
+.env.staging
+!.env.example
 
 # vercel
 .vercel
@@ -42,3 +49,66 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# IDE and Editor files
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+*.swp
+*.swo
+*.swn
+*.sublime-*
+
+# OS files
+Thumbs.db
+Desktop.ini
+
+# Logs and databases
+logs/
+*.log
+*.sqlite
+*.sqlite3
+*.db
+
+# Temporary and backup files
+tmp/
+temp/
+*.backup
+*.bak
+*.tmp
+*~
+
+# Private keys and certificates
+*.key
+*.cert
+*.crt
+*.pem
+!*.example.pem
+
+# Supabase local data (if any)
+.supabase/
+
+# MCP Configuration (CONTAINS API KEYS - NEVER COMMIT)
+.mcp.json
+*.mcp.json
+
+# Vooster Configuration (CONTAINS API KEYS - NEVER COMMIT)
+.vooster/
+.vooster*
+vooster.json
+
+# Package manager specific
+.npm/
+.yarn-integrity
+.eslintcache
+.stylelintcache
+
+# Build artifacts
+dist/
+
+# Turbopack
+.turbo/
+
+# SWC
+.swc/
