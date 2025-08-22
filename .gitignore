@@ -98,6 +98,14 @@ temp/
 .vooster*
 vooster.json
 
+# Test files with hardcoded credentials
+test-*.js
+*.test.js
+test-*.ts
+*.test.ts
+**/test/**
+**/tests/**
+
 # Package manager specific
 .npm/
 .yarn-integrity

@@ -1,0 +1,152 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { 
+  Calendar, 
+  Clock, 
+  User, 
+  LogOut, 
+  Users, 
+  UserCog,
+  Settings,
+  ChevronLeft,
+  ChevronRight
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Separator } from '@/components/ui/separator';
+import { useAuthContext } from '@/providers/auth-provider';
+import { useAuth } from '@/hooks/use-auth';
+
+interface NavItem {
+  name: string;
+  href: string;
+  icon: React.ElementType;
+  roles?: string[];
+}
+
+const navigation: NavItem[] = [
+  { name: '내 스케줄', href: '/dashboard', icon: Calendar, roles: ['nurse', 'admin'] },
+  { name: '환자 관리', href: '/dashboard/patients', icon: Users, roles: ['nurse', 'admin'] },
+  { name: '스케줄 관리', href: '/dashboard/schedules', icon: Clock, roles: ['nurse', 'admin'] },
+  { name: '프로필', href: '/dashboard/profile', icon: User, roles: ['nurse', 'admin'] },
+];
+
+const adminNavigation: NavItem[] = [
+  { name: '관리자 대시보드', href: '/admin', icon: Settings, roles: ['admin'] },
+  { name: '사용자 관리', href: '/admin/users', icon: UserCog, roles: ['admin'] },
+];
+
+export function Sidebar() {
+  const pathname = usePathname();
+  const { user, profile } = useAuthContext();
+  const { signOut } = useAuth();
+  const [isCollapsed, setIsCollapsed] = useState(false);
+
+  const handleSignOut = () => {
+    signOut();
+    window.location.href = '/';
+  };
+
+  const allNavigation = profile?.role === 'admin' 
+    ? [...navigation, ...adminNavigation] 
+    : navigation;
+
+  const filteredNavigation = allNavigation.filter(item => 
+    !item.roles || item.roles.includes(profile?.role || '')
+  );
+
+  return (
+    <div className="flex h-full flex-col">
+      {/* Header */}
+      <div className="flex h-16 items-center justify-between px-6 border-b">
+        {!isCollapsed && (
+          <h1 className="text-xl font-semibold text-gray-900">케어스케줄러</h1>
+        )}
+        <Button
+          variant="ghost"
+          size="sm"
+          className="hidden xl:flex"
+          onClick={() => setIsCollapsed(!isCollapsed)}
+        >
+          {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+        </Button>
+      </div>
+
+      {/* User info */}
+      {profile && (
+        <div className={`px-6 py-4 border-b ${isCollapsed ? 'px-3' : ''}`}>
+          <div className="flex items-center space-x-3">
+            <Avatar>
+              <AvatarFallback>
+                {profile.name.charAt(0).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+            {!isCollapsed && (
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-gray-900 truncate">
+                  {profile.name}
+                </p>
+                <p className="text-xs text-gray-500 truncate">
+                  {profile.role === 'nurse' ? '간호사' : '관리자'}
+                  {profile.department && ` • ${profile.department}`}
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Navigation */}
+      <ScrollArea className="flex-1">
+        <nav className="px-4 py-4">
+          <ul className="space-y-2">
+            {filteredNavigation.map((item) => {
+              const isActive = pathname === item.href || 
+                              (item.href !== '/' && pathname.startsWith(item.href));
+              return (
+                <li key={item.name}>
+                  <Link
+                    href={item.href}
+                    className={`
+                      flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors
+                      ${isActive
+                        ? 'bg-blue-100 text-blue-700'
+                        : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
+                      }
+                      ${isCollapsed ? 'justify-center' : ''}
+                    `}
+                    title={isCollapsed ? item.name : undefined}
+                  >
+                    <item.icon className={`h-5 w-5 ${isCollapsed ? '' : 'mr-3'}`} />
+                    {!isCollapsed && item.name}
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </nav>
+      </ScrollArea>
+
+      <Separator />
+
+      {/* Logout */}
+      <div className="px-4 py-4">
+        <Button
+          variant="ghost"
+          className={`w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50 ${
+            isCollapsed ? 'justify-center px-0' : ''
+          }`}
+          onClick={handleSignOut}
+          title={isCollapsed ? '로그아웃' : undefined}
+        >
+          <LogOut className={`h-5 w-5 ${isCollapsed ? '' : 'mr-3'}`} />
+          {!isCollapsed && '로그아웃'}
+        </Button>
+      </div>
+    </div>
+  );
+}

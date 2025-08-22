@@ -2,16 +2,6 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Language Processing Instructions
-
-**IMPORTANT**: When receiving prompts in Korean (한글), follow these steps:
-1. First, translate the Korean prompt to English and display it in a quote block
-2. Then proceed with the task based on the English translation
-
-Example format:
-```
-> English Translation: [translated prompt here]
-```
 
 ## Project Overview
 
