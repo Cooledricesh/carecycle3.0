@@ -13,7 +13,7 @@ export interface Item {
   code: string
   name: string
   category: ItemCategory
-  defaultIntervalDays: number
+  defaultIntervalWeeks: number
   description?: string | null
   instructions?: string | null
   preparationNotes?: string | null
@@ -31,7 +31,7 @@ export interface ItemCreateInput {
   code: string
   name: string
   category: ItemCategory
-  defaultIntervalDays?: number
+  defaultIntervalWeeks?: number
   description?: string | null
   instructions?: string | null
   preparationNotes?: string | null
@@ -45,7 +45,7 @@ export interface ItemUpdateInput {
   code?: string
   name?: string
   category?: ItemCategory
-  defaultIntervalDays?: number
+  defaultIntervalWeeks?: number
   description?: string | null
   instructions?: string | null
   preparationNotes?: string | null
@@ -68,7 +68,7 @@ export interface ItemListItem {
   code: string
   name: string
   category: ItemCategory
-  defaultIntervalDays: number
+  defaultIntervalWeeks: number
   isActive: boolean
   activeScheduleCount?: number
 }
@@ -81,10 +81,10 @@ export interface IntervalOption {
 }
 
 export const COMMON_INTERVALS: IntervalOption[] = [
-  { value: 7, label: '1주', description: '매주' },
-  { value: 14, label: '2주', description: '격주' },
-  { value: 28, label: '4주', description: '매월' },
-  { value: 56, label: '8주', description: '2개월마다' },
-  { value: 84, label: '12주', description: '3개월마다' },
-  { value: 168, label: '24주', description: '6개월마다' },
+  { value: 1, label: '1주', description: '매주' },
+  { value: 2, label: '2주', description: '격주' },
+  { value: 4, label: '4주', description: '매월' },
+  { value: 8, label: '8주', description: '2개월마다' },
+  { value: 12, label: '12주', description: '3개월마다' },
+  { value: 24, label: '24주', description: '6개월마다' },
 ]

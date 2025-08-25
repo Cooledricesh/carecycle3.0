@@ -21,6 +21,11 @@ export function useSchedules() {
       try {
         return await scheduleService.getAllSchedules(supabase)
       } catch (error) {
+        console.error('useSchedules error:', {
+          error,
+          message: error instanceof Error ? error.message : 'Unknown error',
+          user: user?.id
+        })
         const message = mapErrorToUserMessage(error)
         toast({
           title: '오류',
@@ -32,7 +37,8 @@ export function useSchedules() {
     },
     enabled: initialized && !!user,
     retry: 1,
-    staleTime: 30 * 1000, // 30 seconds
+    staleTime: 5 * 1000, // 5 seconds for faster updates
+    refetchInterval: 30 * 1000 // Auto-refresh every 30 seconds
   })
 
   const createMutation = useMutation({
@@ -64,23 +70,55 @@ export function useSchedules() {
     mutationFn: async ({ scheduleId, ...input }: { scheduleId: string } & Parameters<typeof scheduleService.markAsCompleted>[1]) => {
       return await scheduleService.markAsCompleted(scheduleId, input, supabase)
     },
-    onSuccess: () => {
-      // Invalidate all schedule-related queries for proper sync
-      const keysToInvalidate = getRelatedQueryKeys('schedule.complete')
-      keysToInvalidate.forEach(key => {
-        queryClient.invalidateQueries({ queryKey: key })
-      })
-      toast({
-        title: '성공',
-        description: '일정이 완료 처리되었습니다.'
-      })
+    onMutate: async ({ scheduleId }) => {
+      // Cancel outgoing refetches to prevent overwriting optimistic update
+      await queryClient.cancelQueries({ queryKey: queryKeys.schedules.all })
+      await queryClient.cancelQueries({ queryKey: queryKeys.executions.all })
+      
+      // Snapshot previous values for rollback
+      const previousSchedules = queryClient.getQueryData(queryKeys.schedules.lists())
+      const previousToday = queryClient.getQueryData(queryKeys.schedules.today())
+      const previousUpcoming = queryClient.getQueryData(queryKeys.schedules.upcoming())
+      
+      // Optimistically remove completed schedule from today's list
+      queryClient.setQueryData(queryKeys.schedules.today(), (old: ScheduleWithDetails[] = []) => 
+        old.filter(schedule => schedule.id !== scheduleId)
+      )
+      
+      // Optimistically update upcoming schedules
+      queryClient.setQueryData(queryKeys.schedules.upcoming(), (old: ScheduleWithDetails[] = []) => 
+        old.filter(schedule => schedule.id !== scheduleId)
+      )
+      
+      // Return context for rollback
+      return { previousSchedules, previousToday, previousUpcoming }
     },
-    onError: (error) => {
+    onError: (error, _variables, context) => {
+      // Rollback on error
+      if (context) {
+        queryClient.setQueryData(queryKeys.schedules.lists(), context.previousSchedules)
+        queryClient.setQueryData(queryKeys.schedules.today(), context.previousToday)
+        queryClient.setQueryData(queryKeys.schedules.upcoming(), context.previousUpcoming)
+      }
+      
       const message = mapErrorToUserMessage(error)
       toast({
         title: '완료 처리 실패',
         description: message,
         variant: 'destructive'
+      })
+    },
+    onSettled: () => {
+      // Always refetch after mutation to ensure consistency
+      const keysToInvalidate = getRelatedQueryKeys('schedule.complete')
+      keysToInvalidate.forEach(key => {
+        queryClient.invalidateQueries({ queryKey: key })
+      })
+    },
+    onSuccess: () => {
+      toast({
+        title: '성공',
+        description: '일정이 완료 처리되었습니다.'
       })
     }
   })
@@ -124,8 +162,8 @@ export function useTodayChecklist() {
     },
     enabled: initialized && !!user,
     retry: 1,
-    staleTime: 30 * 1000, // 30 seconds
-    refetchInterval: 60 * 1000 // Refetch every minute
+    staleTime: 5 * 1000, // 5 seconds for faster updates
+    refetchInterval: 30 * 1000 // Refetch every 30 seconds
   })
 }
 
@@ -151,7 +189,8 @@ export function useUpcomingSchedules(daysAhead: number = 7) {
     },
     enabled: initialized && !!user,
     retry: 1,
-    staleTime: 30 * 1000 // 30 seconds
+    staleTime: 5 * 1000, // 5 seconds for faster updates
+    refetchInterval: 30 * 1000 // Auto-refresh every 30 seconds
   })
 }
 
@@ -177,7 +216,8 @@ export function usePatientSchedules(patientId: string) {
     },
     enabled: initialized && !!user && !!patientId,
     retry: 1,
-    staleTime: 30 * 1000 // 30 seconds
+    staleTime: 5 * 1000, // 5 seconds for faster updates
+    refetchInterval: 30 * 1000 // Auto-refresh every 30 seconds
   })
 }
 
@@ -203,7 +243,7 @@ export function useOverdueSchedules() {
     },
     enabled: initialized && !!user,
     retry: 1,
-    staleTime: 30 * 1000, // 30 seconds
-    refetchInterval: 5 * 60 * 1000 // Refetch every 5 minutes
+    staleTime: 5 * 1000, // 5 seconds for faster updates
+    refetchInterval: 60 * 1000 // Refetch every minute for overdue items
   })
 }

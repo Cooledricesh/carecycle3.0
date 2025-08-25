@@ -21,12 +21,12 @@ export const ItemCreateSchema = z.object({
   
   category: ItemCategorySchema,
   
-  defaultIntervalDays: z
+  defaultIntervalWeeks: z
     .number()
     .int('정수를 입력해주세요')
-    .min(1, '최소 1일 이상 입력해주세요')
-    .max(365, '최대 365일까지 입력 가능합니다')
-    .default(28),
+    .min(1, '최소 1주 이상 입력해주세요')
+    .max(52, '최대 52주까지 입력 가능합니다')
+    .default(4),
   
   description: z
     .string()
@@ -112,11 +112,11 @@ export const validateItemBulkUpdate = (data: unknown) => {
   return ItemBulkUpdateSchema.safeParse(data)
 }
 
-// Common interval validation
+// Common interval validation (in weeks)
 export const CommonIntervalSchema = z
   .number()
   .int('정수를 입력해주세요')
   .refine(
-    (val) => [7, 14, 28, 56, 84, 168].includes(val),
+    (val) => [1, 2, 4, 8, 12, 24].includes(val),
     '일반적인 주기를 선택해주세요 (1주, 2주, 4주, 8주, 12주, 24주)'
   )

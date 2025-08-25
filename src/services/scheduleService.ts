@@ -75,7 +75,7 @@ export const scheduleService = {
             name: input.itemName,
             category: '기타',
             description: `${input.intervalValue}주 주기`,
-            default_interval_days: input.intervalDays,
+            default_interval_weeks: Math.ceil(input.intervalDays / 7),
             preparation_notes: null
           })
           .select()
@@ -352,7 +352,7 @@ export const scheduleService = {
             name,
             category,
             description,
-            default_interval_days,
+            default_interval_weeks,
             preparation_notes,
             created_at,
             updated_at
@@ -372,7 +372,11 @@ export const scheduleService = {
         } as ScheduleWithDetails
       })
     } catch (error) {
-      console.error('Error fetching all schedules:', error)
+      console.error('Error fetching all schedules:', {
+        error,
+        message: error instanceof Error ? error.message : 'Unknown error',
+        details: JSON.stringify(error)
+      })
       throw new Error('전체 일정 조회에 실패했습니다')
     }
   },

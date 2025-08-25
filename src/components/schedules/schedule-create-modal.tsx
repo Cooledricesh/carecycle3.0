@@ -152,7 +152,7 @@ export function ScheduleCreateModal({
         code: item.code,
         name: item.name,
         category: item.category,
-        defaultIntervalDays: item.default_interval_days
+        defaultIntervalDays: (item.default_interval_weeks || 0) * 7
       }))
       
       setItems(formattedItems)

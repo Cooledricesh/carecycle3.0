@@ -94,7 +94,7 @@ export interface Database {
           code: string
           name: string
           category: ItemCategory
-          default_interval_days: number
+          default_interval_weeks: number
           description: string | null
           instructions: string | null
           preparation_notes: string | null
@@ -111,7 +111,7 @@ export interface Database {
           code: string
           name: string
           category: ItemCategory
-          default_interval_days?: number
+          default_interval_weeks?: number
           description?: string | null
           instructions?: string | null
           preparation_notes?: string | null
@@ -128,7 +128,7 @@ export interface Database {
           code?: string
           name?: string
           category?: ItemCategory
-          default_interval_days?: number
+          default_interval_weeks?: number
           description?: string | null
           instructions?: string | null
           preparation_notes?: string | null

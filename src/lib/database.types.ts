@@ -164,6 +164,59 @@ export interface Database {
           user_agent?: string | null
         }
       }
+      items: {
+        Row: {
+          id: string
+          code: string
+          name: string
+          category: string
+          default_interval_weeks: number | null
+          description: string | null
+          instructions: string | null
+          preparation_notes: string | null
+          requires_notification: boolean | null
+          notification_days_before: number | null
+          is_active: boolean | null
+          sort_order: number | null
+          metadata: any | null
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          code?: string
+          name: string
+          category: string
+          default_interval_weeks?: number | null
+          description?: string | null
+          instructions?: string | null
+          preparation_notes?: string | null
+          requires_notification?: boolean | null
+          notification_days_before?: number | null
+          is_active?: boolean | null
+          sort_order?: number | null
+          metadata?: any | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          code?: string
+          name?: string
+          category?: string
+          default_interval_weeks?: number | null
+          description?: string | null
+          instructions?: string | null
+          preparation_notes?: string | null
+          requires_notification?: boolean | null
+          notification_days_before?: number | null
+          is_active?: boolean | null
+          sort_order?: number | null
+          metadata?: any | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+      }
     }
     Views: {
       database_health: {
@@ -242,3 +295,7 @@ export type PatientScheduleInsert = Database['public']['Tables']['patient_schedu
 export type PatientScheduleUpdate = Database['public']['Tables']['patient_schedules']['Update']
 
 export type AuditLog = Database['public']['Tables']['audit_logs']['Row']
+
+export type Item = Database['public']['Tables']['items']['Row']
+export type ItemInsert = Database['public']['Tables']['items']['Insert']
+export type ItemUpdate = Database['public']['Tables']['items']['Update']
