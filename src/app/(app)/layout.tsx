@@ -2,6 +2,7 @@ import { ReactNode } from 'react';
 import { redirect } from 'next/navigation';
 import { getCurrentUserProfile } from '@/lib/supabase/server';
 import { AppShell } from '@/components/app-shell';
+import { RealtimeProvider } from '@/components/dashboard/realtime-provider';
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -14,5 +15,9 @@ export default async function AppLayout({ children }: AppLayoutProps) {
     redirect('/auth/signin');
   }
 
-  return <AppShell>{children}</AppShell>;
+  return (
+    <RealtimeProvider>
+      <AppShell>{children}</AppShell>
+    </RealtimeProvider>
+  );
 }

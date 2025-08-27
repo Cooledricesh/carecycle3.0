@@ -6,171 +6,106 @@ import { getSupabaseClient } from '@/lib/supabase/singleton'
 import { queryKeys } from '@/lib/query-keys'
 import { useAuthContext } from '@/providers/auth-provider'
 import type { RealtimeChannel } from '@supabase/supabase-js'
+import type { Schedule, Patient } from '@/types'
+import { toCamelCase } from '@/lib/database-utils'
 
 /**
- * Real-time synchronization hook
- * Subscribes to database changes and automatically invalidates relevant queries
- * This ensures data stays in sync across all tabs and users
+ * Enhanced Real-time synchronization hook
+ * Subscribes to database changes and directly updates the React Query cache
+ * for an instantaneous UI update, bypassing refetch latency.
  */
 export function useRealtimeSync() {
   const queryClient = useQueryClient()
   const { user, initialized } = useAuthContext()
   const supabase = getSupabaseClient()
   const channelRef = useRef<RealtimeChannel | null>(null)
-  const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null)
-  const retryCountRef = useRef(0)
 
   useEffect(() => {
     if (!initialized || !user) {
-      console.log('[Realtime] Skipping - auth not ready')
       return
     }
 
-    const setupRealtimeSubscription = async () => {
-      try {
-        // Clean up any existing channel
-        if (channelRef.current) {
-          await supabase.removeChannel(channelRef.current)
-          channelRef.current = null
+    const channel = supabase.channel(`realtime-sync:${user.id}`)
+
+    // --- PATIENTS SUBSCRIPTION ---
+    channel.on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'patients' },
+      (payload) => {
+        console.log('[Realtime] Patient change received:', payload)
+        const newPatient = toCamelCase(payload.new) as Patient
+        const oldPatientId = payload.old?.id
+
+        // Update the main list of patients
+        queryClient.setQueryData(
+          queryKeys.patients.lists(),
+          (oldData: Patient[] | undefined) => {
+            if (!oldData) return []
+            switch (payload.eventType) {
+              case 'INSERT':
+                return [newPatient, ...oldData]
+              case 'UPDATE':
+                return oldData.map((p) => (p.id === newPatient.id ? newPatient : p))
+              case 'DELETE':
+                return oldData.filter((p) => p.id !== oldPatientId)
+              default:
+                return oldData
+            }
+          }
+        )
+        // Invalidate details query if it exists
+        if (newPatient.id || oldPatientId) {
+          queryClient.invalidateQueries({ queryKey: queryKeys.patients.detail(newPatient.id || oldPatientId) })
         }
-
-        console.log('[Realtime] Setting up subscription for user:', user.id)
-
-        // Create a single channel for all subscriptions
-        const channel = supabase
-          .channel(`realtime-sync-${user.id}`, {
-            config: {
-              presence: { key: user.id },
-            },
-          })
-
-        // Subscribe to schedule changes
-        channel.on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'schedules'
-          },
-          (payload) => {
-            console.log('[Realtime] Schedule change:', payload.eventType)
-            
-            // Invalidate all schedule-related queries
-            queryClient.invalidateQueries({ queryKey: queryKeys.schedules.all })
-            
-            // If a specific patient's schedule changed
-            if (payload.new && 'patient_id' in payload.new) {
-              const patientId = payload.new.patient_id as string
-              if (patientId) {
-                queryClient.invalidateQueries({ 
-                  queryKey: queryKeys.schedules.byPatient(patientId) 
-                })
-              }
-            }
-          }
-        )
-
-        // Subscribe to execution changes
-        channel.on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'schedule_executions'
-          },
-          (payload) => {
-            console.log('[Realtime] Execution change:', payload.eventType)
-            
-            // Invalidate execution and schedule queries
-            queryClient.invalidateQueries({ queryKey: queryKeys.executions.all })
-            queryClient.invalidateQueries({ queryKey: queryKeys.schedules.all })
-          }
-        )
-
-        // Subscribe to patient changes
-        channel.on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'patients'
-          },
-          (payload) => {
-            console.log('[Realtime] Patient change:', payload.eventType)
-            
-            // Invalidate patient queries
-            queryClient.invalidateQueries({ queryKey: queryKeys.patients.all })
-            
-            // If a specific patient changed
-            if (payload.new && 'id' in payload.new) {
-              const patientId = payload.new.id as string
-              if (patientId) {
-                queryClient.invalidateQueries({ 
-                  queryKey: queryKeys.patients.detail(patientId) 
-                })
-              }
-            }
-          }
-        )
-
-        // Subscribe with error handling
-        const subscription = channel.subscribe((status, err) => {
-          if (status === 'SUBSCRIBED') {
-            console.log('[Realtime] Successfully subscribed')
-            retryCountRef.current = 0 // Reset retry count on success
-          } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-            console.warn(`[Realtime] Subscription status: ${status}`, err)
-            
-            // Implement exponential backoff retry
-            if (retryCountRef.current < 5) {
-              const retryDelay = Math.min(1000 * Math.pow(2, retryCountRef.current), 30000)
-              console.log(`[Realtime] Will retry in ${retryDelay}ms (attempt ${retryCountRef.current + 1}/5)`)
-              
-              if (retryTimeoutRef.current) {
-                clearTimeout(retryTimeoutRef.current)
-              }
-              
-              retryTimeoutRef.current = setTimeout(() => {
-                retryCountRef.current++
-                setupRealtimeSubscription()
-              }, retryDelay)
-            } else {
-              console.error('[Realtime] Max retries reached, giving up')
-            }
-          } else if (status === 'CLOSED') {
-            console.log('[Realtime] Channel closed')
-          }
-        })
-
-        channelRef.current = channel
-      } catch (error) {
-        console.error('[Realtime] Setup error:', error)
       }
-    }
+    )
 
-    setupRealtimeSubscription()
+    // --- SCHEDULES SUBSCRIPTION ---
+    channel.on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'schedules' },
+      (payload) => {
+        console.log('[Realtime] Schedule change received:', payload)
+        // Invalidate all schedule queries for simplicity and robustness
+        // Direct cache manipulation is complex due to multiple views (today, upcoming, etc.)
+        queryClient.invalidateQueries({ queryKey: queryKeys.schedules.all })
+        queryClient.invalidateQueries({ queryKey: queryKeys.executions.all })
+      }
+    )
+    
+    // --- EXECUTIONS SUBSCRIPTION ---
+    channel.on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'schedule_executions' },
+      (payload) => {
+        console.log('[Realtime] Execution change received:', payload)
+        // Invalidate all schedule and execution queries
+        queryClient.invalidateQueries({ queryKey: queryKeys.schedules.all })
+        queryClient.invalidateQueries({ queryKey: queryKeys.executions.all })
+      }
+    )
 
-    // Cleanup function
+    channel.subscribe((status, err) => {
+      if (status === 'SUBSCRIBED') {
+        console.log('[Realtime] Successfully subscribed!')
+      }
+      if (status === 'CHANNEL_ERROR') {
+        console.error('[Realtime] Channel error:', err)
+      }
+    })
+
+    channelRef.current = channel
+
     return () => {
-      console.log('[Realtime] Cleaning up subscription')
-      
-      if (retryTimeoutRef.current) {
-        clearTimeout(retryTimeoutRef.current)
-        retryTimeoutRef.current = null
-      }
-      
       if (channelRef.current) {
         supabase.removeChannel(channelRef.current)
-        channelRef.current = null
+        console.log('[Realtime] Unsubscribed.')
       }
     }
   }, [initialized, user, queryClient, supabase])
 }
 
-/**
- * Hook to use in layout components to enable real-time sync
- * Should be called at the highest level of authenticated pages
- */
+// Keep this hook for layout components
 export function useGlobalRealtimeSync() {
   useRealtimeSync()
 }

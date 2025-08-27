@@ -37,8 +37,7 @@ export function useSchedules() {
     },
     enabled: initialized && !!user,
     retry: 1,
-    staleTime: 5 * 1000, // 5 seconds for faster updates
-    refetchInterval: 30 * 1000 // Auto-refresh every 30 seconds
+    staleTime: 5 * 60 * 1000 // 5 minutes - rely on realtime sync
   })
 
   const createMutation = useMutation({
@@ -162,8 +161,7 @@ export function useTodayChecklist() {
     },
     enabled: initialized && !!user,
     retry: 1,
-    staleTime: 5 * 1000, // 5 seconds for faster updates
-    refetchInterval: 30 * 1000 // Refetch every 30 seconds
+    staleTime: 5 * 60 * 1000 // 5 minutes - rely on realtime sync
   })
 }
 
@@ -189,8 +187,7 @@ export function useUpcomingSchedules(daysAhead: number = 7) {
     },
     enabled: initialized && !!user,
     retry: 1,
-    staleTime: 5 * 1000, // 5 seconds for faster updates
-    refetchInterval: 30 * 1000 // Auto-refresh every 30 seconds
+    staleTime: 5 * 60 * 1000 // 5 minutes - rely on realtime sync
   })
 }
 
@@ -216,8 +213,7 @@ export function usePatientSchedules(patientId: string) {
     },
     enabled: initialized && !!user && !!patientId,
     retry: 1,
-    staleTime: 5 * 1000, // 5 seconds for faster updates
-    refetchInterval: 30 * 1000 // Auto-refresh every 30 seconds
+    staleTime: 5 * 60 * 1000 // 5 minutes - rely on realtime sync
   })
 }
 
@@ -243,7 +239,6 @@ export function useOverdueSchedules() {
     },
     enabled: initialized && !!user,
     retry: 1,
-    staleTime: 5 * 1000, // 5 seconds for faster updates
-    refetchInterval: 60 * 1000 // Refetch every minute for overdue items
+    staleTime: 5 * 60 * 1000 // 5 minutes - rely on realtime sync
   })
 }

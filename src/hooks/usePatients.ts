@@ -33,7 +33,7 @@ export function usePatients() {
     },
     enabled: initialized && !!user,
     retry: 1,
-    staleTime: 30 * 1000, // 30 seconds
+    staleTime: 5 * 60 * 1000 // 5 minutes - rely on realtime sync
   })
 
   const createMutation = useMutation({
@@ -61,6 +61,31 @@ export function usePatients() {
     }
   })
 
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return await patientService.delete(id, supabase)
+    },
+    onSuccess: () => {
+      // Invalidate all patient-related queries
+      const keysToInvalidate = getRelatedQueryKeys('patient.delete')
+      keysToInvalidate.forEach(key => {
+        queryClient.invalidateQueries({ queryKey: key })
+      })
+      toast({
+        title: '성공',
+        description: '환자가 성공적으로 삭제되었습니다.'
+      })
+    },
+    onError: (error) => {
+      const message = mapErrorToUserMessage(error)
+      toast({
+        title: '환자 삭제 실패',
+        description: message,
+        variant: 'destructive'
+      })
+    }
+  })
+
   const refetch = () => {
     queryClient.invalidateQueries({ queryKey: queryKeys.patients.all })
   }
@@ -71,7 +96,9 @@ export function usePatients() {
     error: query.error,
     refetch,
     createPatient: createMutation.mutate,
-    isCreating: createMutation.isPending
+    isCreating: createMutation.isPending,
+    deletePatient: deleteMutation.mutate,
+    isDeleting: deleteMutation.isPending
   }
 }
 
