@@ -33,8 +33,18 @@ export class RealtimeConnectionManager {
     }
 
     console.log('[RealtimeConnectionManager] Initializing with Supabase client')
+    
+    // Clean up any existing connections first
+    if (this.currentChannel) {
+      console.log('[RealtimeConnectionManager] Cleaning up previous connection before reinitializing')
+      this.disconnect()
+    }
+    
     this.supabase = supabase
     this.isInitialized = true
+
+    // Add delay to prevent immediate reconnection conflicts
+    await new Promise(resolve => setTimeout(resolve, 500))
 
     // Set up the main realtime channel only if page is visible
     if (typeof document !== 'undefined' && !document.hidden) {
@@ -241,8 +251,10 @@ export class RealtimeConnectionManager {
       // Unregister old channel
       eventManager.unregisterChannel('database-changes')
       
-      // Wait a bit before reconnecting to avoid rapid reconnection
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      // Wait longer in production to avoid rapid reconnection
+      const isProduction = typeof window !== 'undefined' && window.location.hostname !== 'localhost'
+      const reconnectDelay = isProduction ? 3000 : 1000 // 3s in prod, 1s in dev
+      await new Promise(resolve => setTimeout(resolve, reconnectDelay))
       
       // Reset ping time
       this.lastPingTime = Date.now()
@@ -306,21 +318,39 @@ export class RealtimeConnectionManager {
   private startKeepalive() {
     this.stopKeepalive()
     
-    // Send keepalive every 30 seconds
+    // Detect production environment (Vercel)
+    const isProduction = typeof window !== 'undefined' && 
+                        (window.location.hostname !== 'localhost' || 
+                         process.env.NODE_ENV === 'production')
+    
+    // Use longer intervals in production to reduce connection churn
+    const keepaliveInterval = isProduction ? 60000 : 30000 // 60s in prod, 30s in dev
+    const timeoutThreshold = isProduction ? 120000 : 60000 // 2 min in prod, 1 min in dev
+    
+    console.log(`[RealtimeConnectionManager] Starting keepalive (${isProduction ? 'Production' : 'Development'} mode)`)
+    
     this.keepaliveInterval = setInterval(() => {
       const now = Date.now()
       const timeSinceLastPing = now - this.lastPingTime
       
-      // If more than 60 seconds since last ping, force reconnect
-      if (timeSinceLastPing > 60000) {
-        console.warn('[RealtimeConnectionManager] Keepalive timeout detected, forcing reconnect')
-        this.reconnect()
+      // If exceeded timeout threshold, force reconnect
+      if (timeSinceLastPing > timeoutThreshold) {
+        console.warn(`[RealtimeConnectionManager] Keepalive timeout detected (${timeSinceLastPing}ms), forcing reconnect`)
+        // In production, be less aggressive about reconnecting
+        if (isProduction && this.reconnectAttempts < 3) {
+          this.reconnect()
+        } else if (!isProduction) {
+          this.reconnect()
+        }
       } else if (this.currentChannel) {
         // Send a ping to keep connection alive
         this.lastPingTime = now
-        console.log('[RealtimeConnectionManager] Sending keepalive ping')
+        // Only log in development to reduce noise
+        if (!isProduction) {
+          console.log('[RealtimeConnectionManager] Sending keepalive ping')
+        }
       }
-    }, 30000)
+    }, keepaliveInterval)
   }
 
   // Stop keepalive mechanism

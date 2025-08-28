@@ -22,18 +22,23 @@ export function usePatients() {
       try {
         return await patientService.getAll(supabase)
       } catch (error) {
-        const message = mapErrorToUserMessage(error)
-        toast({
-          title: '오류',
-          description: message,
-          variant: 'destructive'
-        })
+        // Don't show toast on first load to prevent noise during auth initialization
+        if (initialized) {
+          const message = mapErrorToUserMessage(error)
+          toast({
+            title: '오류',
+            description: message,
+            variant: 'destructive'
+          })
+        }
         throw error
       }
     },
-    enabled: initialized && !!user,
-    retry: 1,
-    staleTime: 5 * 60 * 1000 // 5 minutes - rely on realtime sync
+    enabled: true, // CRITICAL FIX: Remove auth blocking to allow immediate data loading
+    retry: 3, // Increased retries for production stability
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000), // Exponential backoff
+    staleTime: 30 * 1000, // Reduced to 30 seconds for more frequent updates
+    gcTime: 10 * 60 * 1000 // Cache for 10 minutes
   })
 
   const createMutation = useMutation({
@@ -191,8 +196,9 @@ export function usePatient(id: string) {
         throw error
       }
     },
-    enabled: initialized && !!user && !!id,
-    retry: 1
+    enabled: !!id, // Only check if ID exists, not auth state
+    retry: 3, // Increased retries for production stability
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000)
   })
 }
 
@@ -203,7 +209,7 @@ export function useSearchPatients(query: string) {
   return useQuery({
     queryKey: queryKeys.patients.search(query),
     queryFn: () => patientService.search(query, supabase),
-    enabled: initialized && !!user && query.length >= 2,
+    enabled: query.length >= 2, // Only check query length, not auth
     staleTime: 10 * 1000 // 10 seconds
   })
 }

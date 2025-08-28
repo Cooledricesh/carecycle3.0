@@ -35,9 +35,11 @@ export function useSchedules() {
         throw error
       }
     },
-    enabled: initialized && !!user,
-    retry: 1,
-    staleTime: 5 * 60 * 1000 // 5 minutes - rely on realtime sync
+    enabled: true, // Remove auth blocking for immediate loading
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    staleTime: 30 * 1000, // 30 seconds for more frequent updates
+    gcTime: 10 * 60 * 1000 // Cache for 10 minutes
   })
 
   const createMutation = useMutation({
@@ -159,9 +161,11 @@ export function useTodayChecklist() {
         throw error
       }
     },
-    enabled: initialized && !!user,
-    retry: 1,
-    staleTime: 5 * 60 * 1000 // 5 minutes - rely on realtime sync
+    enabled: true, // Remove auth blocking for immediate loading
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    staleTime: 30 * 1000, // 30 seconds for more frequent updates
+    gcTime: 10 * 60 * 1000 // Cache for 10 minutes
   })
 }
 
@@ -185,9 +189,11 @@ export function useUpcomingSchedules(daysAhead: number = 7) {
         throw error
       }
     },
-    enabled: initialized && !!user,
-    retry: 1,
-    staleTime: 5 * 60 * 1000 // 5 minutes - rely on realtime sync
+    enabled: true, // Remove auth blocking for immediate loading
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    staleTime: 30 * 1000, // 30 seconds for more frequent updates
+    gcTime: 10 * 60 * 1000 // Cache for 10 minutes
   })
 }
 
@@ -211,7 +217,7 @@ export function usePatientSchedules(patientId: string) {
         throw error
       }
     },
-    enabled: initialized && !!user && !!patientId,
+    enabled: !!patientId, // Only check if patientId exists
     retry: 1,
     staleTime: 5 * 60 * 1000 // 5 minutes - rely on realtime sync
   })
@@ -237,8 +243,10 @@ export function useOverdueSchedules() {
         throw error
       }
     },
-    enabled: initialized && !!user,
-    retry: 1,
-    staleTime: 5 * 60 * 1000 // 5 minutes - rely on realtime sync
+    enabled: true, // Remove auth blocking for immediate loading
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    staleTime: 30 * 1000, // 30 seconds for more frequent updates
+    gcTime: 10 * 60 * 1000 // Cache for 10 minutes
   })
 }

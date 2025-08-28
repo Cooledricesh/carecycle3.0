@@ -31,7 +31,13 @@ export function useFallbackPolling({
         clearInterval(pollingIntervalRef.current)
       }
 
-      console.log(`[useFallbackPolling] Starting polling with ${interval}ms interval`)
+      console.log(`[useFallbackPolling] Starting polling with ${typeof interval === 'number' ? interval : 'INVALID'}ms interval`)
+      
+      // Validate interval is a number
+      if (typeof interval !== 'number' || interval <= 0) {
+        console.error(`[useFallbackPolling] Invalid interval: ${interval}, falling back to 10000ms`)
+        interval = 10000
+      }
 
       // Set up new interval
       pollingIntervalRef.current = setInterval(() => {
