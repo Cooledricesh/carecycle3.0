@@ -21,11 +21,12 @@ function SignInForm() {
   const redirectTo = searchParams.get("redirectTo");
 
   useEffect(() => {
-    if (isAuthenticated && profile) {
-      const destination = redirectTo || (profile.role === "admin" ? "/admin" : "/dashboard");
+    if (isAuthenticated) {
+      // Don't wait for profile - redirect immediately when authenticated
+      const destination = redirectTo || "/dashboard";
       router.push(destination);
     }
-  }, [isAuthenticated, profile, router, redirectTo]);
+  }, [isAuthenticated, router, redirectTo]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
