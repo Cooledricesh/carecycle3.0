@@ -358,7 +358,7 @@ export const scheduleService = {
             updated_at
           )
         `)
-        .neq('status', 'cancelled')
+        .in('status', ['active', 'paused'])  // Only show active and paused schedules, exclude cancelled and deleted
         .order('next_due_date', { ascending: true })
       
       if (error) throw error

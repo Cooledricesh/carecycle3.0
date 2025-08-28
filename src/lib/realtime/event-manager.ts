@@ -22,7 +22,8 @@ export class RealtimeEventManager extends EventEmitter {
   private connectionState: 'connected' | 'disconnected' | 'reconnecting' = 'disconnected'
   private reconnectTimer: NodeJS.Timeout | null = null
   private reconnectAttempts = 0
-  private maxReconnectAttempts = 5
+  private maxReconnectAttempts = 10
+  private isSchedulingReconnect = false
 
   private constructor() {
     super()
@@ -88,7 +89,11 @@ export class RealtimeEventManager extends EventEmitter {
   public unregisterChannel(name: string) {
     const channel = this.channels.get(name)
     if (channel) {
-      channel.unsubscribe()
+      try {
+        channel.unsubscribe()
+      } catch (error) {
+        console.warn('[EventManager] Error unsubscribing channel:', error)
+      }
       this.channels.delete(name)
     }
   }
@@ -100,6 +105,14 @@ export class RealtimeEventManager extends EventEmitter {
 
   // Handle reconnection logic
   public scheduleReconnect(callback: () => Promise<void>) {
+    // Prevent multiple concurrent reconnection schedules
+    if (this.isSchedulingReconnect) {
+      console.log('[EventManager] Reconnection already scheduled, skipping')
+      return
+    }
+    
+    this.isSchedulingReconnect = true
+    
     if (this.reconnectTimer) {
       clearTimeout(this.reconnectTimer)
     }
@@ -107,32 +120,39 @@ export class RealtimeEventManager extends EventEmitter {
     if (this.reconnectAttempts >= this.maxReconnectAttempts) {
       this.emitConnectionEvent({
         type: 'error',
-        message: 'Maximum reconnection attempts exceeded',
+        message: 'Maximum reconnection attempts exceeded. Please refresh the page.',
         timestamp: Date.now()
       })
+      this.isSchedulingReconnect = false
       return
     }
 
-    // Exponential backoff: 1s, 2s, 4s, 8s, 16s
-    const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 16000)
+    // Progressive backoff: 2s, 4s, 6s, 8s, 10s, then cap at 10s
+    const delay = Math.min(2000 + (this.reconnectAttempts * 2000), 10000)
+    
+    console.log(`[EventManager] Scheduling reconnection in ${delay}ms (attempt ${this.reconnectAttempts + 1}/${this.maxReconnectAttempts})`)
     
     this.reconnectTimer = setTimeout(async () => {
       this.reconnectAttempts++
       this.emitConnectionEvent({
         type: 'reconnecting',
-        message: `Reconnection attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts}`,
+        message: `재연결 시도 중... (${this.reconnectAttempts}/${this.maxReconnectAttempts})`,
         timestamp: Date.now()
       })
       
       try {
         await callback()
         this.reconnectAttempts = 0
+        this.isSchedulingReconnect = false
         this.emitConnectionEvent({
           type: 'connected',
           message: 'Successfully reconnected',
           timestamp: Date.now()
         })
       } catch (error) {
+        console.error('[EventManager] Reconnection attempt failed:', error)
+        this.isSchedulingReconnect = false
+        // Schedule next attempt
         this.scheduleReconnect(callback)
       }
     }, delay)
@@ -140,7 +160,9 @@ export class RealtimeEventManager extends EventEmitter {
 
   // Reset reconnection attempts
   public resetReconnection() {
+    console.log('[EventManager] Resetting reconnection state')
     this.reconnectAttempts = 0
+    this.isSchedulingReconnect = false
     if (this.reconnectTimer) {
       clearTimeout(this.reconnectTimer)
       this.reconnectTimer = null

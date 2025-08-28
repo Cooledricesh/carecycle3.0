@@ -8,6 +8,8 @@ export class RealtimeConnectionManager {
   private static instance: RealtimeConnectionManager
   private supabase: SupabaseClient<Database> | null = null
   private isInitialized = false
+  private currentChannel: any = null
+  private isReconnecting = false
 
   private constructor() {}
 
@@ -20,16 +22,23 @@ export class RealtimeConnectionManager {
 
   // Initialize with Supabase client
   public async initialize(supabase: SupabaseClient<Database>) {
-    if (this.isInitialized) {
-      console.log('[RealtimeConnectionManager] Already initialized')
+    if (this.isInitialized && this.supabase === supabase) {
+      console.log('[RealtimeConnectionManager] Already initialized with same client')
       return
     }
 
+    console.log('[RealtimeConnectionManager] Initializing with Supabase client')
     this.supabase = supabase
     this.isInitialized = true
 
     // Set up the main realtime channel
-    await this.setupRealtimeSubscriptions()
+    try {
+      await this.setupRealtimeSubscriptions()
+    } catch (error) {
+      console.error('[RealtimeConnectionManager] Failed to setup subscriptions:', error)
+      this.isInitialized = false
+      throw error
+    }
   }
 
   private async setupRealtimeSubscriptions() {
@@ -37,7 +46,21 @@ export class RealtimeConnectionManager {
       throw new Error('Supabase client not initialized')
     }
 
+    // Clean up any existing channel first
+    if (this.currentChannel) {
+      console.log('[RealtimeConnectionManager] Cleaning up existing channel')
+      this.currentChannel.unsubscribe()
+      this.currentChannel = null
+    }
+
     console.log('[RealtimeConnectionManager] Setting up realtime subscriptions')
+
+    // Emit connecting state
+    eventManager.emitConnectionEvent({
+      type: 'reconnecting',
+      message: 'Establishing realtime connection...',
+      timestamp: Date.now()
+    })
 
     // Create a single channel for all database changes
     const channel = this.supabase
@@ -111,11 +134,16 @@ export class RealtimeConnectionManager {
         }
       )
 
+    // Store channel reference
+    this.currentChannel = channel
+
     // Subscribe and handle connection states
-    channel.subscribe((status) => {
-      console.log('[RealtimeConnectionManager] Channel status:', status)
+    channel.subscribe((status, err) => {
+      console.log('[RealtimeConnectionManager] Channel status:', status, err ? 'Error:' : '', err)
       
       if (status === 'SUBSCRIBED') {
+        console.log('[RealtimeConnectionManager] Successfully subscribed to realtime channel')
+        this.isReconnecting = false
         eventManager.emitConnectionEvent({
           type: 'connected',
           message: 'Realtime channel subscribed',
@@ -123,25 +151,44 @@ export class RealtimeConnectionManager {
         })
         eventManager.resetReconnection()
       } else if (status === 'CHANNEL_ERROR') {
+        console.error('[RealtimeConnectionManager] Channel error:', err)
         eventManager.emitConnectionEvent({
           type: 'error',
-          message: 'Channel error occurred',
+          message: `Channel error: ${err?.message || 'WebSocket connection failed'}`,
           timestamp: Date.now()
         })
-        // Schedule reconnection
-        eventManager.scheduleReconnect(async () => {
-          await this.reconnect()
-        })
+        // Schedule reconnection only if not already reconnecting
+        if (!this.isReconnecting) {
+          this.isReconnecting = true
+          eventManager.scheduleReconnect(async () => {
+            await this.reconnect()
+          })
+        }
       } else if (status === 'TIMED_OUT') {
+        console.warn('[RealtimeConnectionManager] Channel timed out')
         eventManager.emitConnectionEvent({
           type: 'disconnected',
           message: 'Channel timed out',
           timestamp: Date.now()
         })
-        // Schedule reconnection
-        eventManager.scheduleReconnect(async () => {
-          await this.reconnect()
+        // Schedule reconnection only if not already reconnecting
+        if (!this.isReconnecting) {
+          this.isReconnecting = true
+          eventManager.scheduleReconnect(async () => {
+            await this.reconnect()
+          })
+        }
+      } else if (status === 'CLOSED') {
+        console.warn('[RealtimeConnectionManager] Channel closed')
+        eventManager.emitConnectionEvent({
+          type: 'disconnected',
+          message: 'Channel closed',
+          timestamp: Date.now()
         })
+        // Don't auto-reconnect on manual close
+        this.isReconnecting = false
+      } else {
+        console.log('[RealtimeConnectionManager] Channel status update:', status)
       }
     })
 
@@ -152,21 +199,37 @@ export class RealtimeConnectionManager {
   // Reconnect to realtime
   private async reconnect() {
     if (!this.supabase) {
-      throw new Error('Cannot reconnect: Supabase client not initialized')
+      console.error('[RealtimeConnectionManager] Cannot reconnect: Supabase client not initialized')
+      this.isReconnecting = false
+      return
     }
 
     console.log('[RealtimeConnectionManager] Attempting to reconnect...')
     
-    // Unregister old channel
-    eventManager.unregisterChannel('database-changes')
-    
-    // Set up new subscriptions
-    await this.setupRealtimeSubscriptions()
+    try {
+      // Unregister old channel
+      eventManager.unregisterChannel('database-changes')
+      
+      // Wait a bit before reconnecting to avoid rapid reconnection
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      
+      // Set up new subscriptions
+      await this.setupRealtimeSubscriptions()
+    } catch (error) {
+      console.error('[RealtimeConnectionManager] Reconnection failed:', error)
+      this.isReconnecting = false
+      throw error
+    }
   }
 
   // Manual disconnect
   public disconnect() {
     console.log('[RealtimeConnectionManager] Disconnecting...')
+    this.isReconnecting = false
+    if (this.currentChannel) {
+      this.currentChannel.unsubscribe()
+      this.currentChannel = null
+    }
     eventManager.unregisterChannel('database-changes')
     eventManager.cleanup()
     this.isInitialized = false

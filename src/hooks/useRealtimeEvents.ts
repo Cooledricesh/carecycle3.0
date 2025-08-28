@@ -1,14 +1,32 @@
 'use client'
 
-import { useEffect, useCallback } from 'react'
+import { useEffect, useCallback, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { eventManager, type DatabaseEvent, type ConnectionEvent } from '@/lib/realtime/event-manager'
 import { connectionManager } from '@/lib/realtime/connection-manager'
 import { getSupabaseClient } from '@/lib/supabase/singleton'
 import { toast } from '@/hooks/use-toast'
+import { useFallbackPolling } from '@/hooks/useFallbackPolling'
 
 export function useRealtimeEvents() {
   const queryClient = useQueryClient()
+  
+  // Reactive connection state
+  const [isConnected, setIsConnected] = useState(() => connectionManager.isConnected())
+
+  // Centralized fallback polling for all dashboard data
+  useFallbackPolling({
+    queryKeys: [
+      ['patients'],
+      ['schedules'],
+      ['today-checklist'],
+      ['schedule-summary'],
+      ['recent-activity'],
+      ['items']
+    ],
+    intervalWhenDisconnected: 15000, // 15 seconds when disconnected (less aggressive)
+    intervalWhenConnected: 90000,    // 1.5 minutes when connected (as backup)
+  })
 
   // Handle database events
   const handleDatabaseEvent = useCallback((event: DatabaseEvent) => {
@@ -74,6 +92,9 @@ export function useRealtimeEvents() {
   const handleConnectionEvent = useCallback((event: ConnectionEvent) => {
     console.log(`[useRealtimeEvents] Connection event:`, event)
 
+    // Update reactive connection state
+    setIsConnected(event.type === 'connected')
+
     switch (event.type) {
       case 'connected':
         toast({
@@ -128,10 +149,10 @@ export function useRealtimeEvents() {
       unsubscribeItems()
       unsubscribeConnection()
     }
-  }, [handleDatabaseEvent, handleConnectionEvent])
+  }, [handleDatabaseEvent, handleConnectionEvent]) // Include callbacks in dependency array
 
-  // Return connection status for components that need it
+  // Return reactive connection status for components that need it
   return {
-    isConnected: connectionManager.isConnected(),
+    isConnected,
   }
 }

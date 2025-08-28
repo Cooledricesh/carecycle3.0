@@ -14,8 +14,8 @@ type PollingConfig = {
 
 export function useFallbackPolling({
   queryKeys,
-  intervalWhenDisconnected = 5000,   // 5 seconds when disconnected
-  intervalWhenConnected = 30000,     // 30 seconds when connected (as backup)
+  intervalWhenDisconnected = 10000,  // 10 seconds when disconnected (reduced frequency)
+  intervalWhenConnected = 60000,     // 60 seconds when connected (as backup)
   enabled = true
 }: PollingConfig) {
   const queryClient = useQueryClient()
@@ -66,15 +66,24 @@ export function useFallbackPolling({
         // Just connected - switch to slower polling
         console.log('[useFallbackPolling] Real-time connected, switching to backup polling')
         startPolling(intervalWhenConnected)
-      } else if (wasConnected && !isNowConnected) {
-        // Just disconnected - switch to faster polling
-        console.log('[useFallbackPolling] Real-time disconnected, switching to frequent polling')
-        startPolling(intervalWhenDisconnected)
+      } else if (wasConnected && !isNowConnected && event.type !== 'reconnecting') {
+        // Just disconnected (but not reconnecting) - switch to moderate polling
+        console.log('[useFallbackPolling] Real-time disconnected, switching to fallback polling')
+        // Wait a bit before starting polling to avoid conflicts with reconnection
+        setTimeout(() => {
+          startPolling(intervalWhenDisconnected)
+        }, 2000)
         
-        // Immediately fetch data once
-        queryKeys.forEach(key => {
-          queryClient.invalidateQueries({ queryKey: key })
-        })
+        // Fetch data once after a delay
+        setTimeout(() => {
+          queryKeys.forEach(key => {
+            queryClient.invalidateQueries({ queryKey: key, refetchType: 'active' })
+          })
+        }, 1000)
+      } else if (event.type === 'reconnecting') {
+        // During reconnection, stop polling to avoid conflicts
+        console.log('[useFallbackPolling] Reconnecting, pausing polling temporarily')
+        stopPolling()
       }
     }
 
