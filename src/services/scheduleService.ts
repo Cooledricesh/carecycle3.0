@@ -118,71 +118,113 @@ export const scheduleService = {
 
   async getTodayChecklist(supabase?: SupabaseClient<Database>): Promise<ScheduleWithDetails[]> {
     const client = supabase || getSupabaseClient()
-    try {
-      const today = format(new Date(), 'yyyy-MM-dd')
-      
-      const { data, error } = await client
-        .from('schedules')
-        .select(`
-          *,
-          patients (*),
-          items (*)
-        `)
-        .eq('status', 'active')
-        .lte('next_due_date', today)
-        .order('priority', { ascending: false })
-        .order('next_due_date', { ascending: true })
-      
-      if (error) throw error
-      
-      return (data || []).map(item => {
-        const schedule = snakeToCamel(item) as any
-        return {
-          ...schedule,
-          patient: (item as any).patients ? snakeToCamel((item as any).patients) : null,
-          item: (item as any).items ? snakeToCamel((item as any).items) : null
-        } as ScheduleWithDetails
-      })
-    } catch (error) {
-      console.error('Error fetching today checklist:', error)
-      throw new Error('오늘 체크리스트 조회에 실패했습니다')
+    
+    const executeQuery = async (retryCount = 0): Promise<ScheduleWithDetails[]> => {
+      try {
+        console.log('[scheduleService.getTodayChecklist] Fetching... (attempt:', retryCount + 1, ')')
+        const today = format(new Date(), 'yyyy-MM-dd')
+        
+        const { data, error } = await client
+          .from('schedules')
+          .select(`
+            *,
+            patients (*),
+            items (*)
+          `)
+          .eq('status', 'active')
+          .lte('next_due_date', today)
+          .order('priority', { ascending: false })
+          .order('next_due_date', { ascending: true })
+        
+        if (error) {
+          console.error('[scheduleService.getTodayChecklist] Error:', error)
+          
+          // Auth error - refresh token and retry
+          if ((error.message?.includes('JWT') || error.message?.includes('token') || error.code === 'PGRST301') && retryCount === 0) {
+            console.log('[scheduleService] Auth error, refreshing token...')
+            const { error: refreshError } = await client.auth.refreshSession()
+            if (!refreshError) {
+              return executeQuery(retryCount + 1)
+            }
+          }
+          throw error
+        }
+        
+        const schedules = (data || []).map(item => {
+          const schedule = snakeToCamel(item) as any
+          return {
+            ...schedule,
+            patient: (item as any).patients ? snakeToCamel((item as any).patients) : null,
+            item: (item as any).items ? snakeToCamel((item as any).items) : null
+          } as ScheduleWithDetails
+        })
+        
+        console.log(`[scheduleService.getTodayChecklist] Fetched ${schedules.length} schedules`)
+        return schedules
+      } catch (error) {
+        console.error('Error fetching today checklist:', error)
+        throw new Error('오늘 체크리스트 조회에 실패했습니다')
+      }
     }
+    
+    return executeQuery()
   },
 
   async getUpcomingSchedules(daysAhead: number = 7, supabase?: SupabaseClient<Database>): Promise<ScheduleWithDetails[]> {
     const client = supabase || getSupabaseClient()
-    try {
-      const today = new Date()
-      const futureDate = format(addDays(today, daysAhead), 'yyyy-MM-dd')
-      // Include schedules from 7 days before their due date
-      const pastDate = format(addDays(today, -7), 'yyyy-MM-dd')
-      
-      const { data, error } = await client
-        .from('schedules')
-        .select(`
-          *,
-          patients (*),
-          items (*)
-        `)
-        .eq('status', 'active')
-        .gte('next_due_date', pastDate)
-        .lte('next_due_date', futureDate)
+    
+    const executeQuery = async (retryCount = 0): Promise<ScheduleWithDetails[]> => {
+      try {
+        console.log('[scheduleService.getUpcomingSchedules] Fetching... (attempt:', retryCount + 1, ')')
+        const today = new Date()
+        const futureDate = format(addDays(today, daysAhead), 'yyyy-MM-dd')
+        // Include schedules from 7 days before their due date
+        const pastDate = format(addDays(today, -7), 'yyyy-MM-dd')
+        
+        const { data, error } = await client
+          .from('schedules')
+          .select(`
+            *,
+            patients (*),
+            items (*)
+          `)
+          .eq('status', 'active')
+          .gte('next_due_date', pastDate)
+          .lte('next_due_date', futureDate)
         .order('next_due_date', { ascending: true })
-      
-      if (error) throw error
-      
-      return (data || []).map(item => {
-        const schedule = snakeToCamel(item) as any
-        return {
-          ...schedule,
-          patient: (item as any).patients ? snakeToCamel((item as any).patients) : null,
-          item: (item as any).items ? snakeToCamel((item as any).items) : null
-        } as ScheduleWithDetails
-      })
-    } catch (error) {
-      console.error('Error fetching upcoming schedules:', error)
-      throw new Error('예정된 일정 조회에 실패했습니다')
+        
+        if (error) {
+          console.error('[scheduleService.getUpcomingSchedules] Error:', error)
+          
+          // Auth error - refresh token and retry
+          if ((error.message?.includes('JWT') || error.message?.includes('token') || error.code === 'PGRST301') && retryCount === 0) {
+            console.log('[scheduleService] Auth error, refreshing token...')
+            const { error: refreshError } = await client.auth.refreshSession()
+            if (!refreshError) {
+              return executeQuery(retryCount + 1)
+            }
+          }
+          throw error
+        }
+        
+        const schedules = (data || []).map(item => {
+          const schedule = snakeToCamel(item) as any
+          return {
+            ...schedule,
+            patient: (item as any).patients ? snakeToCamel((item as any).patients) : null,
+            item: (item as any).items ? snakeToCamel((item as any).items) : null
+          } as ScheduleWithDetails
+        })
+        
+        console.log(`[scheduleService.getUpcomingSchedules] Fetched ${schedules.length} schedules`)
+        return schedules
+      } catch (error) {
+        console.error('Error fetching upcoming schedules:', error)
+        throw new Error('예정된 일정 조회에 실패했습니다')
+      }
     }
+    
+    return executeQuery()
   },
 
   async getByPatientId(patientId: string, supabase?: SupabaseClient<Database>): Promise<ScheduleWithDetails[]> {
