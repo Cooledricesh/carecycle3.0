@@ -23,7 +23,7 @@ export const scheduleService = {
       // Calculate next_due_date from start_date
       const nextDueDate = validated.startDate
       
-      const { data, error } = await client
+      const { data, error } = await (client as any)
         .from('schedules')
         .insert({
           ...snakeData,
@@ -64,11 +64,11 @@ export const scheduleService = {
         .maybeSingle()
       
       if (existingItem) {
-        itemId = existingItem.id
+        itemId = (existingItem as any).id
       } else {
         // Create new item (code is optional, so we generate a unique one)
         const itemCode = `CUSTOM_${Date.now()}`
-        const { data: newItem, error: itemError } = await client
+        const { data: newItem, error: itemError } = await (client as any)
           .from('items')
           .insert({
             code: itemCode,
@@ -89,7 +89,7 @@ export const scheduleService = {
       const { data: userData } = await client.auth.getUser()
       const userId = userData?.user?.id
       
-      const { data, error } = await client
+      const { data, error } = await (client as any)
         .from('schedules')
         .insert({
           patient_id: input.patientId,
@@ -139,8 +139,8 @@ export const scheduleService = {
         const schedule = snakeToCamel(item) as any
         return {
           ...schedule,
-          patient: item.patients ? snakeToCamel(item.patients) : null,
-          item: item.items ? snakeToCamel(item.items) : null
+          patient: (item as any).patients ? snakeToCamel((item as any).patients) : null,
+          item: (item as any).items ? snakeToCamel((item as any).items) : null
         } as ScheduleWithDetails
       })
     } catch (error) {
@@ -175,8 +175,8 @@ export const scheduleService = {
         const schedule = snakeToCamel(item) as any
         return {
           ...schedule,
-          patient: item.patients ? snakeToCamel(item.patients) : null,
-          item: item.items ? snakeToCamel(item.items) : null
+          patient: (item as any).patients ? snakeToCamel((item as any).patients) : null,
+          item: (item as any).items ? snakeToCamel((item as any).items) : null
         } as ScheduleWithDetails
       })
     } catch (error) {
@@ -204,8 +204,8 @@ export const scheduleService = {
         const schedule = snakeToCamel(item) as any
         return {
           ...schedule,
-          patient: item.patients ? snakeToCamel(item.patients) : null,
-          item: item.items ? snakeToCamel(item.items) : null
+          patient: (item as any).patients ? snakeToCamel((item as any).patients) : null,
+          item: (item as any).items ? snakeToCamel((item as any).items) : null
         } as ScheduleWithDetails
       })
     } catch (error) {
@@ -235,8 +235,8 @@ export const scheduleService = {
       const schedule = snakeToCamel(data) as any
       return {
         ...schedule,
-        patient: snakeToCamel(data.patients),
-        item: snakeToCamel(data.items)
+        patient: snakeToCamel((data as any).patients),
+        item: snakeToCamel((data as any).items)
       } as ScheduleWithDetails
     } catch (error) {
       console.error('Error fetching schedule:', error)
@@ -317,8 +317,8 @@ export const scheduleService = {
         const schedule = snakeToCamel(item) as any
         return {
           ...schedule,
-          patient: item.patients ? snakeToCamel(item.patients) : null,
-          item: item.items ? snakeToCamel(item.items) : null
+          patient: (item as any).patients ? snakeToCamel((item as any).patients) : null,
+          item: (item as any).items ? snakeToCamel((item as any).items) : null
         } as ScheduleWithDetails
       })
     } catch (error) {
@@ -367,8 +367,8 @@ export const scheduleService = {
         const schedule = snakeToCamel(item) as any
         return {
           ...schedule,
-          patient: item.patients ? snakeToCamel(item.patients) : null,
-          item: item.items ? snakeToCamel(item.items) : null
+          patient: (item as any).patients ? snakeToCamel((item as any).patients) : null,
+          item: (item as any).items ? snakeToCamel((item as any).items) : null
         } as ScheduleWithDetails
       })
     } catch (error) {

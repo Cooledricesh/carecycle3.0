@@ -25,7 +25,8 @@ export default function DebugProfilePage() {
 
     setCreating(true);
     try {
-      const { data, error } = await supabase
+      // TODO: Fix TypeScript types for profiles table
+      const { data, error } = await (supabase as any)
         .from('profiles')
         .upsert({
           id: user.id,

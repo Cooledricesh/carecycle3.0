@@ -4,7 +4,6 @@ import { PatientRegistrationModal } from '@/components/patients/patient-registra
 import { PatientDeleteDialog } from '@/components/patients/patient-delete-dialog'
 import { ScheduleCreateModal } from '@/components/schedules/schedule-create-modal'
 import { usePatients } from '@/hooks/usePatients'
-import { usePatientsPolling } from '@/hooks/useFallbackPolling'
 import {
   Table,
   TableBody,
@@ -23,8 +22,7 @@ import { Users, Calendar, AlertCircle, RefreshCw } from 'lucide-react'
 export default function PatientsPage() {
   const { patients, isLoading, error, refetch, deletePatient, isDeleting } = usePatients()
   
-  // Enable fallback polling for patients data
-  usePatientsPolling()
+  // Polling is now handled by useRealtimeEvents in the RealtimeProvider
 
   const handleRegistrationSuccess = () => {
     refetch()

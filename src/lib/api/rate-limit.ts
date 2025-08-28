@@ -1,5 +1,3 @@
-'use server'
-
 import { NextRequest } from 'next/server'
 import { apiErrors } from './response'
 

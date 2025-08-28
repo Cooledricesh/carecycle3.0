@@ -49,17 +49,17 @@ export function usePatients() {
       const previousPatients = queryClient.getQueryData<Patient[]>(queryKeys.patients.lists())
       
       // Optimistically update to the new value with a temporary ID
-      const tempPatient: Patient = {
+      const tempPatient = {
         id: `temp-${Date.now()}`,
         patientNumber: input.patientNumber,
         name: input.name,
-        birthDate: input.birthDate || null,
-        gender: input.gender || null,
-        roomNumber: input.roomNumber || null,
-        bedNumber: input.bedNumber || null,
-        diagnosis: input.diagnosis || null,
+        birthDate: (input as any).birthDate || null,
+        gender: (input as any).gender || null,
+        roomNumber: (input as any).roomNumber || null,
+        bedNumber: (input as any).bedNumber || null,
+        diagnosis: (input as any).diagnosis || null,
         careType: input.careType || null,
-        notes: input.notes || null,
+        notes: (input as any).notes || null,
         isActive: true,
         nurseId: user?.id || '',
         createdAt: new Date().toISOString(),
@@ -67,8 +67,8 @@ export function usePatients() {
       }
       
       queryClient.setQueryData<Patient[]>(queryKeys.patients.lists(), (old) => {
-        if (!old) return [tempPatient]
-        return [...old, tempPatient]
+        if (!old) return [tempPatient as Patient]
+        return [...old, tempPatient as Patient]
       })
       
       // Return a context object with the snapshotted value

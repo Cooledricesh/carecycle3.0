@@ -1,5 +1,3 @@
-'use server'
-
 import { NextRequest } from 'next/server'
 import { z, ZodSchema } from 'zod'
 import { apiErrors } from './response'

@@ -10,8 +10,13 @@ export class RealtimeConnectionManager {
   private isInitialized = false
   private currentChannel: any = null
   private isReconnecting = false
+  private visibilityHandler: (() => void) | null = null
+  private keepaliveInterval: NodeJS.Timeout | null = null
+  private lastPingTime: number = Date.now()
 
-  private constructor() {}
+  private constructor() {
+    this.setupVisibilityHandler()
+  }
 
   public static getInstance(): RealtimeConnectionManager {
     if (!RealtimeConnectionManager.instance) {
@@ -31,13 +36,16 @@ export class RealtimeConnectionManager {
     this.supabase = supabase
     this.isInitialized = true
 
-    // Set up the main realtime channel
-    try {
-      await this.setupRealtimeSubscriptions()
-    } catch (error) {
-      console.error('[RealtimeConnectionManager] Failed to setup subscriptions:', error)
-      this.isInitialized = false
-      throw error
+    // Set up the main realtime channel only if page is visible
+    if (typeof document !== 'undefined' && !document.hidden) {
+      try {
+        await this.setupRealtimeSubscriptions()
+        this.startKeepalive()
+      } catch (error) {
+        console.error('[RealtimeConnectionManager] Failed to setup subscriptions:', error)
+        this.isInitialized = false
+        throw error
+      }
     }
   }
 
@@ -150,6 +158,8 @@ export class RealtimeConnectionManager {
           timestamp: Date.now()
         })
         eventManager.resetReconnection()
+        // Update ping time on successful subscription
+        this.lastPingTime = Date.now()
       } else if (status === 'CHANNEL_ERROR') {
         console.error('[RealtimeConnectionManager] Channel error:', err)
         eventManager.emitConnectionEvent({
@@ -185,8 +195,16 @@ export class RealtimeConnectionManager {
           message: 'Channel closed',
           timestamp: Date.now()
         })
-        // Don't auto-reconnect on manual close
-        this.isReconnecting = false
+        // Auto-reconnect on CLOSED status unless page is hidden
+        if (typeof document !== 'undefined' && !document.hidden && !this.isReconnecting) {
+          this.isReconnecting = true
+          console.log('[RealtimeConnectionManager] Scheduling reconnection after CLOSED status')
+          setTimeout(() => {
+            eventManager.scheduleReconnect(async () => {
+              await this.reconnect()
+            })
+          }, 2000)
+        }
       } else {
         console.log('[RealtimeConnectionManager] Channel status update:', status)
       }
@@ -204,17 +222,36 @@ export class RealtimeConnectionManager {
       return
     }
 
+    // Don't reconnect if page is hidden
+    if (typeof document !== 'undefined' && document.hidden) {
+      console.log('[RealtimeConnectionManager] Page is hidden, skipping reconnection')
+      this.isReconnecting = false
+      return
+    }
+
     console.log('[RealtimeConnectionManager] Attempting to reconnect...')
     
     try {
+      // Force disconnect existing channel
+      if (this.currentChannel) {
+        this.currentChannel.unsubscribe()
+        this.currentChannel = null
+      }
+      
       // Unregister old channel
       eventManager.unregisterChannel('database-changes')
       
       // Wait a bit before reconnecting to avoid rapid reconnection
       await new Promise(resolve => setTimeout(resolve, 1000))
       
+      // Reset ping time
+      this.lastPingTime = Date.now()
+      
       // Set up new subscriptions
       await this.setupRealtimeSubscriptions()
+      
+      // Restart keepalive
+      this.startKeepalive()
     } catch (error) {
       console.error('[RealtimeConnectionManager] Reconnection failed:', error)
       this.isReconnecting = false
@@ -222,14 +259,94 @@ export class RealtimeConnectionManager {
     }
   }
 
+  // Setup page visibility handler
+  private setupVisibilityHandler() {
+    if (typeof document === 'undefined') return
+
+    this.visibilityHandler = () => {
+      if (document.hidden) {
+        console.log('[RealtimeConnectionManager] Page hidden, pausing connection')
+        this.pauseConnection()
+      } else {
+        console.log('[RealtimeConnectionManager] Page visible, resuming connection')
+        this.resumeConnection()
+      }
+    }
+
+    document.addEventListener('visibilitychange', this.visibilityHandler)
+  }
+
+  // Pause connection when page is hidden
+  private pauseConnection() {
+    this.stopKeepalive()
+    if (this.currentChannel) {
+      console.log('[RealtimeConnectionManager] Pausing channel subscription')
+      this.currentChannel.unsubscribe()
+      eventManager.unregisterChannel('database-changes')
+      this.currentChannel = null
+    }
+  }
+
+  // Resume connection when page becomes visible
+  private async resumeConnection() {
+    if (!this.supabase || !this.isInitialized) return
+    
+    console.log('[RealtimeConnectionManager] Resuming connection')
+    this.isReconnecting = false
+    
+    try {
+      await this.setupRealtimeSubscriptions()
+      this.startKeepalive()
+    } catch (error) {
+      console.error('[RealtimeConnectionManager] Failed to resume connection:', error)
+    }
+  }
+
+  // Start keepalive mechanism
+  private startKeepalive() {
+    this.stopKeepalive()
+    
+    // Send keepalive every 30 seconds
+    this.keepaliveInterval = setInterval(() => {
+      const now = Date.now()
+      const timeSinceLastPing = now - this.lastPingTime
+      
+      // If more than 60 seconds since last ping, force reconnect
+      if (timeSinceLastPing > 60000) {
+        console.warn('[RealtimeConnectionManager] Keepalive timeout detected, forcing reconnect')
+        this.reconnect()
+      } else if (this.currentChannel) {
+        // Send a ping to keep connection alive
+        this.lastPingTime = now
+        console.log('[RealtimeConnectionManager] Sending keepalive ping')
+      }
+    }, 30000)
+  }
+
+  // Stop keepalive mechanism
+  private stopKeepalive() {
+    if (this.keepaliveInterval) {
+      clearInterval(this.keepaliveInterval)
+      this.keepaliveInterval = null
+    }
+  }
+
   // Manual disconnect
   public disconnect() {
     console.log('[RealtimeConnectionManager] Disconnecting...')
     this.isReconnecting = false
+    this.stopKeepalive()
+    
     if (this.currentChannel) {
       this.currentChannel.unsubscribe()
       this.currentChannel = null
     }
+    
+    if (this.visibilityHandler) {
+      document.removeEventListener('visibilitychange', this.visibilityHandler)
+      this.visibilityHandler = null
+    }
+    
     eventManager.unregisterChannel('database-changes')
     eventManager.cleanup()
     this.isInitialized = false

@@ -21,13 +21,13 @@ export const optimizedScheduleService = {
   ): Promise<ScheduleWithDetails[]> {
     const client = supabase || getSupabaseClient()
     try {
-      const { data, error } = await client.rpc('get_today_checklist_optimized', {
+      const { data, error } = await (client as any).rpc('get_today_checklist_optimized', {
         nurse_id_filter: nurseId || null
       })
       
       if (error) throw error
       
-      return (data || []).map(item => ({
+      return (data || []).map((item: any) => ({
         id: item.schedule_id,
         patientId: item.patient_id,
         itemId: item.item_id,
@@ -68,7 +68,7 @@ export const optimizedScheduleService = {
   ): Promise<ScheduleWithDetails[]> {
     const client = supabase || getSupabaseClient()
     try {
-      const { data, error } = await client.rpc('get_upcoming_schedules_optimized', {
+      const { data, error } = await (client as any).rpc('get_upcoming_schedules_optimized', {
         days_ahead: daysAhead,
         nurse_id_filter: nurseId || null,
         patient_id_filter: patientId || null
@@ -76,7 +76,7 @@ export const optimizedScheduleService = {
       
       if (error) throw error
       
-      return (data || []).map(item => ({
+      return (data || []).map((item: any) => ({
         id: item.schedule_id,
         patientId: item.patient_id,
         itemId: item.item_id,
@@ -114,13 +114,13 @@ export const optimizedScheduleService = {
   ) {
     const client = supabase || getSupabaseClient()
     try {
-      const { data, error } = await client.rpc('get_patient_schedule_overview', {
+      const { data, error } = await (client as any).rpc('get_patient_schedule_overview', {
         target_patient_id: patientId
       })
       
       if (error) throw error
       
-      return (data || []).map(item => toCamelCase(item))
+      return (data || []).map((item: any) => toCamelCase(item))
     } catch (error) {
       console.error('Error fetching patient schedule overview:', error)
       throw new Error('환자 일정 개요 조회에 실패했습니다')
@@ -149,14 +149,14 @@ export const optimizedScheduleService = {
         executed_by: completion.executedBy
       }))
 
-      const { data, error } = await client.rpc('mark_schedules_completed_batch', {
+      const { data, error } = await (client as any).rpc('mark_schedules_completed_batch', {
         schedule_data: scheduleData
       })
       
       if (error) throw error
       
       // Return results with camelCase conversion
-      return (data || []).map(result => ({
+      return (data || []).map((result: any) => ({
         scheduleId: result.schedule_id,
         success: result.success,
         errorMessage: result.error_message,
@@ -203,7 +203,7 @@ export const optimizedScheduleService = {
       
       if (error) throw error
       
-      return (data || []).map(item => toCamelCase(item))
+      return (data || []).map((item: any) => toCamelCase(item))
     } catch (error) {
       console.error('Error fetching patient schedule summary:', error)
       throw new Error('환자 일정 요약 조회에 실패했습니다')

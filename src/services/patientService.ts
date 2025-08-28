@@ -32,7 +32,7 @@ export const patientService = {
       
       console.log('[patientService.create] Insert data:', insertData)
       
-      const { data, error } = await client
+      const { data, error } = await (client as any)
         .from('patients')
         .insert(insertData)
         .select()
@@ -127,7 +127,7 @@ export const patientService = {
       const validated = PatientUpdateSchema.parse(input)
       const snakeData = toSnakeCase(validated)
       
-      const { data, error } = await client
+      const { data, error } = await (client as any)
         .from('patients')
         .update(snakeData)
         .eq('id', id)
@@ -164,27 +164,9 @@ export const patientService = {
       
       console.log('[patientService.delete] Found patient:', existingPatient)
       
-      // First, soft delete all schedules for this patient
-      const { error: scheduleError } = await client
-        .from('schedules')
-        .update({ 
-          status: 'paused',
-          updated_at: new Date().toISOString()
-        })
-        .eq('patient_id', id)
-        .eq('status', 'active')  // Only update active schedules
-      
-      if (scheduleError) {
-        console.error('[patientService.delete] Error deactivating schedules:', scheduleError)
-        console.error('[patientService.delete] Schedule error code:', scheduleError.code)
-        console.error('[patientService.delete] Schedule error message:', scheduleError.message)
-        // Continue anyway - we'll still try to delete the patient
-      } else {
-        console.log('[patientService.delete] Successfully deactivated patient schedules')
-      }
-      
-      // Now perform the soft delete on the patient
-      const { error } = await client
+      // Perform the soft delete on the patient
+      // The database trigger will automatically cascade delete all related schedules
+      const { error } = await (client as any)
         .from('patients')
         .update({ 
           is_active: false,
@@ -224,7 +206,7 @@ export const patientService = {
         throw error
       }
       
-      console.log('[patientService.delete] Successfully deleted patient and related schedules')
+      console.log('[patientService.delete] Successfully deleted patient (schedules cascade deleted by trigger)')
     } catch (error) {
       console.error('[patientService.delete] Full error object:', error)
       if (error instanceof Error) {

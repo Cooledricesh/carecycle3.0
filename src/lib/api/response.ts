@@ -1,5 +1,3 @@
-'use server'
-
 import { NextResponse } from 'next/server'
 
 export type ApiSuccessResponse<T = any> = {

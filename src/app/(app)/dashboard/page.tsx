@@ -8,7 +8,6 @@ import { useAuthContext } from "@/providers/auth-provider";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import { useTodayChecklist, useUpcomingSchedules } from "@/hooks/useSchedules";
-import { useDashboardPolling } from "@/hooks/useFallbackPolling";
 import { scheduleService } from "@/services/scheduleService";
 import type { ScheduleWithDetails } from "@/types/schedule";
 import { format, isToday, isWithinInterval, addDays } from "date-fns";
@@ -40,8 +39,7 @@ export default function DashboardPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Enable fallback polling for dashboard data
-  useDashboardPolling();
+  // Polling is now handled by useRealtimeEvents in the RealtimeProvider
 
   // Use React Query hooks for data fetching
   const { data: todaySchedules = [], isLoading: todayLoading, refetch: refetchToday } = useTodayChecklist();

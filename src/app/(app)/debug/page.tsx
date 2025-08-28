@@ -214,7 +214,7 @@ export default function DebugPage() {
                 <div key={index} className="p-3 border rounded-lg bg-red-50">
                   <div className="flex justify-between items-start">
                     <div>
-                      <p className="font-medium">{error.name}</ателефон>
+                      <p className="font-medium">{error.name}</p>
                       <p className="text-sm text-red-600">{error.error}</p>
                     </div>
                     <Badge variant="destructive">{error.type}</Badge>

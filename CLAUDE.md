@@ -170,6 +170,78 @@ Currently no test framework is configured. When implementing tests:
 - Unit tests for core functionality
 - Consider integration and end-to-end tests
 
+## Playwright MCP Usage Guide
+
+### Overview
+Playwright MCP is used for browser automation and E2E testing. Configuration files in `.playwright-mcp/` prevent multiple browser tabs issue.
+
+### Best Practices for Playwright MCP
+
+1. **Browser Management**
+   - Always close browser after test sequences: `mcp__playwright__browser_close`
+   - Check for existing browser before starting new tests
+   - Use single browser context for related operations
+
+2. **Common Commands**
+   ```bash
+   # Close all Playwright browsers
+   mcp__playwright__browser_close
+   
+   # Kill zombie Playwright processes
+   pkill -f "chrome.*playwright"
+   
+   # Clear Playwright cache (if issues persist)
+   rm -rf ~/Library/Caches/ms-playwright/
+   ```
+
+3. **Test Structure Pattern**
+   ```javascript
+   // 1. Navigate to page
+   mcp__playwright__browser_navigate({ url: "http://localhost:3000" })
+   
+   // 2. Take snapshot for visual reference
+   mcp__playwright__browser_snapshot()
+   
+   // 3. Interact with elements
+   mcp__playwright__browser_click({ element: "button", ref: "button-ref" })
+   
+   // 4. Wait for results
+   mcp__playwright__browser_wait_for({ text: "Success" })
+   
+   // 5. Clean up
+   mcp__playwright__browser_close()
+   ```
+
+4. **Troubleshooting Multiple Tabs Issue**
+   - Configuration in `.playwright-mcp/config.js` controls browser behavior
+   - Set `autoClose: true` for automatic tab cleanup
+   - Use `maxTabs: 1` to limit open tabs
+   - Helper functions in `.playwright-mcp/browser-helper.js` manage lifecycle
+
+5. **Important Notes**
+   - Do NOT run multiple browser instances simultaneously
+   - Always handle errors to ensure cleanup runs
+   - Monitor browser process count during tests
+   - Restart Claude Desktop if MCP connection issues persist
+
+### Testing Workflow with Playwright MCP
+
+1. **Pre-test Cleanup**
+   ```bash
+   # Ensure no browsers are running
+   mcp__playwright__browser_close
+   ```
+
+2. **Run Tests**
+   - Use browser_snapshot for debugging visual issues
+   - Implement proper waits between actions
+   - Verify elements exist before interacting
+
+3. **Post-test Cleanup**
+   - Always close browser after test completion
+   - Check for zombie processes if tabs persist
+   - Clear cache if performance degrades
+
 ## Development Workflow
 
 ### Solution Process

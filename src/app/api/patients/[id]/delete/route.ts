@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import type { Database } from '@/lib/database.types'
-import { getSupabaseServer } from '@/lib/supabase/server'
+import { createClient as getSupabaseServer } from '@/lib/supabase/server'
 
 export async function POST(
   request: Request,
@@ -23,23 +23,9 @@ export async function POST(
       )
     }
     
-    // First, soft delete all schedules for this patient
-    const { error: scheduleError } = await supabase
-      .from('schedules')
-      .update({ 
-        status: 'paused',
-        updated_at: new Date().toISOString()
-      })
-      .eq('patient_id', id)
-      .eq('status', 'active')
-    
-    if (scheduleError) {
-      console.log('[API] Warning: Could not deactivate schedules:', scheduleError)
-      // Continue anyway
-    }
-    
     // Try to update patient with regular client first
-    const { error: updateError } = await supabase
+    // The database trigger will automatically cascade delete all related schedules
+    const { error: updateError } = await (supabase as any)
       .from('patients')
       .update({ 
         is_active: false,
@@ -68,18 +54,9 @@ export async function POST(
       }
     )
     
-    // Deactivate schedules with admin client
-    await supabaseAdmin
-      .from('schedules')
-      .update({ 
-        status: 'paused',
-        updated_at: new Date().toISOString()
-      })
-      .eq('patient_id', id)
-      .eq('status', 'active')
-    
     // Deactivate patient with admin client
-    const { error: adminError } = await supabaseAdmin
+    // The database trigger will automatically cascade delete all related schedules
+    const { error: adminError } = await (supabaseAdmin as any)
       .from('patients')
       .update({ 
         is_active: false,

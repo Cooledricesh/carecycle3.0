@@ -34,7 +34,7 @@ export function useRealtimeSync() {
       (payload) => {
         console.log('[Realtime] Patient change received:', payload)
         const newPatient = toCamelCase(payload.new) as Patient
-        const oldPatientId = payload.old?.id
+        const oldPatientId = (payload.old as any)?.id
 
         // Update the main list of patients
         queryClient.setQueryData(

@@ -144,17 +144,17 @@ export function useAuth() {
       }
 
       // Check approval status
-      if (profile.approval_status === 'pending') {
+      if ((profile as any)?.approval_status === 'pending') {
         await supabase.auth.signOut();
         throw new Error('계정이 승인 대기 중입니다. 관리자의 승인을 기다려주세요.');
       }
 
-      if (profile.approval_status === 'rejected') {
+      if ((profile as any)?.approval_status === 'rejected') {
         await supabase.auth.signOut();
         throw new Error('계정 승인이 거부되었습니다. 관리자에게 문의하세요.');
       }
 
-      if (!profile.is_active) {
+      if (!(profile as any)?.is_active) {
         await supabase.auth.signOut();
         throw new Error('계정이 비활성화되었습니다. 관리자에게 문의하세요.');
       }

@@ -57,8 +57,8 @@ export async function GET(request: NextRequest) {
     }
     
     // Apply pagination
-    const from = (filters.page - 1) * filters.limit
-    const to = from + filters.limit - 1
+    const from = ((filters.page ?? 1) - 1) * (filters.limit ?? 10)
+    const to = from + (filters.limit ?? 10) - 1
     query = query.range(from, to)
     
     // Apply sorting
@@ -70,8 +70,8 @@ export async function GET(request: NextRequest) {
     
     return ApiResponseBuilder.paginated(
       data || [],
-      filters.page,
-      filters.limit,
+      filters.page ?? 1,
+      filters.limit ?? 10,
       count || 0,
       'Schedules retrieved successfully'
     )

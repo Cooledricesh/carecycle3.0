@@ -57,7 +57,7 @@ export function useOptimisticMutation<
     onError: (error, variables, context) => {
       console.error(`[useOptimisticMutation] Error:`, error)
       
-      if (rollbackOnError && context && 'previousData' in context) {
+      if (rollbackOnError && context && typeof context === 'object' && 'previousData' in context) {
         queryClient.setQueryData(queryKey, (context as any).previousData)
       }
 
