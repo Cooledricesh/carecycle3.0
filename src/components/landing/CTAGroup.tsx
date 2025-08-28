@@ -36,12 +36,12 @@ export function CTAGroup({
     }
   }, [error, toast]);
 
-  // Show loading skeletons during auth check
+  // Show loading skeletons during auth check - maintain button layout
   if (loading) {
     return (
-      <div className={`flex items-center justify-center gap-4 ${className}`} aria-busy="true" aria-label="로딩 중">
+      <div className={`flex flex-col items-center justify-center gap-3 sm:flex-row sm:gap-4 ${className}`} aria-busy="true" aria-label="로딩 중">
+        <Skeleton className="h-10 sm:h-11 w-24 sm:w-28" />
         <Skeleton className="h-10 sm:h-11 w-28 sm:w-32" />
-        <Skeleton className="h-10 sm:h-11 w-20 sm:w-24" />
       </div>
     );
   }

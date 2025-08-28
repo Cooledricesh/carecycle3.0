@@ -117,6 +117,7 @@ export function useAuth() {
 
   const signIn = async (email: string, password: string) => {
     try {
+      console.log('🔐 Starting sign in process for:', email);
       setAuthState(prev => ({ ...prev, loading: true, error: null }));
       
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -124,16 +125,20 @@ export function useAuth() {
         password,
       });
 
+      console.log('🔐 Auth response:', { data: !!data, error: error?.message });
       if (error) throw error;
 
       // Check user approval status
+      console.log('🔐 Fetching profile for user:', data.user!.id);
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('approval_status, is_active, role')
         .eq('id', data.user!.id)
         .single();
 
+      console.log('🔐 Profile response:', { profile, error: profileError?.message });
       if (profileError) {
+        console.log('🔐 Profile error, signing out');
         await supabase.auth.signOut();
         throw new Error('프로필을 불러올 수 없습니다.');
       }

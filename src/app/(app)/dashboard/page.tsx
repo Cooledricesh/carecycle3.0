@@ -8,12 +8,14 @@ import { useAuthContext } from "@/providers/auth-provider";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import { useTodayChecklist, useUpcomingSchedules } from "@/hooks/useSchedules";
+import { useDashboardPolling } from "@/hooks/useFallbackPolling";
 import { scheduleService } from "@/services/scheduleService";
 import type { ScheduleWithDetails } from "@/types/schedule";
 import { format, isToday, isWithinInterval, addDays } from "date-fns";
 import { ko } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { useQueryClient } from "@tanstack/react-query";
+import { getRelatedQueryKeys } from "@/lib/query-keys";
 import {
   Dialog,
   DialogContent,
@@ -38,6 +40,9 @@ export default function DashboardPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  // Enable fallback polling for dashboard data
+  useDashboardPolling();
+
   // Use React Query hooks for data fetching
   const { data: todaySchedules = [], isLoading: todayLoading, refetch: refetchToday } = useTodayChecklist();
   const { data: upcomingSchedules = [], isLoading: upcomingLoading, refetch: refetchUpcoming } = useUpcomingSchedules(7);
@@ -49,14 +54,6 @@ export default function DashboardPage() {
       setProfile({ name: user.email?.split('@')[0] || 'User' });
     }
   }, [user]);
-
-  const loadSchedules = async () => {
-    // Refetch both queries
-    await Promise.all([
-      refetchToday(),
-      refetchUpcoming()
-    ]);
-  };
 
   const handleRegistrationSuccess = () => {
     toast({
@@ -93,12 +90,24 @@ export default function DashboardPage() {
         description: `${selectedSchedule.patient?.name}님의 ${selectedSchedule.item?.name} 일정이 완료 처리되었습니다.`,
       });
 
-      // 다이얼로그 닫기
+      // Reset state and close dialog
+      setSelectedSchedule(null);
+      setExecutionNotes('');
       setIsCompletionDialogOpen(false);
       
-      // Invalidate queries to refresh data
-      queryClient.invalidateQueries({ queryKey: ['todayChecklist'] });
-      queryClient.invalidateQueries({ queryKey: ['upcomingSchedules'] });
+      // Invalidate all schedule-related queries for immediate update
+      const keysToInvalidate = getRelatedQueryKeys('schedule.complete');
+      await Promise.all(
+        keysToInvalidate.map(key => 
+          queryClient.invalidateQueries({ queryKey: key })
+        )
+      );
+      
+      // Force refetch current data
+      await Promise.all([
+        refetchToday(),
+        refetchUpcoming()
+      ]);
     } catch (error) {
       console.error('Failed to mark schedule as completed:', error);
       toast({
@@ -106,6 +115,12 @@ export default function DashboardPage() {
         description: "완료 처리 중 오류가 발생했습니다.",
         variant: "destructive"
       });
+      
+      // Refetch to ensure data consistency after error
+      await Promise.all([
+        refetchToday(),
+        refetchUpcoming()
+      ]);
     } finally {
       setIsSubmitting(false);
     }
@@ -258,8 +273,6 @@ export default function DashboardPage() {
                 const dueDate = new Date(schedule.nextDueDate);
                 const today = new Date();
                 const daysUntil = Math.ceil((dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-                // Check if schedule is within executable window (7 days before to 7 days after)
-                const isExecutable = daysUntil >= -7 && daysUntil <= 7;
                 
                 return (
                   <div key={schedule.id} className="flex items-center justify-between p-4 border rounded-lg">

@@ -145,14 +145,91 @@ export const patientService = {
   async delete(id: string, supabase?: SupabaseClient<Database>): Promise<void> {
     const client = supabase || getSupabaseClient()
     try {
+      console.log('[patientService.delete] Attempting to delete patient with id:', id)
+      
+      // First, check if the patient exists
+      const { data: existingPatient, error: fetchError } = await client
+        .from('patients')
+        .select('*')
+        .eq('id', id)
+        .single()
+      
+      if (fetchError) {
+        console.error('[patientService.delete] Error fetching patient:', fetchError)
+        if (fetchError.code === 'PGRST116') {
+          throw new Error('환자를 찾을 수 없습니다')
+        }
+        throw fetchError
+      }
+      
+      console.log('[patientService.delete] Found patient:', existingPatient)
+      
+      // First, soft delete all schedules for this patient
+      const { error: scheduleError } = await client
+        .from('schedules')
+        .update({ 
+          status: 'paused',
+          updated_at: new Date().toISOString()
+        })
+        .eq('patient_id', id)
+        .eq('status', 'active')  // Only update active schedules
+      
+      if (scheduleError) {
+        console.error('[patientService.delete] Error deactivating schedules:', scheduleError)
+        console.error('[patientService.delete] Schedule error code:', scheduleError.code)
+        console.error('[patientService.delete] Schedule error message:', scheduleError.message)
+        // Continue anyway - we'll still try to delete the patient
+      } else {
+        console.log('[patientService.delete] Successfully deactivated patient schedules')
+      }
+      
+      // Now perform the soft delete on the patient
       const { error } = await client
         .from('patients')
-        .update({ is_active: false })
+        .update({ 
+          is_active: false,
+          updated_at: new Date().toISOString()
+        })
         .eq('id', id)
       
-      if (error) throw error
+      if (error) {
+        console.error('[patientService.delete] Direct update failed:', error)
+        console.error('[patientService.delete] Error code:', error.code)
+        console.error('[patientService.delete] Error message:', error.message)
+        console.error('[patientService.delete] Error details:', error.details)
+        console.error('[patientService.delete] Error hint:', error.hint)
+        
+        // If RLS policy error (42501), use API route as fallback
+        if (error.code === '42501') {
+          console.log('[patientService.delete] RLS policy error, using API route fallback')
+          
+          const response = await fetch(`/api/patients/${id}/delete`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          })
+          
+          if (!response.ok) {
+            const errorData = await response.json()
+            console.error('[patientService.delete] API route failed:', errorData)
+            throw new Error(errorData.error || '환자 삭제에 실패했습니다')
+          }
+          
+          console.log('[patientService.delete] Successfully deleted via API route')
+          return
+        }
+        
+        // For other errors, throw them
+        throw error
+      }
+      
+      console.log('[patientService.delete] Successfully deleted patient and related schedules')
     } catch (error) {
-      console.error('Error deleting patient:', error)
+      console.error('[patientService.delete] Full error object:', error)
+      if (error instanceof Error) {
+        throw error
+      }
       throw new Error('환자 삭제에 실패했습니다')
     }
   },

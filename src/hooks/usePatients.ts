@@ -40,23 +40,64 @@ export function usePatients() {
     mutationFn: async (input: PatientCreateInput) => {
       return await patientService.create(input, supabase)
     },
-    onSuccess: (data) => {
-      // Invalidate all patient-related queries
-      const keysToInvalidate = getRelatedQueryKeys('patient.create')
-      keysToInvalidate.forEach(key => {
-        queryClient.invalidateQueries({ queryKey: key })
+    // Optimistic update
+    onMutate: async (input: PatientCreateInput) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: queryKeys.patients.lists() })
+      
+      // Snapshot the previous value
+      const previousPatients = queryClient.getQueryData<Patient[]>(queryKeys.patients.lists())
+      
+      // Optimistically update to the new value with a temporary ID
+      const tempPatient: Patient = {
+        id: `temp-${Date.now()}`,
+        patientNumber: input.patientNumber,
+        name: input.name,
+        birthDate: input.birthDate || null,
+        gender: input.gender || null,
+        roomNumber: input.roomNumber || null,
+        bedNumber: input.bedNumber || null,
+        diagnosis: input.diagnosis || null,
+        careType: input.careType || null,
+        notes: input.notes || null,
+        isActive: true,
+        nurseId: user?.id || '',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      }
+      
+      queryClient.setQueryData<Patient[]>(queryKeys.patients.lists(), (old) => {
+        if (!old) return [tempPatient]
+        return [...old, tempPatient]
       })
-      toast({
-        title: '성공',
-        description: '환자가 성공적으로 등록되었습니다.'
-      })
+      
+      // Return a context object with the snapshotted value
+      return { previousPatients }
     },
-    onError: (error) => {
+    onError: (error, input, context) => {
+      // If the mutation fails, use the context to rollback
+      if (context?.previousPatients) {
+        queryClient.setQueryData(queryKeys.patients.lists(), context.previousPatients)
+      }
+      
       const message = mapErrorToUserMessage(error)
       toast({
         title: '환자 등록 실패',
         description: message,
         variant: 'destructive'
+      })
+    },
+    onSettled: () => {
+      // Always refetch after error or success
+      const keysToInvalidate = getRelatedQueryKeys('patient.create')
+      keysToInvalidate.forEach(key => {
+        queryClient.invalidateQueries({ queryKey: key })
+      })
+    },
+    onSuccess: (data) => {
+      toast({
+        title: '성공',
+        description: '환자가 성공적으로 등록되었습니다.'
       })
     }
   })
@@ -65,23 +106,47 @@ export function usePatients() {
     mutationFn: async (id: string) => {
       return await patientService.delete(id, supabase)
     },
-    onSuccess: () => {
-      // Invalidate all patient-related queries
-      const keysToInvalidate = getRelatedQueryKeys('patient.delete')
-      keysToInvalidate.forEach(key => {
-        queryClient.invalidateQueries({ queryKey: key })
+    // Optimistic update
+    onMutate: async (id: string) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: queryKeys.patients.lists() })
+      
+      // Snapshot the previous value
+      const previousPatients = queryClient.getQueryData<Patient[]>(queryKeys.patients.lists())
+      
+      // Optimistically update to the new value
+      queryClient.setQueryData<Patient[]>(queryKeys.patients.lists(), (old) => {
+        if (!old) return []
+        return old.filter(patient => patient.id !== id)
       })
-      toast({
-        title: '성공',
-        description: '환자가 성공적으로 삭제되었습니다.'
-      })
+      
+      // Return a context object with the snapshotted value
+      return { previousPatients }
     },
-    onError: (error) => {
+    onError: (error, id, context) => {
+      // If the mutation fails, use the context to rollback
+      if (context?.previousPatients) {
+        queryClient.setQueryData(queryKeys.patients.lists(), context.previousPatients)
+      }
+      
       const message = mapErrorToUserMessage(error)
       toast({
         title: '환자 삭제 실패',
         description: message,
         variant: 'destructive'
+      })
+    },
+    onSettled: () => {
+      // Always refetch after error or success
+      const keysToInvalidate = getRelatedQueryKeys('patient.delete')
+      keysToInvalidate.forEach(key => {
+        queryClient.invalidateQueries({ queryKey: key })
+      })
+    },
+    onSuccess: () => {
+      toast({
+        title: '성공',
+        description: '환자가 성공적으로 삭제되었습니다.'
       })
     }
   })

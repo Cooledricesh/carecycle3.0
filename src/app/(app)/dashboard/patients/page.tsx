@@ -1,8 +1,10 @@
 'use client'
 
 import { PatientRegistrationModal } from '@/components/patients/patient-registration-modal'
+import { PatientDeleteDialog } from '@/components/patients/patient-delete-dialog'
 import { ScheduleCreateModal } from '@/components/schedules/schedule-create-modal'
 import { usePatients } from '@/hooks/usePatients'
+import { usePatientsPolling } from '@/hooks/useFallbackPolling'
 import {
   Table,
   TableBody,
@@ -19,7 +21,10 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Users, Calendar, AlertCircle, RefreshCw } from 'lucide-react'
 
 export default function PatientsPage() {
-  const { patients, isLoading, error, refetch } = usePatients()
+  const { patients, isLoading, error, refetch, deletePatient, isDeleting } = usePatients()
+  
+  // Enable fallback polling for patients data
+  usePatientsPolling()
 
   const handleRegistrationSuccess = () => {
     refetch()
@@ -27,6 +32,10 @@ export default function PatientsPage() {
 
   const handleScheduleSuccess = () => {
     refetch()
+  }
+
+  const handleDeletePatient = (id: string) => {
+    deletePatient(id)
   }
 
   return (
@@ -118,16 +127,24 @@ export default function PatientsPage() {
                         {new Date(patient.createdAt).toLocaleDateString('ko-KR')}
                       </TableCell>
                       <TableCell className="text-right">
-                        <ScheduleCreateModal
-                          presetPatientId={patient.id}
-                          onSuccess={handleScheduleSuccess}
-                          triggerButton={
-                            <Button variant="outline" size="sm">
-                              <Calendar className="mr-2 h-4 w-4" />
-                              스케줄 추가
-                            </Button>
-                          }
-                        />
+                        <div className="flex items-center justify-end gap-2">
+                          <ScheduleCreateModal
+                            presetPatientId={patient.id}
+                            onSuccess={handleScheduleSuccess}
+                            triggerButton={
+                              <Button variant="outline" size="sm">
+                                <Calendar className="mr-2 h-4 w-4" />
+                                스케줄 추가
+                              </Button>
+                            }
+                          />
+                          <PatientDeleteDialog
+                            patientName={patient.name}
+                            patientNumber={patient.patientNumber}
+                            onConfirm={() => handleDeletePatient(patient.id)}
+                            isDeleting={isDeleting}
+                          />
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}

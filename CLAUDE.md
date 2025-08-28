@@ -34,14 +34,18 @@ npx shadcn@latest add [component-name]  # Add new UI components
 ```
 src/
 ├── app/                    # Next.js 15 App Router pages
+│   ├── (app)/             # Protected app routes with layout
+│   │   ├── dashboard/     # Main dashboard interface
+│   │   ├── admin/         # Admin-specific pages
+│   │   └── debug/         # Performance monitoring dashboard
 │   ├── api/               # API routes (auth endpoints)
-│   ├── admin/             # Admin-specific pages
-│   ├── dashboard/         # Main dashboard interface
 │   └── auth/              # Authentication pages
 ├── components/            # React components
 │   ├── ui/               # shadcn/ui base components
 │   ├── admin/            # Admin-specific components
-│   └── dashboard/        # Dashboard-specific components
+│   ├── dashboard/        # Dashboard-specific components
+│   ├── patients/         # Patient management components
+│   └── schedules/        # Schedule management components
 ├── features/             # Feature-based modules (when needed)
 │   └── [feature]/
 │       ├── components/
@@ -49,9 +53,19 @@ src/
 │       ├── lib/
 │       └── api.ts
 ├── hooks/                # Global React hooks
+│   ├── useRealtimeEvents.ts     # Real-time event subscriptions
+│   ├── useOptimisticMutation.ts # Optimistic update utilities
+│   └── useFallbackPolling.ts    # Polling fallback strategy
 ├── lib/                  # Utilities and configurations
-│   └── supabase/        # Supabase client configurations
-└── providers/           # React context providers
+│   ├── supabase/        # Supabase client configurations
+│   ├── realtime/        # Real-time architecture
+│   │   ├── event-manager.ts      # Event bus system
+│   │   └── connection-manager.ts # WebSocket management
+│   └── monitoring/      # Performance monitoring
+│       └── performance-monitor.ts # Metrics collection
+├── providers/           # React context providers
+├── services/           # API service layers
+└── types/             # TypeScript type definitions
 ```
 
 ### Key Technical Decisions
@@ -243,8 +257,94 @@ The project includes detailed documentation in `/vooster-docs/`:
 - Keep dependencies up to date but test thoroughly
 - Document any version-specific requirements
 
+## Real-time Architecture Guidelines
+
+### Event-Driven System
+- **Event Manager**: Central event bus for all real-time updates
+  - Use `eventManager.subscribeToTable()` for table-specific events
+  - Use `eventManager.subscribeToConnection()` for connection state
+  - Always clean up subscriptions in useEffect cleanup
+- **Connection Manager**: Single WebSocket connection point
+  - Automatically handles reconnection with exponential backoff
+  - Monitors connection health and emits status events
+  - Single channel for all database changes
+
+### Optimistic Updates Pattern
+```typescript
+// Example: Optimistic delete with rollback
+onMutate: async (id) => {
+  await queryClient.cancelQueries({ queryKey })
+  const previousData = queryClient.getQueryData(queryKey)
+  queryClient.setQueryData(queryKey, optimisticUpdate)
+  return { previousData }
+},
+onError: (error, variables, context) => {
+  if (context?.previousData) {
+    queryClient.setQueryData(queryKey, context.previousData)
+  }
+}
+```
+
+### Fallback Polling Strategy
+- Use `useFallbackPolling()` hook for critical data
+- Polling intervals:
+  - Connected: 30-60 seconds (backup polling)
+  - Disconnected: 3-5 seconds (primary data sync)
+- Pre-configured hooks: `useDashboardPolling()`, `usePatientsPolling()`
+
+### Performance Monitoring
+- Access debug dashboard at `/debug` for real-time metrics
+- Key metrics to monitor:
+  - Cache hit rate (target > 70%)
+  - Average query time (target < 500ms)
+  - Connection uptime (target > 90%)
+  - Error rate (target < 5%)
+- Use `performanceMonitor.recordMetric()` for custom metrics
+
+### Best Practices
+1. **Single Source of Truth**: Let React Query manage cache, don't duplicate in local state
+2. **Event Isolation**: Each component subscribes only to relevant events
+3. **Graceful Degradation**: Always implement fallback for real-time failures
+4. **User Feedback**: Show connection status and sync indicators
+5. **Cleanup**: Always unsubscribe from events in cleanup functions
+
+## Troubleshooting Guide
+
+### Common Issues & Solutions
+
+#### Real-time Sync Not Working
+1. Check `/debug` dashboard for connection status
+2. Verify Supabase Realtime is enabled for tables
+3. Check browser console for WebSocket errors
+4. Ensure RLS policies allow SELECT on subscribed tables
+5. Try hard refresh (Cmd+Shift+R / Ctrl+Shift+F5)
+
+#### Session Lost on Page Refresh
+1. Check middleware.ts authentication paths match actual routes
+2. Verify cookies are being set correctly
+3. Check for auth state listener in auth-provider
+4. Ensure proper cookie configuration in Supabase client
+
+#### Optimistic Updates Not Rolling Back
+1. Ensure `onMutate` returns context with previous data
+2. Check `onError` handler restores previous data from context
+3. Verify mutation key matches query key exactly
+
+#### High Query Times (> 1000ms)
+1. Check database indexes are properly created
+2. Verify materialized views are refreshed
+3. Review N+1 query patterns
+4. Consider pagination for large datasets
+
+#### Memory Leaks in Development
+1. Check for missing cleanup in useEffect hooks
+2. Ensure event subscriptions are unsubscribed
+3. Clear intervals/timeouts properly
+4. Check for circular references in state
+
 ## Internationalization
 
 - Check for UTF-8 encoding issues with Korean text
 - Ensure Korean characters display correctly (깨지는 한글 확인)
 - Test with various character encodings
+- 제발 포트 실행되어 있는지 아닌지 체크하고 개발 서버 열어. 이미 열려있는데 왜 자꾸 npm run dev 실행하냐?

@@ -9,7 +9,7 @@ import { useAuthContext } from '@/providers/auth-provider';
 import { 
   HeroSection, 
   FeaturesSection, 
-  CTAGroup, 
+  OptimizedCTAGroup as CTAGroup, 
   BenefitsSection, 
   SecuritySection 
 } from '@/components/landing';

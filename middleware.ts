@@ -39,12 +39,12 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Public routes that don't require authentication
-  const publicRoutes = ["/", "/auth/login", "/auth/signup", "/auth/forgot-password"];
+  const publicRoutes = ["/", "/auth/signin", "/auth/signup", "/auth/forgot-password"];
   const isPublicRoute = publicRoutes.includes(pathname);
 
   // If user is not authenticated and trying to access protected route
   if (!user && !isPublicRoute) {
-    const redirectUrl = new URL("/auth/login", request.url);
+    const redirectUrl = new URL("/auth/signin", request.url);
     redirectUrl.searchParams.set("redirectTo", pathname);
     return NextResponse.redirect(redirectUrl);
   }
@@ -77,7 +77,7 @@ export async function middleware(request: NextRequest) {
 
     // Nurse route protection (optional - nurses can access their dashboard)
     if (pathname.startsWith("/dashboard/") && !profile) {
-      return NextResponse.redirect(new URL("/auth/login", request.url));
+      return NextResponse.redirect(new URL("/auth/signin", request.url));
     }
   }
 

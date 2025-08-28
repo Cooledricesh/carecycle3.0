@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { 
@@ -12,7 +12,8 @@ import {
   UserCog,
   Settings,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  List
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -29,10 +30,11 @@ interface NavItem {
 }
 
 const navigation: NavItem[] = [
-  { name: '내 스케줄', href: '/dashboard', icon: Calendar, roles: ['nurse', 'admin'] },
-  { name: '환자 관리', href: '/dashboard/patients', icon: Users, roles: ['nurse', 'admin'] },
-  { name: '스케줄 관리', href: '/dashboard/schedules', icon: Clock, roles: ['nurse', 'admin'] },
-  { name: '프로필', href: '/dashboard/profile', icon: User, roles: ['nurse', 'admin'] },
+  { name: '내 스케줄', href: '/dashboard', icon: Calendar },
+  { name: '환자 관리', href: '/dashboard/patients', icon: Users },
+  { name: '스케줄 관리', href: '/dashboard/schedules', icon: Clock },
+  { name: '항목 관리', href: '/dashboard/items', icon: List },
+  { name: '프로필', href: '/dashboard/profile', icon: User },
 ];
 
 const adminNavigation: NavItem[] = [
@@ -42,7 +44,7 @@ const adminNavigation: NavItem[] = [
 
 export function Sidebar() {
   const pathname = usePathname();
-  const { user, profile } = useAuthContext();
+  const { user, profile, loading } = useAuthContext();
   const { signOut } = useAuth();
   const [isCollapsed, setIsCollapsed] = useState(false);
 
@@ -51,13 +53,24 @@ export function Sidebar() {
     window.location.href = '/';
   };
 
-  const allNavigation = profile?.role === 'admin' 
+  // Show all basic navigation if no profile, add admin navigation if admin
+  const userRole = profile?.role || 'nurse';
+  
+  const allNavigation = userRole === 'admin' 
     ? [...navigation, ...adminNavigation] 
     : navigation;
 
-  const filteredNavigation = allNavigation.filter(item => 
-    !item.roles || item.roles.includes(profile?.role || '')
-  );
+  // Filter navigation based on roles if specified
+  const filteredNavigation = allNavigation.filter(item => {
+    // If no roles specified, show to everyone
+    if (!item.roles) return true;
+    // If profile exists, check role
+    if (profile) return item.roles.includes(profile.role);
+    // If no profile, only show items without role restriction
+    return !item.roles || item.roles.includes('nurse');
+  });
+
+  // Remove loading screen - show sidebar even while loading
 
   return (
     <div className="flex h-full flex-col">
@@ -77,26 +90,44 @@ export function Sidebar() {
       </div>
 
       {/* User info */}
-      {profile && (
-        <div className={`px-6 py-4 border-b ${isCollapsed ? 'px-3' : ''}`}>
-          <div className="flex items-center space-x-3">
-            <Avatar>
-              <AvatarFallback>
-                {profile.name.charAt(0).toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
-            {!isCollapsed && (
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900 truncate">
-                  {profile.name}
-                </p>
-                <p className="text-xs text-gray-500 truncate">
-                  {profile.role === 'nurse' ? '간호사' : '관리자'}
-                  {profile.department && ` • ${profile.department}`}
-                </p>
-              </div>
-            )}
-          </div>
+      <div className={`px-6 py-4 border-b ${isCollapsed ? 'px-3' : ''}`}>
+        <div className="flex items-center space-x-3">
+          <Avatar>
+            <AvatarFallback>
+              {profile?.name?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase() || 'U'}
+            </AvatarFallback>
+          </Avatar>
+          {!isCollapsed && (
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-gray-900 truncate">
+                {profile?.name || user?.email?.split('@')[0] || '사용자'}
+              </p>
+              <p className="text-xs text-gray-500 truncate">
+                {profile ? (
+                  <>
+                    {profile.role === 'nurse' ? '간호사' : '관리자'}
+                    {profile.department && ` • ${profile.department}`}
+                  </>
+                ) : user ? (
+                  <span className="text-amber-600">프로필 설정 필요</span>
+                ) : (
+                  '로그인 필요'
+                )}
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Profile warning */}
+      {user && !profile && !loading && (
+        <div className="px-4 py-3 bg-amber-50 border-b border-amber-200">
+          <p className="text-xs text-amber-800">
+            프로필이 없습니다. 
+            <Link href="/debug/profile" className="underline font-medium">
+              여기서 생성하세요
+            </Link>
+          </p>
         </div>
       )}
 
