@@ -56,26 +56,43 @@ export const patientService = {
 
   async getAll(supabase?: SupabaseClient<Database>): Promise<Patient[]> {
     const client = supabase || getSupabaseClient()
-    try {
-      console.log('[patientService.getAll] Fetching patients...')
-      const { data, error } = await client
-        .from('patients')
-        .select('*')
-        .eq('is_active', true)
-        .order('created_at', { ascending: false })
-      
-      if (error) {
-        console.error('[patientService.getAll] Error:', error)
+    
+    // Helper function to execute query with retry on auth failure
+    const executeQuery = async (retryCount = 0): Promise<Patient[]> => {
+      try {
+        console.log('[patientService.getAll] Fetching patients... (attempt:', retryCount + 1, ')')
+        const { data, error } = await client
+          .from('patients')
+          .select('*')
+          .eq('is_active', true)
+          .order('created_at', { ascending: false })
+        
+        if (error) {
+          console.error('[patientService.getAll] Error:', error)
+          
+          // If auth error and first attempt, try refreshing session
+          if ((error.message?.includes('JWT') || error.message?.includes('token') || error.code === 'PGRST301') && retryCount === 0) {
+            console.log('[patientService.getAll] Auth error detected, refreshing session...')
+            const { error: refreshError } = await client.auth.refreshSession()
+            if (!refreshError) {
+              // Retry after successful refresh
+              return executeQuery(retryCount + 1)
+            }
+          }
+          
+          throw error
+        }
+        
+        const patients = (data || []).map(item => toCamelCase(item) as Patient)
+        console.log(`[patientService.getAll] Fetched ${patients.length} patients`)
+        return patients
+      } catch (error) {
+        console.error('Error fetching patients:', error)
         throw error
       }
-      
-      const patients = (data || []).map(item => toCamelCase(item) as Patient)
-      console.log(`[patientService.getAll] Fetched ${patients.length} patients`)
-      return patients
-    } catch (error) {
-      console.error('Error fetching patients:', error)
-      throw error // Throw error instead of returning empty array to trigger React Query retry
     }
+    
+    return executeQuery()
   },
 
   async getById(id: string, supabase?: SupabaseClient<Database>): Promise<Patient | null> {

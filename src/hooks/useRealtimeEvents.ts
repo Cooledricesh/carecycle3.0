@@ -24,8 +24,8 @@ export function useRealtimeEvents() {
       ['recent-activity'],
       ['items']
     ],
-    intervalWhenDisconnected: 15000, // 15 seconds when disconnected (less aggressive)
-    intervalWhenConnected: 90000,    // 1.5 minutes when connected (as backup)
+    intervalWhenDisconnected: 5000,  // 5 seconds when disconnected for faster recovery
+    intervalWhenConnected: 30000,    // 30 seconds when connected as backup
   })
 
   // Handle database events

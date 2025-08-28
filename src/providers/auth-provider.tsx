@@ -103,6 +103,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (session?.user) {
         const profileData = await fetchProfile(session.user.id);
         setProfile(profileData);
+        
+        // Production: Force token refresh on auth state changes
+        if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
+          console.log('[AuthProvider] Production: Ensuring token is fresh')
+          await supabase.auth.refreshSession()
+        }
       } else {
         setProfile(null);
       }
