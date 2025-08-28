@@ -371,56 +371,79 @@ export const scheduleService = {
 
   async getAllSchedules(supabase?: SupabaseClient<Database>): Promise<ScheduleWithDetails[]> {
     const client = supabase || getSupabaseClient()
-    try {
-      const { data, error } = await client
-        .from('schedules')
-        .select(`
-          *,
-          patients (
-            id,
-            hospital_id,
-            patient_number,
-            name,
-            department,
-            is_active,
-            metadata,
-            created_by,
-            created_at,
-            updated_at
-          ),
-          items (
-            id,
-            code,
-            name,
-            category,
-            description,
-            default_interval_weeks,
-            preparation_notes,
-            created_at,
-            updated_at
-          )
-        `)
-        .in('status', ['active', 'paused'])  // Only show active and paused schedules, exclude cancelled and deleted
-        .order('next_due_date', { ascending: true })
-      
-      if (error) throw error
-      
-      return (data || []).map(item => {
-        const schedule = snakeToCamel(item) as any
-        return {
-          ...schedule,
-          patient: (item as any).patients ? snakeToCamel((item as any).patients) : null,
-          item: (item as any).items ? snakeToCamel((item as any).items) : null
-        } as ScheduleWithDetails
-      })
-    } catch (error) {
-      console.error('Error fetching all schedules:', {
-        error,
-        message: error instanceof Error ? error.message : 'Unknown error',
-        details: JSON.stringify(error)
-      })
-      throw new Error('전체 일정 조회에 실패했습니다')
+    
+    const executeQuery = async (retryCount = 0): Promise<ScheduleWithDetails[]> => {
+      try {
+        console.log('[scheduleService.getAllSchedules] Fetching... (attempt:', retryCount + 1, ')')
+        
+        const { data, error } = await client
+          .from('schedules')
+          .select(`
+            *,
+            patients (
+              id,
+              hospital_id,
+              patient_number,
+              name,
+              department,
+              is_active,
+              metadata,
+              created_by,
+              created_at,
+              updated_at
+            ),
+            items (
+              id,
+              code,
+              name,
+              category,
+              description,
+              default_interval_weeks,
+              preparation_notes,
+              created_at,
+              updated_at
+            )
+          `)
+          .in('status', ['active', 'paused'])  // Only show active and paused schedules, exclude cancelled and deleted
+          .order('next_due_date', { ascending: true })
+        
+        if (error) {
+          console.error('[scheduleService.getAllSchedules] Error:', error)
+          
+          // Auth error - refresh token and retry
+          if ((error.message?.includes('JWT') || error.message?.includes('token') || error.code === 'PGRST301') && retryCount === 0) {
+            console.log('[scheduleService] Auth error, refreshing token...')
+            const { error: refreshError } = await client.auth.refreshSession()
+            if (!refreshError) {
+              return executeQuery(retryCount + 1)
+            }
+          }
+          throw error
+        }
+        
+        const schedules = (data || []).map(item => {
+          const schedule = snakeToCamel(item) as any
+          return {
+            ...schedule,
+            patient: (item as any).patients ? snakeToCamel((item as any).patients) : null,
+            item: (item as any).items ? snakeToCamel((item as any).items) : null
+          } as ScheduleWithDetails
+        })
+        
+        console.log(`[scheduleService.getAllSchedules] Fetched ${schedules.length} schedules`)
+        return schedules
+        
+      } catch (error) {
+        console.error('Error fetching all schedules:', {
+          error,
+          message: error instanceof Error ? error.message : 'Unknown error',
+          details: JSON.stringify(error)
+        })
+        throw new Error('전체 일정 조회에 실패했습니다')
+      }
     }
+    
+    return executeQuery()
   },
 
   async markAsCompleted(scheduleId: string, input: {
