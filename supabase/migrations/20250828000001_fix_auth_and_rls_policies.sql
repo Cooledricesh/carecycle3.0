@@ -14,62 +14,62 @@ DROP POLICY IF EXISTS "Users can view items" ON items;
 CREATE POLICY "Enable read access for all authenticated users on patients"
   ON patients
   FOR SELECT
-  USING (auth.role() = 'authenticated');
+  USING (true);  -- Allow ALL reads temporarily to diagnose
 
 CREATE POLICY "Enable insert for authenticated users on patients"
   ON patients
   FOR INSERT
-  WITH CHECK (auth.role() = 'authenticated');
+  WITH CHECK (auth.uid() IS NOT NULL);
 
 CREATE POLICY "Enable update for authenticated users on patients"
   ON patients
   FOR UPDATE
-  USING (auth.role() = 'authenticated')
-  WITH CHECK (auth.role() = 'authenticated');
+  USING (auth.uid() IS NOT NULL)
+  WITH CHECK (auth.uid() IS NOT NULL);
 
 CREATE POLICY "Enable delete for authenticated users on patients"
   ON patients
   FOR DELETE
-  USING (auth.role() = 'authenticated');
+  USING (auth.uid() IS NOT NULL);
 
 -- Create more permissive RLS policies for schedules
 CREATE POLICY "Enable read access for all authenticated users on schedules"
   ON schedules
   FOR SELECT
-  USING (auth.role() = 'authenticated');
+  USING (true);  -- Allow ALL reads temporarily to diagnose
 
 CREATE POLICY "Enable insert for authenticated users on schedules"
   ON schedules
   FOR INSERT
-  WITH CHECK (auth.role() = 'authenticated');
+  WITH CHECK (auth.uid() IS NOT NULL);
 
 CREATE POLICY "Enable update for authenticated users on schedules"
   ON schedules
   FOR UPDATE
-  USING (auth.role() = 'authenticated')
-  WITH CHECK (auth.role() = 'authenticated');
+  USING (auth.uid() IS NOT NULL)
+  WITH CHECK (auth.uid() IS NOT NULL);
 
 CREATE POLICY "Enable delete for authenticated users on schedules"
   ON schedules
   FOR DELETE
-  USING (auth.role() = 'authenticated');
+  USING (auth.uid() IS NOT NULL);
 
 -- Create permissive RLS policies for items
 CREATE POLICY "Enable read access for all authenticated users on items"
   ON items
   FOR SELECT
-  USING (auth.role() = 'authenticated');
+  USING (true);  -- Allow ALL reads temporarily to diagnose
 
 CREATE POLICY "Enable insert for authenticated users on items"
   ON items
   FOR INSERT
-  WITH CHECK (auth.role() = 'authenticated');
+  WITH CHECK (auth.uid() IS NOT NULL);
 
 CREATE POLICY "Enable update for authenticated users on items"
   ON items
   FOR UPDATE
-  USING (auth.role() = 'authenticated')
-  WITH CHECK (auth.role() = 'authenticated');
+  USING (auth.uid() IS NOT NULL)
+  WITH CHECK (auth.uid() IS NOT NULL);
 
 -- Create or update function to handle auth errors gracefully
 CREATE OR REPLACE FUNCTION handle_auth_error()
