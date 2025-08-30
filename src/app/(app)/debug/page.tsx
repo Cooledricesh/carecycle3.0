@@ -6,7 +6,6 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { performanceMonitor } from '@/lib/monitoring/performance-monitor'
-import { useRealtimeEvents } from '@/hooks/useRealtimeEvents'
 import { 
   Activity, 
   AlertCircle, 
@@ -23,7 +22,7 @@ import {
 export default function DebugPage() {
   const [performanceData, setPerformanceData] = useState(performanceMonitor.getPerformanceSummary())
   const [refreshInterval, setRefreshInterval] = useState<NodeJS.Timeout | null>(null)
-  const { isConnected } = useRealtimeEvents()
+  const isConnected = false // Removed real-time connection
 
   useEffect(() => {
     // Auto-refresh every 2 seconds

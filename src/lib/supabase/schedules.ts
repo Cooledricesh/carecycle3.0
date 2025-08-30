@@ -1,6 +1,6 @@
 'use client';
 
-import { supabaseClient } from '@/lib/supabase/client';
+import { getSupabaseClient } from '@/lib/supabase/client';
 
 export interface Schedule {
   id: string;
@@ -19,7 +19,8 @@ export interface Schedule {
 }
 
 export async function getSchedules() {
-  const { data, error } = await supabaseClient
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase
     .from('patient_schedules')
     .select('*')
     .order('scheduled_date', { ascending: true })
@@ -34,9 +35,10 @@ export async function getSchedules() {
 }
 
 export async function getTodaySchedules() {
+  const supabase = getSupabaseClient();
   const today = new Date().toISOString().split('T')[0];
   
-  const { data, error } = await supabaseClient
+  const { data, error } = await supabase
     .from('patient_schedules')
     .select('*')
     .eq('scheduled_date', today)
@@ -51,9 +53,10 @@ export async function getTodaySchedules() {
 }
 
 export async function getUpcomingSchedules(limit = 5) {
+  const supabase = getSupabaseClient();
   const today = new Date().toISOString().split('T')[0];
   
-  const { data, error } = await supabaseClient
+  const { data, error } = await supabase
     .from('patient_schedules')
     .select('*')
     .gte('scheduled_date', today)
@@ -70,7 +73,8 @@ export async function getUpcomingSchedules(limit = 5) {
 }
 
 export async function getSchedulesByDateRange(startDate: string, endDate: string) {
-  const { data, error } = await supabaseClient
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase
     .from('patient_schedules')
     .select('*')
     .gte('scheduled_date', startDate)
@@ -87,7 +91,8 @@ export async function getSchedulesByDateRange(startDate: string, endDate: string
 }
 
 export async function createSchedule(schedule: Omit<Schedule, 'id' | 'created_at' | 'updated_at'>) {
-  const { data, error } = await supabaseClient
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase
     .from('patient_schedules')
     .insert([schedule])
     .select()
@@ -102,7 +107,8 @@ export async function createSchedule(schedule: Omit<Schedule, 'id' | 'created_at
 }
 
 export async function updateSchedule(id: string, updates: Partial<Omit<Schedule, 'id' | 'created_at' | 'updated_at'>>) {
-  const { data, error } = await supabaseClient
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase
     .from('patient_schedules')
     .update(updates)
     .eq('id', id)
@@ -118,7 +124,8 @@ export async function updateSchedule(id: string, updates: Partial<Omit<Schedule,
 }
 
 export async function deleteSchedule(id: string) {
-  const { error } = await supabaseClient
+  const supabase = getSupabaseClient();
+  const { error } = await supabase
     .from('patient_schedules')
     .delete()
     .eq('id', id);

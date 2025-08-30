@@ -1,7 +1,7 @@
 'use client'
 
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { getSupabaseClient } from '@/lib/supabase/singleton'
+import { getSupabaseClient } from '@/lib/supabase/client'
 import type { ScheduleWithDetails } from '@/types/schedule'
 import { toCamelCase } from '@/lib/database-utils'
 import type { Database } from '@/lib/database.types'

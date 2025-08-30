@@ -1,9 +1,13 @@
 'use client'
 
+import { useState } from 'react'
 import { PatientRegistrationModal } from '@/components/patients/patient-registration-modal'
 import { PatientDeleteDialog } from '@/components/patients/patient-delete-dialog'
 import { ScheduleCreateModal } from '@/components/schedules/schedule-create-modal'
 import { usePatients } from '@/hooks/usePatients'
+import { useQueryClient } from '@tanstack/react-query'
+import { useToast } from '@/hooks/use-toast'
+import { format } from 'date-fns'
 import {
   Table,
   TableBody,
@@ -21,8 +25,10 @@ import { Users, Calendar, AlertCircle, RefreshCw } from 'lucide-react'
 
 export default function PatientsPage() {
   const { patients, isLoading, error, refetch, deletePatient, isDeleting } = usePatients()
-  
-  // Polling is now handled by useRealtimeEvents in the RealtimeProvider
+  const [lastUpdated, setLastUpdated] = useState(new Date())
+  const [isRefreshing, setIsRefreshing] = useState(false)
+  const queryClient = useQueryClient()
+  const { toast } = useToast()
 
   const handleRegistrationSuccess = () => {
     refetch()
@@ -36,6 +42,28 @@ export default function PatientsPage() {
     deletePatient(id)
   }
 
+  // Manual refresh function
+  const handleRefresh = async () => {
+    setIsRefreshing(true)
+    try {
+      // Invalidate all queries to get fresh data
+      await queryClient.invalidateQueries()
+      setLastUpdated(new Date())
+      toast({
+        title: "새로고침 완료",
+        description: "최신 환자 데이터를 불러왔습니다.",
+      })
+    } catch (error) {
+      toast({
+        title: "새로고침 실패",
+        description: "데이터를 새로고침하는 중 오류가 발생했습니다.",
+        variant: "destructive"
+      })
+    } finally {
+      setIsRefreshing(false)
+    }
+  }
+
   return (
     <div className="container mx-auto py-6 px-4 sm:px-6 lg:px-8">
       <div className="flex justify-between items-center mb-6">
@@ -43,12 +71,27 @@ export default function PatientsPage() {
           <h1 className="text-3xl font-bold tracking-tight">환자 관리</h1>
           <p className="text-muted-foreground mt-1">
             등록된 환자 목록을 관리하고 새로운 환자를 추가합니다.
+            <span className="text-xs text-gray-400 ml-2">
+              마지막 업데이트: {format(lastUpdated, 'HH:mm:ss')}
+            </span>
           </p>
         </div>
-        <PatientRegistrationModal
-          onSuccess={handleRegistrationSuccess}
-          triggerClassName="bg-primary"
-        />
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            className="flex items-center gap-2"
+          >
+            <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+            새로고침
+          </Button>
+          <PatientRegistrationModal
+            onSuccess={handleRegistrationSuccess}
+            triggerClassName="bg-primary"
+          />
+        </div>
       </div>
 
       <Card>

@@ -2,6 +2,44 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## ⚠️ CRITICAL: PLAYWRIGHT MCP 올바른 사용법 ⚠️
+
+### 🚨 경고: 잘못 사용하면 브라우저 창 100개가 생성됩니다 🚨
+
+**Playwright MCP 사용 시 반드시 따라야 할 규칙:**
+
+1. **항상 이 패턴을 엄격히 따르세요:**
+   ```javascript
+   // 1. 먼저 기존 브라우저 종료
+   mcp__playwright__browser_close()
+   
+   // 2. 테스트 수행
+   mcp__playwright__browser_navigate({ url: "..." })
+   mcp__playwright__browser_snapshot()
+   // ... 필요한 작업
+   
+   // 3. 반드시 종료 (에러가 나도 실행되도록)
+   try {
+     // 테스트 코드
+   } finally {
+     mcp__playwright__browser_close()
+   }
+   ```
+
+2. **절대 하지 말아야 할 것:**
+   - ❌ browser_close 없이 navigate 연속 호출
+   - ❌ 에러 발생 시 cleanup 생략
+   - ❌ 여러 브라우저 인스턴스 동시 실행
+
+3. **좀비 프로세스 발견 시:**
+   ```bash
+   ./kill-playwright.sh  # 즉시 실행
+   ```
+
+4. **대체 방법 (간단한 테스트):**
+   - API 테스트: `curl` 사용
+   - 상태 확인: 로그 분석
+
 
 ## Project Overview
 
@@ -420,3 +458,4 @@ onError: (error, variables, context) => {
 - Ensure Korean characters display correctly (깨지는 한글 확인)
 - Test with various character encodings
 - 제발 포트 실행되어 있는지 아닌지 체크하고 개발 서버 열어. 이미 열려있는데 왜 자꾸 npm run dev 실행하냐?
+- test@example.com / Test123!@# 테스트 계정으로 로그인할 때 사용하는 아이디/비밀번호야.

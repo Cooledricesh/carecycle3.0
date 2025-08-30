@@ -16,7 +16,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Profile } from "@/lib/database.types";
-import { useAuth } from "@/hooks/use-auth";
+import { useAuthContext } from "@/providers/auth-provider";
 
 interface AdminNavProps {
   profile: Profile;
@@ -34,7 +34,7 @@ const navigation = [
 export default function AdminNav({ profile }: AdminNavProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const pathname = usePathname();
-  const { signOut } = useAuth();
+  const { signOut } = useAuthContext();
 
 
   const handleSignOut = async () => {

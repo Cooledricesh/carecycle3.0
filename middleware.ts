@@ -2,7 +2,22 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { Database } from "./src/lib/database.types";
 
+// Simple in-memory cache for session validation (prevents rate limits)
+const sessionCache = new Map<string, { user: any; timestamp: number }>();
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
 export async function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+  
+  // Skip middleware for static assets
+  if (
+    pathname.startsWith('/_next') ||
+    pathname.startsWith('/api/health') ||
+    pathname.includes('.')
+  ) {
+    return NextResponse.next();
+  }
+
   let supabaseResponse = NextResponse.next({
     request,
   });
@@ -30,13 +45,49 @@ export async function middleware(request: NextRequest) {
     }
   );
 
-  // Refresh session if expired - required for Server Components
-  const {
-    data: { user },
-    error,
-  } = await supabase.auth.getUser();
-
-  const { pathname } = request.nextUrl;
+  // Get session ID for caching
+  const sessionId = request.cookies.get('carecycle-auth')?.value || 
+                   request.cookies.get('sb-rbtzwpfuhbjfmdkpigbt-auth-token')?.value;
+  
+  let user = null;
+  
+  // Check cache first to avoid hitting rate limits
+  if (sessionId) {
+    const cached = sessionCache.get(sessionId);
+    if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+      user = cached.user;
+    }
+  }
+  
+  // If not in cache, get from Supabase (use getSession, not getUser to reduce API calls)
+  if (!user) {
+    try {
+      const { data: { session }, error } = await supabase.auth.getSession();
+      
+      if (error) {
+        console.log('[Middleware] Session error:', error.message);
+        // Handle rate limit and token errors by clearing session
+        if (error.message?.includes('refresh_token_not_found') || 
+            error.message?.includes('over_request_rate_limit')) {
+          // Clear cookies and redirect to signin
+          const response = NextResponse.redirect(new URL('/auth/signin', request.url));
+          response.cookies.delete('carecycle-auth');
+          response.cookies.delete('sb-rbtzwpfuhbjfmdkpigbt-auth-token');
+          return response;
+        }
+      }
+      
+      user = session?.user || null;
+      
+      // Cache the result
+      if (sessionId && user) {
+        sessionCache.set(sessionId, { user, timestamp: Date.now() });
+      }
+    } catch (err) {
+      console.error('[Middleware] Unexpected error:', err);
+      user = null;
+    }
+  }
 
   // Public routes that don't require authentication
   const publicRoutes = ["/", "/auth/signin", "/auth/signup", "/auth/forgot-password"];

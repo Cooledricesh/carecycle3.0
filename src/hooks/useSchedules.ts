@@ -6,8 +6,8 @@ import type { ScheduleWithDetails } from '@/types/schedule'
 import { useToast } from '@/hooks/use-toast'
 import { mapErrorToUserMessage } from '@/lib/error-mapper'
 import { useAuthContext } from '@/providers/auth-provider'
-import { getSupabaseClient } from '@/lib/supabase/singleton'
-import { queryKeys, getRelatedQueryKeys } from '@/lib/query-keys'
+import { getSupabaseClient } from '@/lib/supabase/client'
+// Removed complex query keys - using simple invalidation
 
 export function useSchedules() {
   const { toast } = useToast()
@@ -16,16 +16,12 @@ export function useSchedules() {
   const supabase = getSupabaseClient()
 
   const query = useQuery({
-    queryKey: queryKeys.schedules.lists(),
+    queryKey: ['schedules'],
     queryFn: async () => {
       try {
         return await scheduleService.getAllSchedules(supabase)
       } catch (error) {
-        console.error('useSchedules error:', {
-          error,
-          message: error instanceof Error ? error.message : 'Unknown error',
-          user: user?.id
-        })
+        console.error('useSchedules error:', error)
         const message = mapErrorToUserMessage(error)
         toast({
           title: '오류',
@@ -35,11 +31,7 @@ export function useSchedules() {
         throw error
       }
     },
-    enabled: true, // Remove auth blocking for immediate loading
-    retry: 3,
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
-    staleTime: 30 * 1000, // 30 seconds for more frequent updates
-    gcTime: 10 * 60 * 1000 // Cache for 10 minutes
+    enabled: true
   })
 
   const createMutation = useMutation({
@@ -47,11 +39,8 @@ export function useSchedules() {
       return await scheduleService.createWithCustomItem(input, supabase)
     },
     onSuccess: () => {
-      // Invalidate all schedule-related queries
-      const keysToInvalidate = getRelatedQueryKeys('schedule.create')
-      keysToInvalidate.forEach(key => {
-        queryClient.invalidateQueries({ queryKey: key })
-      })
+      // Invalidate ALL queries to ensure consistency
+      queryClient.invalidateQueries()
       toast({
         title: '성공',
         description: '일정이 성공적으로 등록되었습니다.'
@@ -71,37 +60,7 @@ export function useSchedules() {
     mutationFn: async ({ scheduleId, ...input }: { scheduleId: string } & Parameters<typeof scheduleService.markAsCompleted>[1]) => {
       return await scheduleService.markAsCompleted(scheduleId, input, supabase)
     },
-    onMutate: async ({ scheduleId }) => {
-      // Cancel outgoing refetches to prevent overwriting optimistic update
-      await queryClient.cancelQueries({ queryKey: queryKeys.schedules.all })
-      await queryClient.cancelQueries({ queryKey: queryKeys.executions.all })
-      
-      // Snapshot previous values for rollback
-      const previousSchedules = queryClient.getQueryData(queryKeys.schedules.lists())
-      const previousToday = queryClient.getQueryData(queryKeys.schedules.today())
-      const previousUpcoming = queryClient.getQueryData(queryKeys.schedules.upcoming())
-      
-      // Optimistically remove completed schedule from today's list
-      queryClient.setQueryData(queryKeys.schedules.today(), (old: ScheduleWithDetails[] = []) => 
-        old.filter(schedule => schedule.id !== scheduleId)
-      )
-      
-      // Optimistically update upcoming schedules
-      queryClient.setQueryData(queryKeys.schedules.upcoming(), (old: ScheduleWithDetails[] = []) => 
-        old.filter(schedule => schedule.id !== scheduleId)
-      )
-      
-      // Return context for rollback
-      return { previousSchedules, previousToday, previousUpcoming }
-    },
-    onError: (error, _variables, context) => {
-      // Rollback on error
-      if (context) {
-        queryClient.setQueryData(queryKeys.schedules.lists(), context.previousSchedules)
-        queryClient.setQueryData(queryKeys.schedules.today(), context.previousToday)
-        queryClient.setQueryData(queryKeys.schedules.upcoming(), context.previousUpcoming)
-      }
-      
+    onError: (error) => {
       const message = mapErrorToUserMessage(error)
       toast({
         title: '완료 처리 실패',
@@ -109,14 +68,9 @@ export function useSchedules() {
         variant: 'destructive'
       })
     },
-    onSettled: () => {
-      // Always refetch after mutation to ensure consistency
-      const keysToInvalidate = getRelatedQueryKeys('schedule.complete')
-      keysToInvalidate.forEach(key => {
-        queryClient.invalidateQueries({ queryKey: key })
-      })
-    },
     onSuccess: () => {
+      // Invalidate ALL queries to ensure consistency
+      queryClient.invalidateQueries()
       toast({
         title: '성공',
         description: '일정이 완료 처리되었습니다.'
@@ -125,8 +79,8 @@ export function useSchedules() {
   })
 
   const refetch = () => {
-    // Invalidate all schedule queries
-    queryClient.invalidateQueries({ queryKey: queryKeys.schedules.all })
+    // Invalidate all queries to ensure fresh data
+    queryClient.invalidateQueries()
   }
 
   return {
@@ -147,7 +101,7 @@ export function useTodayChecklist() {
   const supabase = getSupabaseClient()
   
   return useQuery({
-    queryKey: queryKeys.schedules.today(),
+    queryKey: ['schedules', 'today'],
     queryFn: async () => {
       try {
         return await scheduleService.getTodayChecklist(supabase)
@@ -161,11 +115,7 @@ export function useTodayChecklist() {
         throw error
       }
     },
-    enabled: true, // Remove auth blocking for immediate loading
-    retry: 3,
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
-    staleTime: 30 * 1000, // 30 seconds for more frequent updates
-    gcTime: 10 * 60 * 1000 // Cache for 10 minutes
+    enabled: true
   })
 }
 
@@ -175,7 +125,7 @@ export function useUpcomingSchedules(daysAhead: number = 7) {
   const supabase = getSupabaseClient()
   
   return useQuery({
-    queryKey: queryKeys.schedules.upcoming(daysAhead),
+    queryKey: ['schedules', 'upcoming', daysAhead],
     queryFn: async () => {
       try {
         return await scheduleService.getUpcomingSchedules(daysAhead, supabase)
@@ -189,11 +139,7 @@ export function useUpcomingSchedules(daysAhead: number = 7) {
         throw error
       }
     },
-    enabled: true, // Remove auth blocking for immediate loading
-    retry: 3,
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
-    staleTime: 30 * 1000, // 30 seconds for more frequent updates
-    gcTime: 10 * 60 * 1000 // Cache for 10 minutes
+    enabled: true
   })
 }
 
@@ -203,7 +149,7 @@ export function usePatientSchedules(patientId: string) {
   const supabase = getSupabaseClient()
   
   return useQuery({
-    queryKey: queryKeys.schedules.byPatient(patientId),
+    queryKey: ['schedules', 'patient', patientId],
     queryFn: async () => {
       try {
         return await scheduleService.getByPatientId(patientId, supabase)
@@ -217,9 +163,7 @@ export function usePatientSchedules(patientId: string) {
         throw error
       }
     },
-    enabled: !!patientId, // Only check if patientId exists
-    retry: 1,
-    staleTime: 5 * 60 * 1000 // 5 minutes - rely on realtime sync
+    enabled: !!patientId
   })
 }
 
@@ -229,7 +173,7 @@ export function useOverdueSchedules() {
   const supabase = getSupabaseClient()
   
   return useQuery({
-    queryKey: queryKeys.schedules.overdue(),
+    queryKey: ['schedules', 'overdue'],
     queryFn: async () => {
       try {
         return await scheduleService.getOverdueSchedules(supabase)
@@ -243,10 +187,6 @@ export function useOverdueSchedules() {
         throw error
       }
     },
-    enabled: true, // Remove auth blocking for immediate loading
-    retry: 3,
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
-    staleTime: 30 * 1000, // 30 seconds for more frequent updates
-    gcTime: 10 * 60 * 1000 // Cache for 10 minutes
+    enabled: true
   })
 }

@@ -32,7 +32,7 @@ import {
 import { Plus } from 'lucide-react'
 import { patientService } from '@/services/patientService'
 import { useToast } from '@/hooks/use-toast'
-import { getSupabaseClient } from '@/lib/supabase/singleton'
+import { getSupabaseClient } from '@/lib/supabase/client'
 
 const PatientRegistrationSchema = z.object({
   name: z

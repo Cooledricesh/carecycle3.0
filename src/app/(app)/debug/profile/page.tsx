@@ -4,7 +4,7 @@ import { useAuthContext } from '@/providers/auth-provider';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useState } from 'react';
-import { getSupabaseClient } from '@/lib/supabase/singleton';
+import { getSupabaseClient } from '@/lib/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
 export default function DebugProfilePage() {

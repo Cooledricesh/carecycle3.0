@@ -20,7 +20,6 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { useAuthContext } from '@/providers/auth-provider';
-import { useAuth } from '@/hooks/use-auth';
 
 interface NavItem {
   name: string;
@@ -44,8 +43,7 @@ const adminNavigation: NavItem[] = [
 
 export function Sidebar() {
   const pathname = usePathname();
-  const { user, profile, loading } = useAuthContext();
-  const { signOut } = useAuth();
+  const { user, profile, loading, signOut } = useAuthContext();
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   const handleSignOut = () => {

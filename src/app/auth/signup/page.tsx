@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { useAuth } from "@/hooks/use-auth";
+import { useAuthContext } from "@/providers/auth-provider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,7 +23,7 @@ export default function SignupPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [formError, setFormError] = useState("");
   
-  const { signUp, error } = useAuth();
+  const { signUp, error } = useAuthContext();
   const router = useRouter();
 
   const handleInputChange = (field: string, value: string) => {
@@ -156,9 +156,9 @@ export default function SignupPage() {
                 disabled={isLoading}
               />
             </div>
-            {(error || formError) && (
+            {(error?.message || formError) && (
               <div className="text-sm text-red-600 bg-red-50 p-3 rounded">
-                {error || formError}
+                {error?.message || formError}
               </div>
             )}
             <Button type="submit" className="w-full" disabled={isLoading}>

@@ -1,7 +1,5 @@
 'use client'
 
-import { eventManager } from '@/lib/realtime/event-manager'
-
 type PerformanceMetric = {
   timestamp: number
   type: 'query' | 'mutation' | 'realtime' | 'connection'
@@ -44,10 +42,7 @@ class PerformanceMonitor {
   private lastConnectionCheckTime = Date.now()
 
   private constructor() {
-    // Subscribe to connection events
-    eventManager.subscribeToConnection((event) => {
-      this.updateConnectionHealth(event)
-    })
+    // Connection monitoring removed - using simple React Query now
     
     // Periodic health check
     if (typeof window !== 'undefined') {

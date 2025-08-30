@@ -7,7 +7,7 @@ import { Calendar, Clock, User, LogOut, Menu, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Profile } from "@/lib/database.types";
-import { useAuth } from "@/hooks/use-auth";
+import { useAuthContext } from "@/providers/auth-provider";
 
 interface DashboardNavProps {
   profile: Profile;
@@ -23,7 +23,7 @@ const navigation = [
 export default function DashboardNav({ profile }: DashboardNavProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const pathname = usePathname();
-  const { signOut } = useAuth();
+  const { signOut } = useAuthContext();
 
   const handleSignOut = () => {
     console.log("Logout button clicked - redirecting immediately");

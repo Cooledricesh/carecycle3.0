@@ -1,51 +1,67 @@
-import { createBrowserClient } from "@supabase/ssr";
-import { Database } from "../database.types";
+'use client'
 
-export function createClient() {
-  // Detect production environment
-  const isProduction = process.env.NODE_ENV === 'production' || 
-                       process.env.VERCEL_ENV === 'production' ||
-                       typeof window !== 'undefined' && window.location.hostname !== 'localhost'
-  
-  // Log environment for debugging
-  if (typeof window !== 'undefined') {
-    console.log(`[Supabase Client] Environment: ${isProduction ? 'Production' : 'Development'}`)
+import { createBrowserClient } from "@supabase/ssr";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "../database.types";
+
+// Single, shared Supabase client for the entire application
+let supabaseClient: SupabaseClient<Database> | null = null;
+
+export function getSupabaseClient(): SupabaseClient<Database> {
+  if (!supabaseClient) {
+    // Detect environment
+    const isProduction = process.env.NODE_ENV === 'production' || 
+                        process.env.VERCEL_ENV === 'production' ||
+                        (typeof window !== 'undefined' && window.location.hostname !== 'localhost')
+    
+    // Log environment for debugging
+    if (typeof window !== 'undefined') {
+      console.log(`[Supabase Client] Environment: ${isProduction ? 'Production' : 'Development'}`)
+    }
+    
+    supabaseClient = createBrowserClient<Database>(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        auth: {
+          // CRITICAL: Disable session persistence in development to prevent stuck sessions
+          autoRefreshToken: isProduction,
+          persistSession: isProduction,
+          detectSessionInUrl: false, // Prevent redirect loops
+          flowType: 'pkce', // Always use PKCE for security
+          
+          // Only store in production
+          ...(isProduction && {
+            storage: typeof window !== 'undefined' ? window.localStorage : undefined,
+            storageKey: 'carecycle-auth',
+          }),
+          
+          // Cookie settings
+          cookieOptions: {
+            name: 'carecycle-auth',
+            lifetime: 60 * 60 * 8, // 8 hours
+            secure: isProduction,
+            sameSite: 'lax',
+          },
+        },
+        realtime: {
+          params: {
+            eventsPerSecond: isProduction ? 2 : 10,
+            heartbeatIntervalMs: isProduction ? 60000 : 30000,
+          },
+          timeout: isProduction ? 45000 : 20000,
+        },
+        global: {
+          headers: {
+            'X-Client-Info': 'supabase-js/carecycle',
+          },
+        },
+      }
+    );
   }
   
-  return createBrowserClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      realtime: {
-        params: {
-          eventsPerSecond: isProduction ? 2 : 10, // Reduced for production stability
-          heartbeatIntervalMs: isProduction ? 60000 : 30000, // 60s in prod, 30s in dev
-        },
-        timeout: isProduction ? 45000 : 20000, // Longer timeout for production (45s)
-      },
-      global: {
-        headers: {
-          'X-Client-Info': 'supabase-js/carecycle',
-        },
-      },
-      auth: {
-        autoRefreshToken: true,
-        persistSession: true,
-        detectSessionInUrl: true,
-        // Production-specific auth settings
-        flowType: isProduction ? 'pkce' : 'implicit', // More secure flow for production
-        storage: typeof window !== 'undefined' ? window.localStorage : undefined,
-        storageKey: 'carecycle-auth-token', // Explicit storage key
-        cookieOptions: {
-          name: 'carecycle-auth',
-          lifetime: 60 * 60 * 8, // 8 hours
-          secure: isProduction, // Secure cookies in production
-          sameSite: 'lax',
-        },
-      },
-    }
-  );
+  return supabaseClient;
 }
 
-// Client-side auth helper
-export const supabaseClient = createClient();
+// Export for backward compatibility
+export const createClient = getSupabaseClient;

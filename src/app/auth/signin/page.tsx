@@ -3,7 +3,7 @@
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { useAuth } from "@/hooks/use-auth";
+import { useAuthContext } from "@/providers/auth-provider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,31 +15,46 @@ function SignInForm() {
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   
-  const { signIn, isAuthenticated, profile, error } = useAuth();
+  const { user, profile, loading, signIn, error: authError } = useAuthContext();
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get("redirectTo");
 
   useEffect(() => {
-    if (isAuthenticated) {
-      // Don't wait for profile - redirect immediately when authenticated
-      const destination = redirectTo || "/dashboard";
+    if (user && !loading) {
+      // Redirect authenticated users immediately
+      const destination = redirectTo || (profile?.role === "admin" ? "/admin" : "/dashboard");
+      console.log('🔄 Redirecting authenticated user to:', destination);
       router.push(destination);
+      router.refresh();
     }
-  }, [isAuthenticated, router, redirectTo]);
+  }, [user, loading, profile?.role, router, redirectTo]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setError(null);
 
-    const { error, data } = await signIn(email, password);
-    
-    if (!error && data) {
-      // Directly redirect after successful login
-      const destination = redirectTo || "/dashboard";
-      router.push(destination);
-      router.refresh();
-    } else {
+    try {
+      // Use centralized signIn method from AuthProvider
+      const { data, error: signInError } = await signIn(email, password);
+
+      if (signInError) {
+        console.error('🔐 Sign in error:', signInError);
+        setError(signInError);
+        setIsLoading(false);
+        return;
+      }
+
+      if (data) {
+        // Success - AuthProvider will handle state updates and the useEffect will handle redirect
+        console.log('🔐 Sign in successful, waiting for redirect...');
+        setIsLoading(false);
+      }
+    } catch (err) {
+      console.error('🔐 Sign in error:', err);
+      setError(err instanceof Error ? err.message : '로그인 중 오류가 발생했습니다.');
       setIsLoading(false);
     }
   };
@@ -64,7 +79,7 @@ function SignInForm() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                disabled={isLoading}
+                disabled={isLoading || loading}
               />
             </div>
             <div className="grid gap-2">
@@ -83,15 +98,15 @@ function SignInForm() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                disabled={isLoading}
+                disabled={isLoading || loading}
               />
             </div>
-            {error && (
+            {(error || authError?.message) && (
               <div className="text-sm text-red-600 bg-red-50 p-3 rounded">
-                {error}
+                {error || authError?.message}
               </div>
             )}
-            <Button type="submit" className="w-full" disabled={isLoading}>
+            <Button type="submit" className="w-full" disabled={isLoading || loading}>
               {isLoading ? "로그인 중..." : "로그인"}
             </Button>
           </form>

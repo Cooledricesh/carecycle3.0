@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar, Clock, CheckCircle, AlertCircle, Check } from "lucide-react";
+import { Calendar, Clock, CheckCircle, AlertCircle, Check, RefreshCw } from "lucide-react";
 import { PatientRegistrationModal } from "@/components/patients/patient-registration-modal";
 import { useAuthContext } from "@/providers/auth-provider";
 import { useRouter } from "next/navigation";
@@ -14,7 +14,6 @@ import { format, isToday, isWithinInterval, addDays } from "date-fns";
 import { ko } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { useQueryClient } from "@tanstack/react-query";
-import { getRelatedQueryKeys } from "@/lib/query-keys";
 import {
   Dialog,
   DialogContent,
@@ -35,17 +34,39 @@ export default function DashboardPage() {
   const [executionDate, setExecutionDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [executionNotes, setExecutionNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState(new Date());
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-
-  // Polling is now handled by useRealtimeEvents in the RealtimeProvider
 
   // Use React Query hooks for data fetching
   const { data: todaySchedules = [], isLoading: todayLoading, refetch: refetchToday } = useTodayChecklist();
   const { data: upcomingSchedules = [], isLoading: upcomingLoading, refetch: refetchUpcoming } = useUpcomingSchedules(7);
   
   const loading = todayLoading || upcomingLoading;
+
+  // Manual refresh function
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      // Invalidate all queries to get fresh data
+      await queryClient.invalidateQueries();
+      setLastUpdated(new Date());
+      toast({
+        title: "새로고침 완료",
+        description: "최신 데이터를 불러왔습니다.",
+      });
+    } catch (error) {
+      toast({
+        title: "새로고침 실패",
+        description: "데이터를 새로고침하는 중 오류가 발생했습니다.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   useEffect(() => {
     if (user) {
@@ -93,13 +114,9 @@ export default function DashboardPage() {
       setExecutionNotes('');
       setIsCompletionDialogOpen(false);
       
-      // Invalidate all schedule-related queries for immediate update
-      const keysToInvalidate = getRelatedQueryKeys('schedule.complete');
-      await Promise.all(
-        keysToInvalidate.map(key => 
-          queryClient.invalidateQueries({ queryKey: key })
-        )
-      );
+      // Invalidate all queries for immediate update
+      await queryClient.invalidateQueries();
+      setLastUpdated(new Date());
       
       // Force refetch current data
       await Promise.all([
@@ -141,9 +158,24 @@ export default function DashboardPage() {
           </h1>
           <p className="text-gray-600">
             오늘의 스케줄을 확인해보세요.
+            <span className="text-xs text-gray-400 ml-2">
+              마지막 업데이트: {format(lastUpdated, 'HH:mm:ss')}
+            </span>
           </p>
         </div>
-        <PatientRegistrationModal onSuccess={handleRegistrationSuccess} />
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            className="flex items-center gap-2"
+          >
+            <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+            새로고침
+          </Button>
+          <PatientRegistrationModal onSuccess={handleRegistrationSuccess} />
+        </div>
       </div>
 
       {/* Stats Cards */}
