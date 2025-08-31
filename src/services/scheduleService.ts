@@ -382,10 +382,10 @@ export const scheduleService = {
             *,
             patients (
               id,
-              hospital_id,
               patient_number,
               name,
               department,
+              care_type,
               is_active,
               metadata,
               created_by,
@@ -408,7 +408,13 @@ export const scheduleService = {
           .order('next_due_date', { ascending: true })
         
         if (error) {
-          console.error('[scheduleService.getAllSchedules] Error:', error)
+          console.error('[scheduleService.getAllSchedules] Error:', {
+            code: error.code,
+            message: error.message,
+            details: error.details,
+            hint: error.hint,
+            fullError: JSON.stringify(error)
+          })
           
           // Auth error - refresh token and retry
           if ((error.message?.includes('JWT') || error.message?.includes('token') || error.code === 'PGRST301') && retryCount === 0) {

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { PatientRegistrationModal } from '@/components/patients/patient-registration-modal'
 import { PatientDeleteDialog } from '@/components/patients/patient-delete-dialog'
 import { ScheduleCreateModal } from '@/components/schedules/schedule-create-modal'
@@ -21,14 +21,41 @@ import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { Users, Calendar, AlertCircle, RefreshCw } from 'lucide-react'
+import { Users, Calendar, AlertCircle, RefreshCw, ChevronLeft, ChevronRight } from 'lucide-react'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 export default function PatientsPage() {
   const { patients, isLoading, error, refetch, deletePatient, isDeleting } = usePatients()
   const [lastUpdated, setLastUpdated] = useState(new Date())
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [itemsPerPage, setItemsPerPage] = useState(20)
   const queryClient = useQueryClient()
   const { toast } = useToast()
+
+  // Pagination logic
+  const paginatedPatients = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage
+    const endIndex = startIndex + itemsPerPage
+    return patients.slice(startIndex, endIndex)
+  }, [patients, currentPage, itemsPerPage])
+
+  const totalPages = Math.ceil(patients.length / itemsPerPage)
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page)
+  }
+
+  const handleItemsPerPageChange = (value: string) => {
+    setItemsPerPage(Number(value))
+    setCurrentPage(1) // Reset to first page when changing items per page
+  }
 
   const handleRegistrationSuccess = () => {
     refetch()
@@ -152,7 +179,7 @@ export default function PatientsPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {patients.map((patient) => (
+                  {paginatedPatients.map((patient) => (
                     <TableRow key={patient.id}>
                       <TableCell className="font-medium">
                         {patient.patientNumber}
@@ -191,6 +218,57 @@ export default function PatientsPage() {
                   ))}
                 </TableBody>
               </Table>
+            </div>
+          )}
+          
+          {/* Pagination Controls */}
+          {patients.length > 0 && (
+            <div className="flex items-center justify-between mt-4">
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">
+                  표시 개수:
+                </span>
+                <Select value={String(itemsPerPage)} onValueChange={handleItemsPerPageChange}>
+                  <SelectTrigger className="w-20">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="10">10</SelectItem>
+                    <SelectItem value="20">20</SelectItem>
+                    <SelectItem value="50">50</SelectItem>
+                    <SelectItem value="100">100</SelectItem>
+                  </SelectContent>
+                </Select>
+                <span className="text-sm text-muted-foreground ml-4">
+                  총 {patients.length}명 중 {((currentPage - 1) * itemsPerPage) + 1}-{Math.min(currentPage * itemsPerPage, patients.length)}명 표시
+                </span>
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={currentPage === 1}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  이전
+                </Button>
+                <div className="flex items-center gap-1">
+                  <span className="text-sm">
+                    {currentPage} / {totalPages} 페이지
+                  </span>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                >
+                  다음
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
           )}
         </CardContent>
