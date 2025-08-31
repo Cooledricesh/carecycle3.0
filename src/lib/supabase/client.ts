@@ -30,11 +30,11 @@ export function getSupabaseClient(): SupabaseClient<Database> {
           detectSessionInUrl: false, // Prevent redirect loops
           flowType: 'pkce', // Always use PKCE for security
           
-          // Consistent storage configuration
+          // Use Supabase default storage configuration
+          // Removed custom storageKey to prevent conflicts
           storage: typeof window !== 'undefined' ? window.localStorage : undefined,
-          storageKey: 'carecycle-auth',
           
-          // Cookie settings - removed custom name to use Supabase defaults
+          // Cookie settings - use Supabase defaults
           cookieOptions: {
             // Let Supabase use its default cookie naming
             lifetime: 60 * 60 * 8, // 8 hours
@@ -60,6 +60,11 @@ export function getSupabaseClient(): SupabaseClient<Database> {
   }
   
   return supabaseClient;
+}
+
+// Function to reset the client (for logout)
+export function resetSupabaseClient() {
+  supabaseClient = null;
 }
 
 // Export for backward compatibility

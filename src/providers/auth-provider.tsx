@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { User } from "@supabase/supabase-js";
-import { getSupabaseClient } from "@/lib/supabase/client";
+import { getSupabaseClient, resetSupabaseClient } from "@/lib/supabase/client";
 import { Profile } from "@/lib/database.types";
 
 interface AuthContextType {
@@ -321,22 +321,60 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       console.log("SignOut: Successfully signed out from Supabase");
       
-      // Clear any cached data
+      // Comprehensive cleanup of all possible auth data
       if (typeof window !== 'undefined') {
-        localStorage.removeItem('sb-rbtzwpfuhbjfmdkpigbt-auth-token');
+        // Clear all localStorage items that might contain session data
+        const keysToRemove = [
+          'sb-rbtzwpfuhbjfmdkpigbt-auth-token',
+          'sb-rbtzwpfuhbjfmdkpigbt-auth-token-0', 
+          'sb-rbtzwpfuhbjfmdkpigbt-auth-token-1',
+          'carecycle-auth', // Legacy key if it exists
+          'supabase.auth.token' // Another possible key
+        ];
+        
+        keysToRemove.forEach(key => {
+          localStorage.removeItem(key);
+        });
+        
+        // Clear all Supabase-related items from localStorage
+        Object.keys(localStorage).forEach(key => {
+          if (key.startsWith('sb-') || key.includes('supabase')) {
+            localStorage.removeItem(key);
+          }
+        });
+        
+        // Clear sessionStorage completely
         sessionStorage.clear();
+        
+        // Clear all cookies
+        document.cookie.split(";").forEach(c => {
+          const eqPos = c.indexOf("=");
+          const name = eqPos > -1 ? c.substr(0, eqPos).trim() : c.trim();
+          if (name.startsWith('sb-') || name.includes('supabase') || name === 'carecycle-auth') {
+            document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
+            document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=.vercel.app`;
+            document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=${window.location.hostname}`;
+          }
+        });
       }
       
+      // Reset the Supabase client to clear any cached session
+      resetSupabaseClient();
+      
       console.log("SignOut: Redirecting to landing page");
-      // Use window.location for immediate navigation
-      window.location.href = "/";
+      // Use window.location.replace for complete page reload
+      window.location.replace("/");
     } catch (error) {
       console.error("SignOut: Caught error:", error);
       const errorMessage = error instanceof Error ? error.message : "Sign out failed";
       setError(error instanceof Error ? error : new Error(errorMessage));
+      
+      // Reset client even on error
+      resetSupabaseClient();
+      
       // Still try to redirect even if there's an error
       console.log("SignOut: Redirecting to landing page after error");
-      window.location.href = "/";
+      window.location.replace("/");
     }
   };
 
@@ -368,8 +406,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.error("ForceSignOut: Error signing out from Supabase:", error);
     }
     
+    // Reset the Supabase client
+    resetSupabaseClient();
+    
     // Force reload to clear everything
-    window.location.href = "/";
+    window.location.replace("/");
   };
 
   const value = {
