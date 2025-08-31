@@ -73,6 +73,8 @@ export async function middleware(request: NextRequest) {
           const response = NextResponse.redirect(new URL('/auth/signin', request.url));
           response.cookies.delete('carecycle-auth');
           response.cookies.delete('sb-rbtzwpfuhbjfmdkpigbt-auth-token');
+          response.cookies.delete('sb-rbtzwpfuhbjfmdkpigbt-auth-token-0');
+          response.cookies.delete('sb-rbtzwpfuhbjfmdkpigbt-auth-token-1');
           return response;
         }
       }

@@ -14,6 +14,7 @@ function SignInForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [redirectAttempts, setRedirectAttempts] = useState(0);
   
   const { user, profile, loading, signIn, error: authError } = useAuthContext();
   const [error, setError] = useState<string | null>(null);
@@ -22,28 +23,32 @@ function SignInForm() {
   const redirectTo = searchParams.get("redirectTo");
 
   useEffect(() => {
-    // If user exists, redirect immediately regardless of loading state
-    if (user) {
+    // Prevent infinite redirect loops
+    if (redirectAttempts > 2) {
+      console.error('❌ Too many redirect attempts, stopping');
+      return;
+    }
+    
+    // Only redirect if we have a valid user and we're not already redirecting
+    if (user && !isLoading) {
+      // Check if we're already on the dashboard (prevent redirect loop)
+      if (typeof window !== 'undefined' && window.location.pathname.includes('dashboard')) {
+        return;
+      }
+      
+      setRedirectAttempts(prev => prev + 1);
       const destination = redirectTo || (profile?.role === "admin" ? "/admin" : "/dashboard");
       console.log('🔄 Redirecting authenticated user to:', destination);
-      // Force immediate redirect
-      window.location.replace(destination);
-    }
-  }, [user, profile?.role, redirectTo]);
-  
-  // Additional check with timeout as fallback
-  useEffect(() => {
-    if (user && loading) {
-      // If still loading after 2 seconds but user exists, force redirect
-      const timeout = setTimeout(() => {
-        console.log('⚠️ Loading timeout - forcing redirect');
-        const destination = redirectTo || "/dashboard";
-        window.location.replace(destination);
-      }, 2000);
       
-      return () => clearTimeout(timeout);
+      // Use router.push for initial attempt, window.location for fallback
+      if (redirectAttempts === 0) {
+        router.push(destination);
+      } else {
+        // Force hard redirect on subsequent attempts
+        window.location.href = destination;
+      }
     }
-  }, [user, loading, redirectTo]);
+  }, [user, profile?.role, redirectTo, redirectAttempts, isLoading, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
