@@ -22,14 +22,28 @@ function SignInForm() {
   const redirectTo = searchParams.get("redirectTo");
 
   useEffect(() => {
-    if (user && !loading) {
-      // Redirect authenticated users immediately
+    // If user exists, redirect immediately regardless of loading state
+    if (user) {
       const destination = redirectTo || (profile?.role === "admin" ? "/admin" : "/dashboard");
       console.log('🔄 Redirecting authenticated user to:', destination);
-      // Use window.location for more reliable redirect in production
+      // Force immediate redirect
       window.location.replace(destination);
     }
-  }, [user, loading, profile?.role, redirectTo]);
+  }, [user, profile?.role, redirectTo]);
+  
+  // Additional check with timeout as fallback
+  useEffect(() => {
+    if (user && loading) {
+      // If still loading after 2 seconds but user exists, force redirect
+      const timeout = setTimeout(() => {
+        console.log('⚠️ Loading timeout - forcing redirect');
+        const destination = redirectTo || "/dashboard";
+        window.location.replace(destination);
+      }, 2000);
+      
+      return () => clearTimeout(timeout);
+    }
+  }, [user, loading, redirectTo]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -82,7 +96,7 @@ function SignInForm() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                disabled={isLoading || loading}
+                disabled={isLoading || !!user}
               />
             </div>
             <div className="grid gap-2">
@@ -101,7 +115,7 @@ function SignInForm() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                disabled={isLoading || loading}
+                disabled={isLoading || !!user}
               />
             </div>
             {(error || authError?.message) && (
@@ -109,8 +123,8 @@ function SignInForm() {
                 {error || authError?.message}
               </div>
             )}
-            <Button type="submit" className="w-full" disabled={isLoading || loading}>
-              {isLoading ? "로그인 중..." : "로그인"}
+            <Button type="submit" className="w-full" disabled={isLoading || !!user}>
+              {isLoading ? "로그인 중..." : (user ? "리다이렉트 중..." : "로그인")}
             </Button>
           </form>
           <div className="mt-4 text-center text-sm">
