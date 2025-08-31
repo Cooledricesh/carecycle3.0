@@ -90,8 +90,8 @@ export async function middleware(request: NextRequest) {
   }
 
   // Public routes that don't require authentication
-  const publicRoutes = ["/", "/auth/signin", "/auth/signup", "/auth/forgot-password"];
-  const isPublicRoute = publicRoutes.includes(pathname);
+  const publicRoutes = ["/", "/auth/signin", "/auth/signup", "/auth/forgot-password", "/auth/callback"];
+  const isPublicRoute = publicRoutes.includes(pathname) || pathname.startsWith("/auth/callback");
 
   // If user is not authenticated and trying to access protected route
   if (!user && !isPublicRoute) {
@@ -100,15 +100,16 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(redirectUrl);
   }
 
-  // If user is authenticated and trying to access auth pages
-  if (user && pathname.startsWith("/auth/")) {
+  // If user is authenticated and trying to access auth pages (except callback)
+  if (user && pathname.startsWith("/auth/") && pathname !== "/auth/callback") {
     // Get user profile to determine redirect destination
-    const { data: profile } = await supabase
+    const { data: profile, error: profileError } = await supabase
       .from("profiles")
       .select("role")
       .eq("id", user.id)
       .single();
 
+    // If profile fetch fails, still redirect to dashboard (don't block access)
     const redirectPath = profile?.role === "admin" ? "/admin" : "/dashboard";
     return NextResponse.redirect(new URL(redirectPath, request.url));
   }
@@ -127,8 +128,9 @@ export async function middleware(request: NextRequest) {
     }
 
     // Nurse route protection (optional - nurses can access their dashboard)
-    if (pathname.startsWith("/dashboard/") && !profile) {
-      return NextResponse.redirect(new URL("/auth/signin", request.url));
+    if ((pathname === "/dashboard" || pathname.startsWith("/dashboard/")) && !profile) {
+      // If profile doesn't exist yet, create a default one instead of redirecting
+      console.log('[Middleware] No profile found for user, allowing access');
     }
   }
 

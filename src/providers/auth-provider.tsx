@@ -148,17 +148,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setProfile(profileData);
         } else {
           setProfile(null);
+          // Important: Immediately set loading to false when user signs out
+          setLoading(false);
         }
 
         setError(null); // Clear any previous errors on successful auth change
         
         // Add delay to ensure auth state is fully stabilized before queries
-        setTimeout(() => {
-          if (mounted) {
-            setLoading(false);
-            setInitialized(true);
-          }
-        }, 100)
+        // Only delay for sign in events, not sign out
+        if (session?.user) {
+          setTimeout(() => {
+            if (mounted) {
+              setLoading(false);
+              setInitialized(true);
+            }
+          }, 100)
+        } else {
+          // For sign out, update immediately
+          setLoading(false);
+          setInitialized(true);
+        }
       } catch (error) {
         console.error('[AuthProvider] Error handling auth state change:', error);
         
@@ -297,6 +306,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.log("SignOut: Starting logout process");
       setError(null);
       
+      // Clear state first to immediately update UI
+      setUser(null);
+      setProfile(null);
+      setLoading(false); // Important: set loading to false to enable input fields
+      
       console.log("SignOut: Calling supabase.auth.signOut()");
       const { error } = await supabase.auth.signOut();
       
@@ -306,6 +320,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       
       console.log("SignOut: Successfully signed out from Supabase");
+      
+      // Clear any cached data
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('sb-rbtzwpfuhbjfmdkpigbt-auth-token');
+        sessionStorage.clear();
+      }
       
       console.log("SignOut: Redirecting to landing page");
       // Use window.location for immediate navigation
