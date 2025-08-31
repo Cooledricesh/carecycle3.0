@@ -34,13 +34,13 @@ export function getSupabaseClient(): SupabaseClient<Database> {
           storage: typeof window !== 'undefined' ? window.localStorage : undefined,
           storageKey: 'carecycle-auth',
           
-          // Cookie settings with consistent naming
+          // Cookie settings - removed custom name to use Supabase defaults
           cookieOptions: {
-            name: 'carecycle-auth',
+            // Let Supabase use its default cookie naming
             lifetime: 60 * 60 * 8, // 8 hours
             secure: isProduction,
             sameSite: 'lax',
-            domain: isProduction ? '.vercel.app' : undefined,
+            // Remove domain setting to prevent cookie scope issues
           },
         },
         realtime: {

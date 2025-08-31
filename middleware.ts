@@ -9,9 +9,6 @@ const CACHE_DURATION = 2 * 60 * 1000; // 2 minutes (reduced to prevent stale ses
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   
-  // Debug logging for production issues
-  console.log(`[Middleware] ${pathname} - Cookies:`, request.cookies.getAll().map(c => c.name).join(', '));
-  
   // Skip middleware for static assets
   if (
     pathname.startsWith('/_next') ||
@@ -48,9 +45,8 @@ export async function middleware(request: NextRequest) {
     }
   );
 
-  // Get session ID for caching - check all possible cookie names
-  const sessionId = request.cookies.get('carecycle-auth')?.value || 
-                   request.cookies.get('sb-rbtzwpfuhbjfmdkpigbt-auth-token')?.value ||
+  // Get session ID for caching - check Supabase default cookie names
+  const sessionId = request.cookies.get('sb-rbtzwpfuhbjfmdkpigbt-auth-token')?.value ||
                    request.cookies.get('sb-rbtzwpfuhbjfmdkpigbt-auth-token-0')?.value ||
                    request.cookies.get('sb-rbtzwpfuhbjfmdkpigbt-auth-token-1')?.value;
   
@@ -76,9 +72,8 @@ export async function middleware(request: NextRequest) {
             error.message?.includes('over_request_rate_limit') ||
             error.message?.includes('Invalid Refresh Token') ||
             error.message?.includes('JWT expired')) {
-          // Clear all possible cookies and redirect to signin
+          // Clear all Supabase cookies and redirect to signin
           const response = NextResponse.redirect(new URL('/auth/signin', request.url));
-          response.cookies.delete('carecycle-auth');
           response.cookies.delete('sb-rbtzwpfuhbjfmdkpigbt-auth-token');
           response.cookies.delete('sb-rbtzwpfuhbjfmdkpigbt-auth-token-0');
           response.cookies.delete('sb-rbtzwpfuhbjfmdkpigbt-auth-token-1');
