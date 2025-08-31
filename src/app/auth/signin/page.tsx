@@ -26,10 +26,10 @@ function SignInForm() {
       // Redirect authenticated users immediately
       const destination = redirectTo || (profile?.role === "admin" ? "/admin" : "/dashboard");
       console.log('🔄 Redirecting authenticated user to:', destination);
-      router.push(destination);
-      router.refresh();
+      // Use window.location for more reliable redirect in production
+      window.location.replace(destination);
     }
-  }, [user, loading, profile?.role, router, redirectTo]);
+  }, [user, loading, profile?.role, redirectTo]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,9 +48,12 @@ function SignInForm() {
       }
 
       if (data) {
-        // Success - AuthProvider will handle state updates and the useEffect will handle redirect
-        console.log('🔐 Sign in successful, waiting for redirect...');
-        setIsLoading(false);
+        // Success - redirect immediately
+        console.log('🔐 Sign in successful, redirecting...');
+        const destination = redirectTo || "/dashboard";
+        window.location.replace(destination);
+        // Keep loading state true since we're redirecting
+        return;
       }
     } catch (err) {
       console.error('🔐 Sign in error:', err);
