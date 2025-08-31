@@ -24,24 +24,23 @@ export function getSupabaseClient(): SupabaseClient<Database> {
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
         auth: {
-          // CRITICAL: Disable session persistence in development to prevent stuck sessions
-          autoRefreshToken: isProduction,
-          persistSession: isProduction,
+          // Enable session management consistently
+          autoRefreshToken: true,
+          persistSession: true,
           detectSessionInUrl: false, // Prevent redirect loops
           flowType: 'pkce', // Always use PKCE for security
           
-          // Only store in production
-          ...(isProduction && {
-            storage: typeof window !== 'undefined' ? window.localStorage : undefined,
-            storageKey: 'carecycle-auth',
-          }),
+          // Consistent storage configuration
+          storage: typeof window !== 'undefined' ? window.localStorage : undefined,
+          storageKey: 'carecycle-auth',
           
-          // Cookie settings
+          // Cookie settings with consistent naming
           cookieOptions: {
             name: 'carecycle-auth',
             lifetime: 60 * 60 * 8, // 8 hours
             secure: isProduction,
             sameSite: 'lax',
+            domain: isProduction ? '.vercel.app' : undefined,
           },
         },
         realtime: {

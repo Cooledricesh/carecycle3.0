@@ -4,10 +4,13 @@ import { Database } from "./src/lib/database.types";
 
 // Simple in-memory cache for session validation (prevents rate limits)
 const sessionCache = new Map<string, { user: any; timestamp: number }>();
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+const CACHE_DURATION = 2 * 60 * 1000; // 2 minutes (reduced to prevent stale sessions)
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  
+  // Debug logging for production issues
+  console.log(`[Middleware] ${pathname} - Cookies:`, request.cookies.getAll().map(c => c.name).join(', '));
   
   // Skip middleware for static assets
   if (
@@ -45,9 +48,11 @@ export async function middleware(request: NextRequest) {
     }
   );
 
-  // Get session ID for caching
+  // Get session ID for caching - check all possible cookie names
   const sessionId = request.cookies.get('carecycle-auth')?.value || 
-                   request.cookies.get('sb-rbtzwpfuhbjfmdkpigbt-auth-token')?.value;
+                   request.cookies.get('sb-rbtzwpfuhbjfmdkpigbt-auth-token')?.value ||
+                   request.cookies.get('sb-rbtzwpfuhbjfmdkpigbt-auth-token-0')?.value ||
+                   request.cookies.get('sb-rbtzwpfuhbjfmdkpigbt-auth-token-1')?.value;
   
   let user = null;
   
@@ -59,27 +64,33 @@ export async function middleware(request: NextRequest) {
     }
   }
   
-  // If not in cache, get from Supabase (use getSession, not getUser to reduce API calls)
+  // If not in cache, validate user session (use getUser for active validation)
   if (!user) {
     try {
-      const { data: { session }, error } = await supabase.auth.getSession();
+      const { data: { user: authUser }, error } = await supabase.auth.getUser();
       
       if (error) {
-        console.log('[Middleware] Session error:', error.message);
+        console.log('[Middleware] Auth error:', error.message);
         // Handle rate limit and token errors by clearing session
         if (error.message?.includes('refresh_token_not_found') || 
-            error.message?.includes('over_request_rate_limit')) {
-          // Clear cookies and redirect to signin
+            error.message?.includes('over_request_rate_limit') ||
+            error.message?.includes('Invalid Refresh Token') ||
+            error.message?.includes('JWT expired')) {
+          // Clear all possible cookies and redirect to signin
           const response = NextResponse.redirect(new URL('/auth/signin', request.url));
           response.cookies.delete('carecycle-auth');
           response.cookies.delete('sb-rbtzwpfuhbjfmdkpigbt-auth-token');
           response.cookies.delete('sb-rbtzwpfuhbjfmdkpigbt-auth-token-0');
           response.cookies.delete('sb-rbtzwpfuhbjfmdkpigbt-auth-token-1');
+          // Clear cache for this session
+          if (sessionId) {
+            sessionCache.delete(sessionId);
+          }
           return response;
         }
       }
       
-      user = session?.user || null;
+      user = authUser;
       
       // Cache the result
       if (sessionId && user) {

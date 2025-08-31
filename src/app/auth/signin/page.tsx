@@ -26,29 +26,32 @@ function SignInForm() {
     // Prevent infinite redirect loops
     if (redirectAttempts > 2) {
       console.error('❌ Too many redirect attempts, stopping');
+      // Reset state to allow manual retry
+      setTimeout(() => setRedirectAttempts(0), 5000);
       return;
     }
     
-    // Only redirect if we have a valid user and we're not already redirecting
-    if (user && !isLoading) {
-      // Check if we're already on the dashboard (prevent redirect loop)
-      if (typeof window !== 'undefined' && window.location.pathname.includes('dashboard')) {
-        return;
+    // Only redirect if we have a valid user and auth is initialized
+    if (user && !isLoading && profile !== null) {
+      // Check if we're already on the correct destination
+      if (typeof window !== 'undefined') {
+        const currentPath = window.location.pathname;
+        const targetPath = redirectTo || (profile?.role === "admin" ? "/admin" : "/dashboard");
+        
+        if (currentPath === targetPath || currentPath.startsWith(targetPath + '/')) {
+          console.log('🔄 Already on correct path, no redirect needed');
+          return;
+        }
       }
       
       setRedirectAttempts(prev => prev + 1);
       const destination = redirectTo || (profile?.role === "admin" ? "/admin" : "/dashboard");
-      console.log('🔄 Redirecting authenticated user to:', destination);
+      console.log('🔄 Redirecting authenticated user to:', destination, 'attempt:', redirectAttempts + 1);
       
-      // Use router.push for initial attempt, window.location for fallback
-      if (redirectAttempts === 0) {
-        router.push(destination);
-      } else {
-        // Force hard redirect on subsequent attempts
-        window.location.href = destination;
-      }
+      // Always use window.location.replace to prevent back button issues
+      window.location.replace(destination);
     }
-  }, [user, profile?.role, redirectTo, redirectAttempts, isLoading, router]);
+  }, [user, profile, redirectTo, redirectAttempts, isLoading, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
