@@ -65,6 +65,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const initializeAuth = async () => {
       try {
+        // Check for logout query parameter first
+        if (typeof window !== 'undefined') {
+          const urlParams = new URLSearchParams(window.location.search);
+          if (urlParams.has('logout') || urlParams.has('force_logout')) {
+            console.log('[AuthProvider] Logout parameter detected, clearing session');
+            // Clear everything if logout parameter is present
+            await supabase.auth.signOut();
+            localStorage.clear();
+            sessionStorage.clear();
+            setUser(null);
+            setProfile(null);
+            setError(null);
+            setLoading(false);
+            setInitialized(true);
+            
+            // Remove the logout parameter from URL
+            const newUrl = window.location.pathname;
+            window.history.replaceState({}, document.title, newUrl);
+            return;
+          }
+        }
+        
         // First get the session
         const {
           data: { session },
@@ -86,17 +108,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             // Invalid session - clear everything
             await supabase.auth.signOut();
             if (typeof window !== 'undefined') {
-              localStorage.clear();
+              // Clear all auth-related storage
+              const allKeys = Object.keys(localStorage);
+              allKeys.forEach(key => {
+                if (key.startsWith('sb-') || 
+                    key.includes('supabase') || 
+                    key.includes('auth') ||
+                    key.includes('token')) {
+                  localStorage.removeItem(key);
+                }
+              });
               sessionStorage.clear();
             }
             setUser(null);
             setProfile(null);
           } else if (mounted) {
-            // Valid session
-            console.log('[AuthProvider] Valid session confirmed');
-            setUser(user);
-            const profileData = await fetchProfile(user.id);
-            setProfile(profileData);
+            // Valid session - double check it's really valid
+            try {
+              // Try to fetch profile as an additional validation
+              const profileData = await fetchProfile(user.id);
+              if (profileData) {
+                console.log('[AuthProvider] Valid session confirmed with profile');
+                setUser(user);
+                setProfile(profileData);
+              } else {
+                // Profile fetch failed, might be invalid session
+                console.log('[AuthProvider] Profile fetch failed, clearing session');
+                await supabase.auth.signOut();
+                setUser(null);
+                setProfile(null);
+              }
+            } catch (profileError) {
+              console.error('[AuthProvider] Profile validation error:', profileError);
+              await supabase.auth.signOut();
+              setUser(null);
+              setProfile(null);
+            }
           }
         } else if (mounted) {
           // No session
@@ -116,9 +163,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           // Handle specific Supabase errors during initialization
           if (err instanceof Error && (
             err.message.includes('refresh_token_not_found') || 
-            err.message.includes('over_request_rate_limit')
+            err.message.includes('over_request_rate_limit') ||
+            err.message.includes('invalid_grant') ||
+            err.message.includes('session_not_found')
           )) {
-            console.log('[AuthProvider] Rate limit or token error during init - clearing session');
+            console.log('[AuthProvider] Auth error during init - clearing session');
+            // Clear everything on auth errors
+            await supabase.auth.signOut();
             setUser(null);
             setProfile(null);
             setError(null); // Don't show error to user for these cases
@@ -323,47 +374,87 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       // Comprehensive cleanup of all possible auth data
       if (typeof window !== 'undefined') {
-        // Clear all localStorage items that might contain session data
-        const keysToRemove = [
-          'sb-rbtzwpfuhbjfmdkpigbt-auth-token',
-          'sb-rbtzwpfuhbjfmdkpigbt-auth-token-0', 
-          'sb-rbtzwpfuhbjfmdkpigbt-auth-token-1',
-          'carecycle-auth', // Legacy key if it exists
-          'supabase.auth.token' // Another possible key
-        ];
+        // Get all localStorage keys first
+        const allKeys = Object.keys(localStorage);
         
-        keysToRemove.forEach(key => {
-          localStorage.removeItem(key);
-        });
-        
-        // Clear all Supabase-related items from localStorage
-        Object.keys(localStorage).forEach(key => {
-          if (key.startsWith('sb-') || key.includes('supabase')) {
-            localStorage.removeItem(key);
+        // Clear ALL Supabase-related items more aggressively
+        allKeys.forEach(key => {
+          // Remove any key that might be Supabase related
+          if (key.startsWith('sb-') || 
+              key.includes('supabase') || 
+              key.includes('auth') ||
+              key.includes('token')) {
+            try {
+              localStorage.removeItem(key);
+              console.log(`SignOut: Removed localStorage key: ${key}`);
+            } catch (e) {
+              console.error(`SignOut: Failed to remove key ${key}:`, e);
+            }
           }
         });
         
         // Clear sessionStorage completely
-        sessionStorage.clear();
+        try {
+          sessionStorage.clear();
+          console.log("SignOut: Cleared sessionStorage");
+        } catch (e) {
+          console.error("SignOut: Failed to clear sessionStorage:", e);
+        }
         
-        // Clear all cookies
+        // Clear all cookies more aggressively
         document.cookie.split(";").forEach(c => {
           const eqPos = c.indexOf("=");
           const name = eqPos > -1 ? c.substr(0, eqPos).trim() : c.trim();
-          if (name.startsWith('sb-') || name.includes('supabase') || name === 'carecycle-auth') {
-            document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
-            document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=.vercel.app`;
-            document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=${window.location.hostname}`;
+          
+          // Clear cookie for all possible domains and paths
+          const domains = [
+            '', // Current domain
+            window.location.hostname,
+            `.${window.location.hostname}`,
+            '.vercel.app',
+            'vercel.app',
+          ];
+          
+          const paths = ['/', '/auth', '/dashboard', '/admin'];
+          
+          domains.forEach(domain => {
+            paths.forEach(path => {
+              const cookieString = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=${path}${domain ? `;domain=${domain}` : ''}`;
+              document.cookie = cookieString;
+              
+              // Also try with Max-Age=0
+              const cookieString2 = `${name}=;Max-Age=0;path=${path}${domain ? `;domain=${domain}` : ''}`;
+              document.cookie = cookieString2;
+            });
+          });
+          
+          if (name.startsWith('sb-') || name.includes('supabase') || name.includes('auth')) {
+            console.log(`SignOut: Cleared cookie: ${name}`);
           }
         });
+        
+        // Clear IndexedDB if it exists (Supabase might use it)
+        if ('indexedDB' in window) {
+          try {
+            const databases = await indexedDB.databases?.() || [];
+            databases.forEach(db => {
+              if (db.name && (db.name.includes('supabase') || db.name.includes('auth'))) {
+                indexedDB.deleteDatabase(db.name);
+                console.log(`SignOut: Deleted IndexedDB: ${db.name}`);
+              }
+            });
+          } catch (e) {
+            console.log("SignOut: Could not clear IndexedDB:", e);
+          }
+        }
       }
       
       // Reset the Supabase client to clear any cached session
       resetSupabaseClient();
       
-      console.log("SignOut: Redirecting to landing page");
-      // Use window.location.replace for complete page reload
-      window.location.replace("/");
+      console.log("SignOut: Redirecting to landing page with hard reload");
+      // Use window.location.href with a cache-busting parameter
+      window.location.href = `/?logout=${Date.now()}`;
     } catch (error) {
       console.error("SignOut: Caught error:", error);
       const errorMessage = error instanceof Error ? error.message : "Sign out failed";
@@ -374,34 +465,82 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       // Still try to redirect even if there's an error
       console.log("SignOut: Redirecting to landing page after error");
-      window.location.replace("/");
+      window.location.href = `/?logout=${Date.now()}`;
     }
   };
 
   const forceSignOut = async () => {
     console.log("ForceSignOut: Clearing all auth data");
     
-    // Clear all localStorage
-    if (typeof window !== 'undefined') {
-      localStorage.clear();
-      sessionStorage.clear();
-      
-      // Clear all cookies
-      document.cookie.split(";").forEach(c => {
-        const eqPos = c.indexOf("=");
-        const name = eqPos > -1 ? c.substr(0, eqPos).trim() : c.trim();
-        document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
-      });
-    }
-    
-    // Clear state
+    // Clear state immediately
     setUser(null);
     setProfile(null);
     setError(null);
+    setLoading(false);
+    
+    // Clear all storage aggressively
+    if (typeof window !== 'undefined') {
+      // Clear localStorage completely
+      try {
+        localStorage.clear();
+        console.log("ForceSignOut: Cleared all localStorage");
+      } catch (e) {
+        console.error("ForceSignOut: Error clearing localStorage:", e);
+      }
+      
+      // Clear sessionStorage completely
+      try {
+        sessionStorage.clear();
+        console.log("ForceSignOut: Cleared all sessionStorage");
+      } catch (e) {
+        console.error("ForceSignOut: Error clearing sessionStorage:", e);
+      }
+      
+      // Clear all cookies for all domains
+      document.cookie.split(";").forEach(c => {
+        const eqPos = c.indexOf("=");
+        const name = eqPos > -1 ? c.substr(0, eqPos).trim() : c.trim();
+        
+        // Clear for multiple domain variations
+        const domains = [
+          '', // Current domain
+          window.location.hostname,
+          `.${window.location.hostname}`,
+          '.vercel.app',
+          'vercel.app',
+        ];
+        
+        const paths = ['/', '/auth', '/dashboard', '/admin'];
+        
+        domains.forEach(domain => {
+          paths.forEach(path => {
+            document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=${path}${domain ? `;domain=${domain}` : ''}`;
+            document.cookie = `${name}=;Max-Age=0;path=${path}${domain ? `;domain=${domain}` : ''}`;
+          });
+        });
+        console.log(`ForceSignOut: Attempted to clear cookie: ${name}`);
+      });
+      
+      // Clear IndexedDB
+      if ('indexedDB' in window) {
+        try {
+          const databases = await indexedDB.databases?.() || [];
+          for (const db of databases) {
+            if (db.name) {
+              indexedDB.deleteDatabase(db.name);
+              console.log(`ForceSignOut: Deleted IndexedDB: ${db.name}`);
+            }
+          }
+        } catch (e) {
+          console.log("ForceSignOut: Could not clear IndexedDB:", e);
+        }
+      }
+    }
     
     // Sign out from Supabase
     try {
       await supabase.auth.signOut();
+      console.log("ForceSignOut: Successfully signed out from Supabase");
     } catch (error) {
       console.error("ForceSignOut: Error signing out from Supabase:", error);
     }
@@ -409,8 +548,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Reset the Supabase client
     resetSupabaseClient();
     
-    // Force reload to clear everything
-    window.location.replace("/");
+    // Force reload with cache busting
+    console.log("ForceSignOut: Forcing page reload");
+    window.location.href = `/?force_logout=${Date.now()}`;
   };
 
   const value = {

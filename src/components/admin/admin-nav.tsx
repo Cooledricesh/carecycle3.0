@@ -34,18 +34,17 @@ const navigation = [
 export default function AdminNav({ profile }: AdminNavProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const pathname = usePathname();
-  const { signOut } = useAuthContext();
+  const { forceSignOut } = useAuthContext();
 
 
   const handleSignOut = async () => {
     try {
-      await signOut();
-      // Redirect to landing page after sign out
-      window.location.href = "/";
+      await forceSignOut();
+      // forceSignOut already handles redirect
     } catch (error) {
       console.error("Logout error:", error);
       // Still redirect to landing page even on error
-      window.location.href = "/";
+      window.location.href = "/?logout=" + Date.now();
     }
   };
 

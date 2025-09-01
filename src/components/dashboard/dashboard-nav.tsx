@@ -23,14 +23,12 @@ const navigation = [
 export default function DashboardNav({ profile }: DashboardNavProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const pathname = usePathname();
-  const { signOut } = useAuthContext();
+  const { forceSignOut } = useAuthContext();
 
-  const handleSignOut = () => {
-    console.log("Logout button clicked - redirecting immediately");
-    // Skip the async signOut for now and just redirect
-    // This ensures immediate logout response
-    signOut(); // Call without await
-    window.location.href = "/";
+  const handleSignOut = async () => {
+    console.log("Logout button clicked - using forceSignOut");
+    // Use forceSignOut for more aggressive cleanup
+    await forceSignOut();
   };
 
   return (

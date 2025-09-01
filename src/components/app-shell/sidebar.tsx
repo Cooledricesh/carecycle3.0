@@ -43,12 +43,12 @@ const adminNavigation: NavItem[] = [
 
 export function Sidebar() {
   const pathname = usePathname();
-  const { user, profile, loading, signOut } = useAuthContext();
+  const { user, profile, loading, forceSignOut } = useAuthContext();
   const [isCollapsed, setIsCollapsed] = useState(false);
 
-  const handleSignOut = () => {
-    signOut();
-    window.location.href = '/';
+  const handleSignOut = async () => {
+    // Use forceSignOut for more aggressive cleanup
+    await forceSignOut();
   };
 
   // Show all basic navigation if no profile, add admin navigation if admin
