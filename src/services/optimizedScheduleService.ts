@@ -1,7 +1,7 @@
 'use client'
 
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { getSupabaseClient } from '@/lib/supabase/client'
+import { createClient } from '@/lib/supabase/client'
 import type { ScheduleWithDetails } from '@/types/schedule'
 import { toCamelCase } from '@/lib/database-utils'
 import type { Database } from '@/lib/database.types'
@@ -19,7 +19,7 @@ export const optimizedScheduleService = {
     nurseId?: string, 
     supabase?: SupabaseClient<Database>
   ): Promise<ScheduleWithDetails[]> {
-    const client = supabase || getSupabaseClient()
+    const client = supabase || createClient()
     try {
       const { data, error } = await (client as any).rpc('get_today_checklist_optimized', {
         nurse_id_filter: nurseId || null
@@ -66,7 +66,7 @@ export const optimizedScheduleService = {
     patientId?: string,
     supabase?: SupabaseClient<Database>
   ): Promise<ScheduleWithDetails[]> {
-    const client = supabase || getSupabaseClient()
+    const client = supabase || createClient()
     try {
       const { data, error } = await (client as any).rpc('get_upcoming_schedules_optimized', {
         days_ahead: daysAhead,
@@ -112,7 +112,7 @@ export const optimizedScheduleService = {
     patientId: string, 
     supabase?: SupabaseClient<Database>
   ) {
-    const client = supabase || getSupabaseClient()
+    const client = supabase || createClient()
     try {
       const { data, error } = await (client as any).rpc('get_patient_schedule_overview', {
         target_patient_id: patientId
@@ -140,7 +140,7 @@ export const optimizedScheduleService = {
     }>,
     supabase?: SupabaseClient<Database>
   ) {
-    const client = supabase || getSupabaseClient()
+    const client = supabase || createClient()
     try {
       const scheduleData = completions.map(completion => ({
         schedule_id: completion.scheduleId,
@@ -173,7 +173,7 @@ export const optimizedScheduleService = {
    * Performance: ~90% faster than aggregating on-demand
    */
   async getDashboardStats(supabase?: SupabaseClient<Database>) {
-    const client = supabase || getSupabaseClient()
+    const client = supabase || createClient()
     try {
       const { data, error } = await client
         .from('dashboard_stats')
@@ -194,7 +194,7 @@ export const optimizedScheduleService = {
    * Performance: Pre-computed aggregations
    */
   async getPatientScheduleSummary(supabase?: SupabaseClient<Database>) {
-    const client = supabase || getSupabaseClient()
+    const client = supabase || createClient()
     try {
       const { data, error } = await client
         .from('patient_schedule_summary')
@@ -215,7 +215,7 @@ export const optimizedScheduleService = {
    * Use sparingly - views auto-refresh on data changes
    */
   async refreshMaterializedViews(supabase?: SupabaseClient<Database>) {
-    const client = supabase || getSupabaseClient()
+    const client = supabase || createClient()
     try {
       const { error } = await client.rpc('refresh_dashboard_materialized_views')
       if (error) throw error

@@ -5,15 +5,15 @@ import { scheduleService } from '@/services/scheduleService'
 import type { ScheduleWithDetails } from '@/types/schedule'
 import { useToast } from '@/hooks/use-toast'
 import { mapErrorToUserMessage } from '@/lib/error-mapper'
-import { useAuthContext } from '@/providers/auth-provider'
-import { getSupabaseClient } from '@/lib/supabase/client'
+import { useAuth } from '@/providers/auth-provider-simple'
+import { createClient } from '@/lib/supabase/client'
 // Removed complex query keys - using simple invalidation
 
 export function useSchedules() {
   const { toast } = useToast()
   const queryClient = useQueryClient()
-  const { user, initialized } = useAuthContext()
-  const supabase = getSupabaseClient()
+  const { user, loading } = useAuth()
+  const supabase = createClient()
 
   const query = useQuery({
     queryKey: ['schedules'],
@@ -97,8 +97,8 @@ export function useSchedules() {
 
 export function useTodayChecklist() {
   const { toast } = useToast()
-  const { user, initialized } = useAuthContext()
-  const supabase = getSupabaseClient()
+  const { user, loading } = useAuth()
+  const supabase = createClient()
   
   return useQuery({
     queryKey: ['schedules', 'today'],
@@ -121,8 +121,8 @@ export function useTodayChecklist() {
 
 export function useUpcomingSchedules(daysAhead: number = 7) {
   const { toast } = useToast()
-  const { user, initialized } = useAuthContext()
-  const supabase = getSupabaseClient()
+  const { user, loading } = useAuth()
+  const supabase = createClient()
   
   return useQuery({
     queryKey: ['schedules', 'upcoming', daysAhead],
@@ -145,8 +145,8 @@ export function useUpcomingSchedules(daysAhead: number = 7) {
 
 export function usePatientSchedules(patientId: string) {
   const { toast } = useToast()
-  const { user, initialized } = useAuthContext()
-  const supabase = getSupabaseClient()
+  const { user, loading } = useAuth()
+  const supabase = createClient()
   
   return useQuery({
     queryKey: ['schedules', 'patient', patientId],
@@ -169,8 +169,8 @@ export function usePatientSchedules(patientId: string) {
 
 export function useOverdueSchedules() {
   const { toast } = useToast()
-  const { user, initialized } = useAuthContext()
-  const supabase = getSupabaseClient()
+  const { user, loading } = useAuth()
+  const supabase = createClient()
   
   return useQuery({
     queryKey: ['schedules', 'overdue'],

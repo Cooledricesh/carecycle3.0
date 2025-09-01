@@ -1,7 +1,7 @@
 'use client'
 
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { getSupabaseClient } from '@/lib/supabase/client'
+import { createClient } from '@/lib/supabase/client'
 import { 
   ScheduleCreateSchema, 
   ScheduleUpdateSchema,
@@ -15,7 +15,7 @@ import type { Database } from '@/lib/database.types'
 
 export const scheduleService = {
   async create(input: ScheduleCreateInput, supabase?: SupabaseClient<Database>): Promise<Schedule> {
-    const client = supabase || getSupabaseClient()
+    const client = supabase || createClient()
     try {
       const validated = ScheduleCreateSchema.parse(input)
       const snakeData = camelToSnake(validated)
@@ -51,7 +51,7 @@ export const scheduleService = {
     nextDueDate: string
     notes?: string | null
   }, supabase?: SupabaseClient<Database>): Promise<Schedule> {
-    const client = supabase || getSupabaseClient()
+    const client = supabase || createClient()
     try {
       // First, create or find the item
       let itemId: string
@@ -117,7 +117,7 @@ export const scheduleService = {
   },
 
   async getTodayChecklist(supabase?: SupabaseClient<Database>): Promise<ScheduleWithDetails[]> {
-    const client = supabase || getSupabaseClient()
+    const client = supabase || createClient()
     
     const executeQuery = async (retryCount = 0): Promise<ScheduleWithDetails[]> => {
       try {
@@ -171,7 +171,7 @@ export const scheduleService = {
   },
 
   async getUpcomingSchedules(daysAhead: number = 7, supabase?: SupabaseClient<Database>): Promise<ScheduleWithDetails[]> {
-    const client = supabase || getSupabaseClient()
+    const client = supabase || createClient()
     
     const executeQuery = async (retryCount = 0): Promise<ScheduleWithDetails[]> => {
       try {
@@ -228,7 +228,7 @@ export const scheduleService = {
   },
 
   async getByPatientId(patientId: string, supabase?: SupabaseClient<Database>): Promise<ScheduleWithDetails[]> {
-    const client = supabase || getSupabaseClient()
+    const client = supabase || createClient()
     try {
       const { data, error } = await client
         .from('schedules')
@@ -257,7 +257,7 @@ export const scheduleService = {
   },
 
   async getById(id: string, supabase?: SupabaseClient<Database>): Promise<ScheduleWithDetails | null> {
-    const client = supabase || getSupabaseClient()
+    const client = supabase || createClient()
     try {
       const { data, error } = await client
         .from('schedules')
@@ -287,7 +287,7 @@ export const scheduleService = {
   },
 
   async update(id: string, input: ScheduleUpdateInput, supabase?: SupabaseClient<Database>): Promise<Schedule> {
-    const client = supabase || getSupabaseClient()
+    const client = supabase || createClient()
     try {
       const validated = ScheduleUpdateSchema.parse(input)
       const snakeData = camelToSnake(validated)
@@ -308,7 +308,7 @@ export const scheduleService = {
   },
 
   async updateStatus(id: string, status: 'active' | 'paused' | 'completed' | 'cancelled', supabase?: SupabaseClient<Database>): Promise<void> {
-    const client = supabase || getSupabaseClient()
+    const client = supabase || createClient()
     try {
       const { error } = await client
         .from('schedules')
@@ -323,7 +323,7 @@ export const scheduleService = {
   },
 
   async delete(id: string, supabase?: SupabaseClient<Database>): Promise<void> {
-    const client = supabase || getSupabaseClient()
+    const client = supabase || createClient()
     try {
       const { error } = await client
         .from('schedules')
@@ -338,7 +338,7 @@ export const scheduleService = {
   },
 
   async getOverdueSchedules(supabase?: SupabaseClient<Database>): Promise<ScheduleWithDetails[]> {
-    const client = supabase || getSupabaseClient()
+    const client = supabase || createClient()
     try {
       const today = format(new Date(), 'yyyy-MM-dd')
       
@@ -370,7 +370,7 @@ export const scheduleService = {
   },
 
   async getAllSchedules(supabase?: SupabaseClient<Database>): Promise<ScheduleWithDetails[]> {
-    const client = supabase || getSupabaseClient()
+    const client = supabase || createClient()
     
     const executeQuery = async (retryCount = 0): Promise<ScheduleWithDetails[]> => {
       try {
@@ -380,29 +380,8 @@ export const scheduleService = {
           .from('schedules')
           .select(`
             *,
-            patients (
-              id,
-              patient_number,
-              name,
-              department,
-              care_type,
-              is_active,
-              metadata,
-              created_by,
-              created_at,
-              updated_at
-            ),
-            items (
-              id,
-              code,
-              name,
-              category,
-              description,
-              default_interval_weeks,
-              preparation_notes,
-              created_at,
-              updated_at
-            )
+            patients (*),
+            items (*)
           `)
           .in('status', ['active', 'paused'])  // Only show active and paused schedules, exclude cancelled and deleted
           .order('next_due_date', { ascending: true })
@@ -457,7 +436,7 @@ export const scheduleService = {
     notes?: string,
     executedBy: string
   }, supabase?: SupabaseClient<Database>): Promise<void> {
-    const client = supabase || getSupabaseClient()
+    const client = supabase || createClient()
     try {
       // 1. 스케줄 정보 조회
       const { data: schedule, error: scheduleError } = await client

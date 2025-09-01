@@ -6,15 +6,15 @@ import type { Patient } from '@/types/patient'
 import type { PatientCreateInput } from '@/schemas/patient'
 import { useToast } from '@/hooks/use-toast'
 import { mapErrorToUserMessage } from '@/lib/error-mapper'
-import { useAuthContext } from '@/providers/auth-provider'
-import { getSupabaseClient } from '@/lib/supabase/client'
+import { useAuth } from '@/providers/auth-provider-simple'
+import { createClient } from '@/lib/supabase/client'
 // Removed complex query keys - using simple invalidation
 
 export function usePatients() {
   const { toast } = useToast()
   const queryClient = useQueryClient()
-  const { user, initialized } = useAuthContext()
-  const supabase = getSupabaseClient()
+  const { user, loading } = useAuth()
+  const supabase = createClient()
 
   const query = useQuery({
     queryKey: ['patients'],
@@ -22,7 +22,7 @@ export function usePatients() {
       try {
         return await patientService.getAll(supabase)
       } catch (error) {
-        if (initialized) {
+        if (!loading) {
           const message = mapErrorToUserMessage(error)
           toast({
             title: '오류',
@@ -99,8 +99,8 @@ export function usePatients() {
 
 export function usePatient(id: string) {
   const { toast } = useToast()
-  const { user, initialized } = useAuthContext()
-  const supabase = getSupabaseClient()
+  const { user, loading } = useAuth()
+  const supabase = createClient()
   
   return useQuery({
     queryKey: ['patients', id],
@@ -128,11 +128,11 @@ export function usePatient(id: string) {
 }
 
 export function useSearchPatients(query: string) {
-  const { user, initialized } = useAuthContext()
-  const supabase = getSupabaseClient()
+  const { user, loading } = useAuth()
+  const supabase = createClient()
   
   return useQuery({
-    queryKey: queryKeys.patients.search(query),
+    queryKey: ['patients', 'search', query],
     queryFn: () => patientService.search(query, supabase),
     enabled: query.length >= 2, // Only check query length, not auth
     staleTime: 10 * 1000 // 10 seconds

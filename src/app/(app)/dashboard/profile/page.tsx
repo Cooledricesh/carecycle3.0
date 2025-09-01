@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useAuthContext } from "@/providers/auth-provider";
+import { useAuth } from "@/providers/auth-provider-simple";
+import { useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,9 +16,24 @@ import { User, Mail, Phone, Building, Shield, Save, Key } from "lucide-react";
 import { Profile } from "@/lib/database.types";
 
 export default function ProfilePage() {
-  const { profile, refreshProfile } = useAuthContext();
+  const { user } = useAuth();
+  const [profile, setProfile] = useState<Profile | null>(null);
   const { toast } = useToast();
   const supabase = createClient();
+  
+  useEffect(() => {
+    if (user) {
+      // Fetch profile data
+      supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single()
+        .then(({ data, error }) => {
+          if (data) setProfile(data);
+        });
+    }
+  }, [user]);
   
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -54,7 +70,13 @@ export default function ProfilePage() {
       
       if (error) throw error;
 
-      await refreshProfile();
+      // Refresh profile data
+      const { data: updatedProfile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user?.id)
+        .single();
+      if (updatedProfile) setProfile(updatedProfile);
       
       toast({
         title: "프로필 업데이트 완료",

@@ -8,7 +8,7 @@ import {
   QueryClientProvider,
 } from '@tanstack/react-query';
 import { ThemeProvider } from 'next-themes';
-import { AuthProvider } from '@/providers/auth-provider';
+import { AuthProvider } from '@/providers/auth-provider-simple';
 import { Toaster } from '@/components/ui/toaster';
 
 function makeQueryClient() {

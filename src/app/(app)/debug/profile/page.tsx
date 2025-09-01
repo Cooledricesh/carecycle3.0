@@ -1,17 +1,33 @@
 'use client';
 
-import { useAuthContext } from '@/providers/auth-provider';
+import { useAuth } from '@/providers/auth-provider-simple';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { useState } from 'react';
-import { getSupabaseClient } from '@/lib/supabase/client';
+import { useState, useEffect } from 'react';
+import { createClient } from '@/lib/supabase/client';
+import type { Profile } from '@/lib/database.types';
 import { useToast } from '@/hooks/use-toast';
 
 export default function DebugProfilePage() {
-  const { user, profile, loading, initialized, error } = useAuthContext();
+  const { user, loading } = useAuth();
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [creating, setCreating] = useState(false);
-  const supabase = getSupabaseClient();
+  const supabase = createClient();
   const { toast } = useToast();
+  
+  useEffect(() => {
+    if (user) {
+      // Fetch profile data
+      supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single()
+        .then(({ data }) => {
+          if (data) setProfile(data);
+        });
+    }
+  }, [user]);
 
   const createProfile = async () => {
     if (!user) {
@@ -76,12 +92,8 @@ export default function DebugProfilePage() {
               <dd>{loading ? 'Yes' : 'No'}</dd>
             </div>
             <div>
-              <dt className="font-semibold">Initialized:</dt>
-              <dd>{initialized ? 'Yes' : 'No'}</dd>
-            </div>
-            <div>
-              <dt className="font-semibold">Error:</dt>
-              <dd>{error?.message || 'None'}</dd>
+              <dt className="font-semibold">Ready:</dt>
+              <dd>{!loading ? 'Yes' : 'No'}</dd>
             </div>
           </dl>
         </CardContent>

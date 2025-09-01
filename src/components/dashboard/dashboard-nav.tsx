@@ -7,7 +7,8 @@ import { Calendar, Clock, User, LogOut, Menu, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Profile } from "@/lib/database.types";
-import { useAuthContext } from "@/providers/auth-provider";
+import { createClient } from "@/lib/supabase/client";
+import { useRouter } from "next/navigation";
 
 interface DashboardNavProps {
   profile: Profile;
@@ -23,12 +24,13 @@ const navigation = [
 export default function DashboardNav({ profile }: DashboardNavProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const pathname = usePathname();
-  const { forceSignOut } = useAuthContext();
+  const router = useRouter();
 
   const handleSignOut = async () => {
-    console.log("Logout button clicked - using forceSignOut");
-    // Use forceSignOut for more aggressive cleanup
-    await forceSignOut();
+    console.log("Logout button clicked");
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.push('/auth/signin');
   };
 
   return (

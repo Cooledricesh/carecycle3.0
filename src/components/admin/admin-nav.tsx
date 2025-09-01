@@ -16,7 +16,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Profile } from "@/lib/database.types";
-import { useAuthContext } from "@/providers/auth-provider";
+import { createClient } from "@/lib/supabase/client";
+import { useRouter } from "next/navigation";
 
 interface AdminNavProps {
   profile: Profile;
@@ -34,17 +35,17 @@ const navigation = [
 export default function AdminNav({ profile }: AdminNavProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const pathname = usePathname();
-  const { forceSignOut } = useAuthContext();
-
+  const router = useRouter();
 
   const handleSignOut = async () => {
     try {
-      await forceSignOut();
-      // forceSignOut already handles redirect
+      const supabase = createClient();
+      await supabase.auth.signOut();
+      router.push('/auth/signin');
     } catch (error) {
       console.error("Logout error:", error);
       // Still redirect to landing page even on error
-      window.location.href = "/?logout=" + Date.now();
+      router.push('/auth/signin');
     }
   };
 

@@ -5,7 +5,7 @@ import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { useAuthContext } from "@/providers/auth-provider";
+import { useAuth } from "@/providers/auth-provider-simple";
 
 interface CTAGroupProps {
   onSignIn?: () => void;
@@ -22,19 +22,8 @@ export function CTAGroup({
   variant = 'default',
   className = '' 
 }: CTAGroupProps) {
-  const { user, loading, error } = useAuthContext();
+  const { user, loading } = useAuth();
   const { toast } = useToast();
-
-  // Show error toast if there's an authentication error
-  useEffect(() => {
-    if (error) {
-      toast({
-        title: "인증 오류",
-        description: "사용자 정보를 불러오는 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.",
-        variant: "destructive",
-      });
-    }
-  }, [error, toast]);
 
   // Show loading skeletons during auth check - maintain button layout
   if (loading) {

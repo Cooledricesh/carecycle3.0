@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar, Clock, CheckCircle, AlertCircle, Check, RefreshCw } from "lucide-react";
 import { PatientRegistrationModal } from "@/components/patients/patient-registration-modal";
-import { useAuthContext } from "@/providers/auth-provider";
+import { useAuth } from "@/providers/auth-provider-simple";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import { useTodayChecklist, useUpcomingSchedules } from "@/hooks/useSchedules";
@@ -27,7 +27,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 
 export default function DashboardPage() {
-  const { user } = useAuthContext();
+  const { user } = useAuth();
   const [profile, setProfile] = useState<any>(null);
   const [isCompletionDialogOpen, setIsCompletionDialogOpen] = useState(false);
   const [selectedSchedule, setSelectedSchedule] = useState<ScheduleWithDetails | null>(null);

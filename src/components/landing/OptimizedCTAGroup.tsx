@@ -3,7 +3,7 @@
 import { ArrowRight, LogIn, UserPlus } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { useAuthContext } from "@/providers/auth-provider";
+import { useAuth } from "@/providers/auth-provider-simple";
 
 interface OptimizedCTAGroupProps {
   onSignIn?: () => void;
@@ -20,12 +20,12 @@ export function OptimizedCTAGroup({
   variant = 'default',
   className = '' 
 }: OptimizedCTAGroupProps) {
-  const { user, loading, initialized } = useAuthContext();
+  const { user, loading } = useAuth();
   const [showButtons, setShowButtons] = useState(false);
 
   useEffect(() => {
-    // Show buttons immediately if auth is initialized
-    if (initialized) {
+    // Show buttons immediately if auth is loaded
+    if (!loading) {
       setShowButtons(true);
     } else {
       // Show buttons after a very short delay to prevent flicker
@@ -34,7 +34,7 @@ export function OptimizedCTAGroup({
       }, 100);
       return () => clearTimeout(timer);
     }
-  }, [initialized]);
+  }, [loading]);
 
   // If not initialized yet, show default buttons (not logged in state)
   // This prevents the loading skeleton from showing on initial render
@@ -45,9 +45,9 @@ export function OptimizedCTAGroup({
           variant="outline" 
           size={variant === 'compact' ? 'default' : 'lg'} 
           onClick={onSignIn}
-          disabled={!initialized}
+          disabled={loading}
           className="w-full sm:w-auto min-h-[44px] px-4 sm:px-6 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 bg-white hover:bg-gray-50 transition-opacity"
-          style={{ opacity: initialized ? 1 : 0.6 }}
+          style={{ opacity: loading ? 0.6 : 1 }}
           aria-label="로그인하기"
         >
           <LogIn className="mr-2 h-4 w-4 flex-shrink-0" aria-hidden="true" />
@@ -57,9 +57,9 @@ export function OptimizedCTAGroup({
         <Button 
           size={variant === 'compact' ? 'default' : 'lg'} 
           onClick={onSignUp}
-          disabled={!initialized}
+          disabled={loading}
           className="group w-full sm:w-auto min-h-[44px] px-4 sm:px-6 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 transition-opacity"
-          style={{ opacity: initialized ? 1 : 0.6 }}
+          style={{ opacity: loading ? 0.6 : 1 }}
           aria-label="회원가입하기"
         >
           <UserPlus className="mr-2 h-4 w-4 flex-shrink-0" aria-hidden="true" />
@@ -71,7 +71,7 @@ export function OptimizedCTAGroup({
   }
 
   // If user is authenticated and auth is initialized, show dashboard button
-  if (user && initialized) {
+  if (user && !loading) {
     return (
       <div className={`flex items-center justify-center ${className}`}>
         <Button 

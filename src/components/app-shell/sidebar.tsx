@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { 
@@ -19,7 +18,10 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
-import { useAuthContext } from '@/providers/auth-provider';
+import { useAuth } from '@/providers/auth-provider-simple';
+import { createClient } from '@/lib/supabase/client';
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 
 interface NavItem {
   name: string;
@@ -43,12 +45,26 @@ const adminNavigation: NavItem[] = [
 
 export function Sidebar() {
   const pathname = usePathname();
-  const { user, profile, loading, forceSignOut } = useAuthContext();
+  const router = useRouter();
+  const { user, loading } = useAuth();
   const [isCollapsed, setIsCollapsed] = useState(false);
 
+  // Simplified: Create profile from user data without fetching from database
+  // The profiles table query was causing issues - see AUTH_FAILURE_ANALYSIS.md
+  const profile = user ? {
+    id: user.id,
+    name: user.email?.split('@')[0] || 'User',
+    email: user.email,
+    role: 'nurse' as const,
+    department: null,
+    created_at: '',
+    updated_at: ''
+  } : null;
+
   const handleSignOut = async () => {
-    // Use forceSignOut for more aggressive cleanup
-    await forceSignOut();
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.push('/auth/signin');
   };
 
   // Show all basic navigation if no profile, add admin navigation if admin

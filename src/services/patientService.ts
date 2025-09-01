@@ -1,7 +1,7 @@
 'use client'
 
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { getSupabaseClient } from '@/lib/supabase/client'
+import { createClient } from '@/lib/supabase/client'
 import { 
   PatientCreateSchema, 
   PatientUpdateSchema,
@@ -14,7 +14,7 @@ import type { Database } from '@/lib/database.types'
 
 export const patientService = {
   async create(input: PatientCreateInput, supabase?: SupabaseClient<Database>): Promise<Patient> {
-    const client = supabase || getSupabaseClient()
+    const client = supabase || createClient()
     try {
       console.log('[patientService.create] Input:', input)
       const validated = PatientCreateSchema.parse(input)
@@ -55,7 +55,7 @@ export const patientService = {
   },
 
   async getAll(supabase?: SupabaseClient<Database>): Promise<Patient[]> {
-    const client = supabase || getSupabaseClient()
+    const client = supabase || createClient()
     
     // Helper function to execute query with retry on auth failure
     const executeQuery = async (retryCount = 0): Promise<Patient[]> => {
@@ -96,7 +96,7 @@ export const patientService = {
   },
 
   async getById(id: string, supabase?: SupabaseClient<Database>): Promise<Patient | null> {
-    const client = supabase || getSupabaseClient()
+    const client = supabase || createClient()
     try {
       const { data, error } = await client
         .from('patients')
@@ -117,7 +117,7 @@ export const patientService = {
   },
 
   async getByPatientNumber(patientNumber: string, supabase?: SupabaseClient<Database>): Promise<Patient | null> {
-    const client = supabase || getSupabaseClient()
+    const client = supabase || createClient()
     try {
       const { data, error } = await client
         .from('patients')
@@ -139,7 +139,7 @@ export const patientService = {
   },
 
   async update(id: string, input: PatientUpdateInput, supabase?: SupabaseClient<Database>): Promise<Patient> {
-    const client = supabase || getSupabaseClient()
+    const client = supabase || createClient()
     try {
       const validated = PatientUpdateSchema.parse(input)
       const snakeData = toSnakeCase(validated)
@@ -160,7 +160,7 @@ export const patientService = {
   },
 
   async delete(id: string, supabase?: SupabaseClient<Database>): Promise<void> {
-    const client = supabase || getSupabaseClient()
+    const client = supabase || createClient()
     try {
       console.log('[patientService.delete] Attempting to delete patient with id:', id)
       
@@ -234,7 +234,7 @@ export const patientService = {
   },
 
   async search(query: string, supabase?: SupabaseClient<Database>): Promise<Patient[]> {
-    const client = supabase || getSupabaseClient()
+    const client = supabase || createClient()
     try {
       // Validate minimum query length to prevent expensive searches
       if (query.trim().length < 2) {

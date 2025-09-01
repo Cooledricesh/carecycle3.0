@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useAuthContext } from '@/providers/auth-provider';
+import { useAuth } from '@/providers/auth-provider-simple';
 import { 
   HeroSection, 
   FeaturesSection, 
@@ -15,7 +15,7 @@ import {
 } from '@/components/landing';
 
 export default function LandingPage() {
-  const { user, loading } = useAuthContext();
+  const { user, loading } = useAuth();
   const router = useRouter();
 
   // Navigation handlers

@@ -1,6 +1,6 @@
 'use client';
 
-import { getSupabaseClient } from '@/lib/supabase/client';
+import { createClient } from '@/lib/supabase/client';
 
 export interface Schedule {
   id: string;
@@ -19,7 +19,7 @@ export interface Schedule {
 }
 
 export async function getSchedules() {
-  const supabase = getSupabaseClient();
+  const supabase = createClient();
   const { data, error } = await supabase
     .from('patient_schedules')
     .select('*')
@@ -35,7 +35,7 @@ export async function getSchedules() {
 }
 
 export async function getTodaySchedules() {
-  const supabase = getSupabaseClient();
+  const supabase = createClient();
   const today = new Date().toISOString().split('T')[0];
   
   const { data, error } = await supabase
@@ -53,7 +53,7 @@ export async function getTodaySchedules() {
 }
 
 export async function getUpcomingSchedules(limit = 5) {
-  const supabase = getSupabaseClient();
+  const supabase = createClient();
   const today = new Date().toISOString().split('T')[0];
   
   const { data, error } = await supabase
@@ -73,7 +73,7 @@ export async function getUpcomingSchedules(limit = 5) {
 }
 
 export async function getSchedulesByDateRange(startDate: string, endDate: string) {
-  const supabase = getSupabaseClient();
+  const supabase = createClient();
   const { data, error } = await supabase
     .from('patient_schedules')
     .select('*')
@@ -91,7 +91,7 @@ export async function getSchedulesByDateRange(startDate: string, endDate: string
 }
 
 export async function createSchedule(schedule: Omit<Schedule, 'id' | 'created_at' | 'updated_at'>) {
-  const supabase = getSupabaseClient();
+  const supabase = createClient();
   const { data, error } = await supabase
     .from('patient_schedules')
     .insert([schedule])
@@ -107,7 +107,7 @@ export async function createSchedule(schedule: Omit<Schedule, 'id' | 'created_at
 }
 
 export async function updateSchedule(id: string, updates: Partial<Omit<Schedule, 'id' | 'created_at' | 'updated_at'>>) {
-  const supabase = getSupabaseClient();
+  const supabase = createClient();
   const { data, error } = await supabase
     .from('patient_schedules')
     .update(updates)
@@ -124,7 +124,7 @@ export async function updateSchedule(id: string, updates: Partial<Omit<Schedule,
 }
 
 export async function deleteSchedule(id: string) {
-  const supabase = getSupabaseClient();
+  const supabase = createClient();
   const { error } = await supabase
     .from('patient_schedules')
     .delete()
