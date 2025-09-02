@@ -40,11 +40,12 @@ export function SignUpForm({
     }
 
     try {
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || window.location.origin;
       const { error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/dashboard`,
+          emailRedirectTo: `${appUrl}/dashboard`,
         },
       });
       if (error) throw error;
