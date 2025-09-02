@@ -10,8 +10,9 @@ import { useToast } from "@/hooks/use-toast";
 import { useTodayChecklist, useUpcomingSchedules } from "@/hooks/useSchedules";
 import { scheduleService } from "@/services/scheduleService";
 import type { ScheduleWithDetails } from "@/types/schedule";
-import { format, isToday, isWithinInterval, addDays } from "date-fns";
+import { format } from "date-fns";
 import { ko } from "date-fns/locale";
+import { safeFormatDate, safeParse, getDaysDifference, addWeeks } from "@/lib/utils/date";
 import { Button } from "@/components/ui/button";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -252,7 +253,7 @@ export default function DashboardPage() {
                       {schedule.item?.name || '항목 정보 없음'} • {schedule.item?.category}
                     </p>
                     <p className="text-xs text-red-600 mt-1">
-                      예정일: {format(new Date(schedule.nextDueDate), 'yyyy년 MM월 dd일', { locale: ko })}
+                      예정일: {safeFormatDate(schedule.nextDueDate, 'yyyy년 MM월 dd일')}
                       {schedule.intervalWeeks && ` • ${schedule.intervalWeeks}주 주기`}
                     </p>
                     {schedule.notes && (
@@ -300,9 +301,8 @@ export default function DashboardPage() {
           ) : (
             <div className="space-y-4">
               {upcomingSchedules.map((schedule) => {
-                const dueDate = new Date(schedule.nextDueDate);
-                const today = new Date();
-                const daysUntil = Math.ceil((dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+                const dueDate = safeParse(schedule.nextDueDate);
+                const daysUntil = dueDate ? getDaysDifference(dueDate, new Date()) : null;
                 
                 return (
                   <div key={schedule.id} className="flex items-center justify-between p-4 border rounded-lg">
@@ -312,7 +312,7 @@ export default function DashboardPage() {
                         {schedule.item?.name || '항목 정보 없음'} • {schedule.item?.category}
                       </p>
                       <p className="text-xs text-gray-500 mt-1">
-                        예정일: {format(dueDate, 'yyyy년 MM월 dd일', { locale: ko })}
+                        예정일: {safeFormatDate(schedule.nextDueDate, 'yyyy년 MM월 dd일')}
                         {schedule.intervalWeeks && ` • ${schedule.intervalWeeks}주 주기`}
                       </p>
                       {schedule.notes && (
@@ -329,17 +329,19 @@ export default function DashboardPage() {
                         <Check className="h-4 w-4" />
                         완료 처리
                       </Button>
-                      <span className={`px-2 py-1 text-xs rounded ${
-                        daysUntil < 0
-                          ? 'bg-blue-100 text-blue-700'
-                          : daysUntil === 0 
-                          ? 'bg-orange-100 text-orange-700'
-                          : daysUntil <= 3
-                          ? 'bg-yellow-100 text-yellow-700'
-                          : 'bg-green-100 text-green-700'
-                      }`}>
-                        {daysUntil < 0 ? `${Math.abs(daysUntil)}일 전` : daysUntil === 0 ? '오늘' : daysUntil === 1 ? '내일' : `${daysUntil}일 후`}
-                      </span>
+                      {daysUntil !== null && (
+                        <span className={`px-2 py-1 text-xs rounded ${
+                          daysUntil < 0
+                            ? 'bg-blue-100 text-blue-700'
+                            : daysUntil === 0 
+                            ? 'bg-orange-100 text-orange-700'
+                            : daysUntil <= 3
+                            ? 'bg-yellow-100 text-yellow-700'
+                            : 'bg-green-100 text-green-700'
+                        }`}>
+                          {daysUntil < 0 ? `${Math.abs(daysUntil)}일 전` : daysUntil === 0 ? '오늘' : daysUntil === 1 ? '내일' : `${daysUntil}일 후`}
+                        </span>
+                      )}
                     </div>
                   </div>
                 );
@@ -389,15 +391,14 @@ export default function DashboardPage() {
                 rows={3}
               />
             </div>
-            {selectedSchedule && (
+            {selectedSchedule && selectedSchedule.intervalWeeks && (
               <div className="text-sm text-gray-600">
                 <p>다음 예정일: {
-                  format(
-                    addDays(new Date(executionDate), selectedSchedule.intervalDays),
-                    'yyyy년 MM월 dd일',
-                    { locale: ko }
-                  )
-                } (자동 계산됨)</p>
+                  (() => {
+                    const nextDate = addWeeks(executionDate, selectedSchedule.intervalWeeks);
+                    return nextDate ? safeFormatDate(nextDate, 'yyyy년 MM월 dd일') : '계산 오류';
+                  })()
+                } ({selectedSchedule.intervalWeeks}주 후, 자동 계산됨)</p>
               </div>
             )}
           </div>

@@ -11,6 +11,7 @@ import {
 import type { Schedule, ScheduleWithDetails } from '@/types/schedule'
 import { toCamelCase as snakeToCamel, toSnakeCase as camelToSnake } from '@/lib/database-utils'
 import { format, addDays } from 'date-fns'
+import { addWeeks } from '@/lib/utils/date'
 import type { Database } from '@/lib/database.types'
 
 export const scheduleService = {
@@ -471,27 +472,91 @@ export const scheduleService = {
       if (scheduleError) throw scheduleError
       if (!schedule) throw new Error('스케줄을 찾을 수 없습니다')
 
-      // 2. schedule_executions 테이블에 실행 기록 추가
-      const { error: executionError } = await client
-        .from('schedule_executions')
-        .insert({
-          schedule_id: scheduleId,
-          planned_date: schedule.next_due_date,
-          executed_date: input.executedDate,
-          executed_time: format(new Date(), 'HH:mm:ss'),
-          status: 'completed',
-          executed_by: input.executedBy,
-          notes: input.notes || null
+      // 2. schedule_executions 테이블에 실행 기록 추가 (UPSERT 함수 사용)
+      // RPC 함수가 존재하는지 먼저 확인하고, 없으면 기존 방식 사용
+      try {
+        // 새로운 UPSERT 함수 사용 시도
+        const { error: rpcError } = await client
+          .rpc('complete_schedule_execution', {
+            p_schedule_id: scheduleId,
+            p_planned_date: schedule.next_due_date,
+            p_executed_date: input.executedDate,
+            p_executed_by: input.executedBy,
+            p_notes: input.notes || null
+          })
+        
+        if (rpcError) {
+          // RPC 함수가 없으면 기존 방식으로 fallback
+          if (rpcError.message?.includes('function') || rpcError.message?.includes('does not exist')) {
+            console.log('RPC function not found, using fallback method')
+            
+            // 기존 INSERT 방식 (중복 시 실패할 수 있음)
+            const { error: executionError } = await client
+              .from('schedule_executions')
+              .insert({
+                schedule_id: scheduleId,
+                planned_date: schedule.next_due_date,
+                executed_date: input.executedDate,
+                executed_time: format(new Date(), 'HH:mm:ss'),
+                status: 'completed',
+                executed_by: input.executedBy,
+                notes: input.notes || null
+              })
+            
+            if (executionError) {
+              // 중복 키 에러인 경우 UPDATE 시도
+              if (executionError.code === '23505') {
+                const { error: updateError } = await client
+                  .from('schedule_executions')
+                  .update({
+                    executed_date: input.executedDate,
+                    executed_time: format(new Date(), 'HH:mm:ss'),
+                    status: 'completed',
+                    executed_by: input.executedBy,
+                    notes: input.notes || null,
+                    updated_at: new Date().toISOString()
+                  })
+                  .eq('schedule_id', scheduleId)
+                  .eq('planned_date', schedule.next_due_date)
+                
+                if (updateError) {
+                  console.error('Execution update error:', updateError)
+                  throw updateError
+                }
+              } else {
+                console.error('Execution insert error:', {
+                  code: executionError.code,
+                  message: executionError.message,
+                  details: executionError.details,
+                  hint: executionError.hint,
+                  error: executionError
+                })
+                throw executionError
+              }
+            }
+          } else {
+            console.error('RPC execution error:', rpcError)
+            throw rpcError
+          }
+        }
+      } catch (error: any) {
+        console.error('Failed to complete schedule execution:', {
+          message: error?.message || 'Unknown error',
+          code: error?.code,
+          details: error?.details,
+          hint: error?.hint,
+          fullError: error
         })
-      
-      if (executionError) {
-        console.error('Execution insert error:', executionError)
-        throw executionError
+        throw error
       }
 
-      // 3. 다음 예정일 계산 (실행일 기준으로)
+      // 3. 다음 예정일 계산 (실행일 기준으로, 주 단위)
       const executedDate = new Date(input.executedDate)
-      const nextDueDate = addDays(executedDate, (schedule.interval_weeks || 0) * 7)
+      const nextDueDate = addWeeks(executedDate, schedule.interval_weeks || 0)
+      
+      if (!nextDueDate) {
+        throw new Error('다음 예정일 계산에 실패했습니다')
+      }
       
       // 4. schedules 테이블의 next_due_date와 last_executed_date 업데이트
       const { error: updateError } = await client
