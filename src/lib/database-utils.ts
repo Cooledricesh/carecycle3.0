@@ -57,7 +57,7 @@ export function convertScheduleRow(row: any): any {
     id: row.id,
     patientId: row.patient_id,
     itemId: row.item_id,
-    intervalDays: row.interval_days,
+    intervalWeeks: row.interval_weeks,
     startDate: row.start_date,
     endDate: row.end_date,
     lastExecutedDate: row.last_executed_date,
@@ -132,14 +132,14 @@ export function toScheduleInsert(data: any): any {
   return {
     patient_id: data.patientId,
     item_id: data.itemId,
-    interval_days: data.intervalDays,
+    interval_weeks: data.intervalWeeks,
     start_date: data.startDate,
     end_date: data.endDate,
     next_due_date: data.startDate, // Initially same as start date
     assigned_nurse_id: data.assignedNurseId,
     notes: data.notes,
     priority: data.priority ?? 0,
-    requires_notification: data.requiresNotification ?? (data.intervalDays >= 28),
+    requires_notification: data.requiresNotification ?? (data.intervalWeeks >= 4),
     notification_days_before: data.notificationDaysBefore ?? 7,
   }
 }

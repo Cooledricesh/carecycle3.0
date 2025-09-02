@@ -146,7 +146,7 @@ export interface Database {
           id: string
           patient_id: string
           item_id: string
-          interval_days: number
+          interval_weeks: number
           start_date: string
           end_date: string | null
           last_executed_date: string | null
@@ -165,7 +165,7 @@ export interface Database {
           id?: string
           patient_id: string
           item_id: string
-          interval_days: number
+          interval_weeks: number
           start_date: string
           end_date?: string | null
           last_executed_date?: string | null
@@ -184,7 +184,7 @@ export interface Database {
           id?: string
           patient_id?: string
           item_id?: string
-          interval_days?: number
+          interval_weeks?: number
           start_date?: string
           end_date?: string | null
           last_executed_date?: string | null

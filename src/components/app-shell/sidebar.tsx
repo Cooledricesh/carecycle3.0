@@ -22,6 +22,7 @@ import { useAuth } from '@/providers/auth-provider-simple';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import { useProfile } from '@/hooks/useProfile';
 
 interface NavItem {
   name: string;
@@ -46,26 +47,24 @@ const adminNavigation: NavItem[] = [
 export function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, loading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const { data: profile, isLoading: profileLoading, error: profileError } = useProfile();
 
-  // Simplified: Create profile from user data without fetching from database
-  // The profiles table query was causing issues - see AUTH_FAILURE_ANALYSIS.md
-  const profile = user ? {
-    id: user.id,
-    name: user.email?.split('@')[0] || 'User',
-    email: user.email,
-    role: 'nurse' as const,
-    department: null,
-    created_at: '',
-    updated_at: ''
-  } : null;
+  const loading = authLoading || profileLoading;
 
   const handleSignOut = async () => {
     const supabase = createClient();
     await supabase.auth.signOut();
     router.push('/auth/signin');
   };
+
+  // Debug log to check profile data
+  console.log('[Sidebar] Profile data:', profile);
+  console.log('[Sidebar] User role:', profile?.role);
+  console.log('[Sidebar] Profile loading:', profileLoading);
+  console.log('[Sidebar] Profile error:', profileError);
+  console.log('[Sidebar] User ID:', user?.id);
 
   // Show all basic navigation if no profile, add admin navigation if admin
   const userRole = profile?.role || 'nurse';

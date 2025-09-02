@@ -44,7 +44,7 @@ export const scheduleService = {
   async createWithCustomItem(input: {
     patientId: string
     itemName: string
-    intervalDays: number
+    intervalWeeks: number
     intervalUnit: string
     intervalValue: number
     startDate: string
@@ -75,7 +75,7 @@ export const scheduleService = {
             name: input.itemName,
             category: '기타',
             description: `${input.intervalValue}주 주기`,
-            default_interval_weeks: Math.ceil(input.intervalDays / 7),
+            default_interval_weeks: input.intervalWeeks,
             preparation_notes: null
           })
           .select()
@@ -94,7 +94,7 @@ export const scheduleService = {
         .insert({
           patient_id: input.patientId,
           item_id: itemId,
-          interval_days: input.intervalDays,
+          interval_weeks: input.intervalWeeks,
           start_date: input.startDate,
           next_due_date: input.nextDueDate,
           status: 'active',
@@ -468,7 +468,7 @@ export const scheduleService = {
 
       // 3. 다음 예정일 계산 (실행일 기준으로)
       const executedDate = new Date(input.executedDate)
-      const nextDueDate = addDays(executedDate, schedule.interval_days)
+      const nextDueDate = addDays(executedDate, (schedule.interval_weeks || 0) * 7)
       
       // 4. schedules 테이블의 next_due_date와 last_executed_date 업데이트
       const { error: updateError } = await client

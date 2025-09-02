@@ -14,7 +14,7 @@ export interface Schedule {
   id: string
   patientId: string
   itemId: string
-  intervalDays: number
+  intervalWeeks: number
   startDate: string
   endDate?: string | null
   lastExecutedDate?: string | null
@@ -47,7 +47,7 @@ export type ScheduleWithDetails = ScheduleWithRelations
 export interface ScheduleCreateInput {
   patientId: string
   itemId: string
-  intervalDays: number
+  intervalWeeks: number
   startDate: string
   endDate?: string | null
   assignedNurseId?: string | null
@@ -58,7 +58,7 @@ export interface ScheduleCreateInput {
 }
 
 export interface ScheduleUpdateInput {
-  intervalDays?: number
+  intervalWeeks?: number
   startDate?: string
   endDate?: string | null
   status?: ScheduleStatus
@@ -73,7 +73,7 @@ export interface ScheduleUpdateInput {
 export interface BulkScheduleCreateInput {
   patientIds: string[]
   itemId: string
-  intervalDays: number
+  intervalWeeks: number
   startDate: string
   assignedNurseId?: string | null
   requiresNotification?: boolean
@@ -98,7 +98,7 @@ export interface ScheduleListItem {
   patientNumber: string
   itemName: string
   itemCategory: string
-  intervalDays: number
+  intervalWeeks: number
   nextDueDate: string
   status: ScheduleStatus
   assignedNurseName?: string | null

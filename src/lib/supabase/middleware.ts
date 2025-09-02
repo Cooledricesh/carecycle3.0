@@ -48,7 +48,7 @@ export async function updateSession(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
 
   // Public routes that don't require authentication
-  const publicRoutes = ["/", "/auth/signin", "/auth/signup", "/auth/forgot-password", "/auth/callback"];
+  const publicRoutes = ["/", "/auth/signin", "/auth/signup", "/auth/forgot-password", "/auth/callback", "/auth/update-password"];
   const isPublicRoute = publicRoutes.includes(pathname) || pathname.startsWith("/auth/callback");
 
   // If user is not authenticated and trying to access protected route
@@ -58,8 +58,9 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(redirectUrl);
   }
 
-  // If user is authenticated and trying to access auth pages (except callback)
-  if (user && pathname.startsWith("/auth/") && pathname !== "/auth/callback") {
+  // If user is authenticated and trying to access auth pages (except callback and update-password)
+  const authExceptions = ["/auth/callback", "/auth/update-password"];
+  if (user && pathname.startsWith("/auth/") && !authExceptions.includes(pathname)) {
     // Get user profile to determine redirect destination
     const { data: profile } = await supabase
       .from("profiles")

@@ -253,7 +253,7 @@ export default function DashboardPage() {
                     </p>
                     <p className="text-xs text-red-600 mt-1">
                       예정일: {format(new Date(schedule.nextDueDate), 'yyyy년 MM월 dd일', { locale: ko })}
-                      {schedule.intervalDays && ` • ${Math.round(schedule.intervalDays / 7)}주 주기`}
+                      {schedule.intervalWeeks && ` • ${schedule.intervalWeeks}주 주기`}
                     </p>
                     {schedule.notes && (
                       <p className="text-xs text-gray-500 mt-1">{schedule.notes}</p>
@@ -313,7 +313,7 @@ export default function DashboardPage() {
                       </p>
                       <p className="text-xs text-gray-500 mt-1">
                         예정일: {format(dueDate, 'yyyy년 MM월 dd일', { locale: ko })}
-                        {schedule.intervalDays && ` • ${Math.round(schedule.intervalDays / 7)}주 주기`}
+                        {schedule.intervalWeeks && ` • ${schedule.intervalWeeks}주 주기`}
                       </p>
                       {schedule.notes && (
                         <p className="text-xs text-gray-500 mt-1">{schedule.notes}</p>
