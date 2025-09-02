@@ -22,7 +22,7 @@ POST /auth/login
 Content-Type: application/json
 
 {
-  "email": "nurse@hospital.com",
+  "email": "staff@hospital.com",
   "password": "SecurePassword123!"
 }
 ```
@@ -93,7 +93,7 @@ POST /auth/login
 **Request Body:**
 ```json
 {
-  "email": "nurse@hospital.com",
+  "email": "staff@hospital.com",
   "password": "SecurePassword123!"
 }
 ```
@@ -103,7 +103,7 @@ POST /auth/login
 {
   "user": {
     "id": "uuid",
-    "email": "nurse@hospital.com",
+    "email": "staff@hospital.com",
     "name": "Jane Nurse",
     "role": "nurse"
   },
@@ -526,7 +526,7 @@ const { data, error } = await supabase
 # Login
 curl -X POST http://localhost:3000/api/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"nurse@hospital.com","password":"password"}'
+  -d '{"email":"staff@hospital.com","password":"password"}'
 
 # Get patients
 curl -X GET http://localhost:3000/api/patients \

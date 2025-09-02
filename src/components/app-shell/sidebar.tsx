@@ -118,7 +118,7 @@ export function Sidebar() {
               <p className="text-xs text-gray-500 truncate">
                 {profile ? (
                   <>
-                    {profile.role === 'nurse' ? '간호사' : '관리자'}
+                    {profile.role === 'nurse' ? '스텝' : '관리자'}
                     {profile.department && ` • ${profile.department}`}
                   </>
                 ) : user ? (

@@ -153,7 +153,7 @@ export default function AdminUsersPage() {
         return (
           <Badge className="bg-blue-100 text-blue-800">
             <User className="w-3 h-3 mr-1" />
-            간호사
+            스텝
           </Badge>
         );
       default:

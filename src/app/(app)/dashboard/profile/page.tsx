@@ -180,7 +180,7 @@ export default function ProfilePage() {
               <div className="flex items-center gap-2">
                 <Shield className="h-4 w-4 text-gray-400" />
                 <span className="text-sm text-gray-600">
-                  {profile.role === "admin" ? "관리자" : "간호사"}
+                  {profile.role === "admin" ? "관리자" : "스텝"}
                 </span>
                 {profile.department && (
                   <>

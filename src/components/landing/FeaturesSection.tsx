@@ -47,7 +47,7 @@ export function FeaturesSection() {
         {/* Section header */}
         <div className="text-center">
           <h2 id="features-section-heading" className="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-gray-900">
-            간호사를 위한 핵심 기능
+            핵심 기능
           </h2>
           <p className="mx-auto mt-3 sm:mt-4 max-w-2xl text-base sm:text-lg text-gray-600">
             의료 스케줄링을 간소화하고 환자 케어 품질을 향상시키는 모든 기능

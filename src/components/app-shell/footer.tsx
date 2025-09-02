@@ -6,7 +6,7 @@ export function Footer() {
       <div className="container max-w-[1200px] mx-auto px-4 lg:px-6">
         <div className="flex h-14 items-center justify-between">
           <p className="text-sm text-muted-foreground">
-            © 2024 CareScheduler. All rights reserved.
+            © 2025 CareScheduler. All rights reserved.
           </p>
           <div className="flex items-center gap-4">
             <a

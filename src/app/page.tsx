@@ -148,10 +148,10 @@ export default function LandingPage() {
                 <span className="text-xl font-bold">CareScheduler</span>
               </div>
               <p className="text-gray-400 mb-4">
-                병원 간호사를 위한 반복 검사 및 주사 일정 자동화 스마트 스케줄링 시스템.
+                반복 검사 및 주사 일정 자동화 스마트 스케줄링 시스템.
               </p>
               <p className="text-gray-500 text-sm">
-                © 2024 CareScheduler. All rights reserved.
+                © 2025 CareScheduler. All rights reserved.
               </p>
             </div>
             

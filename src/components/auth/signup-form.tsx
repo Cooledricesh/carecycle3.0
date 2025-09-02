@@ -71,7 +71,7 @@ export function SignUpForm({
                 <Input
                   id="email"
                   type="email"
-                  placeholder="nurse@hospital.com"
+                  placeholder="staff@hospital.com"
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}

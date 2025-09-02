@@ -54,7 +54,7 @@ paths:
                 email:
                   type: string
                   format: email
-                  example: nurse@hospital.com
+                  example: staff@hospital.com
                 password:
                   type: string
                   format: password

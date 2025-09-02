@@ -49,7 +49,7 @@ export const ScheduleCreateSchema = z.object({
   
   assignedNurseId: z
     .string()
-    .uuid('유효한 간호사 ID가 아닙니다')
+    .uuid('유효한 ID가 아닙니다')
     .nullable()
     .optional(),
   
@@ -112,7 +112,7 @@ export const ScheduleUpdateSchema = z.object({
   
   assignedNurseId: z
     .string()
-    .uuid('유효한 간호사 ID가 아닙니다')
+    .uuid('유효한 ID가 아닙니다')
     .nullable()
     .optional(),
   
@@ -165,7 +165,7 @@ export const BulkScheduleCreateSchema = z.object({
   
   assignedNurseId: z
     .string()
-    .uuid('유효한 간호사 ID가 아닙니다')
+    .uuid('유효한 ID가 아닙니다')
     .nullable()
     .optional(),
   

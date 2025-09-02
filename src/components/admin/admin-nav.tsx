@@ -142,7 +142,7 @@ export default function AdminNav({ profile }: AdminNavProps) {
               onClick={() => setIsMobileMenuOpen(false)}
             >
               <Calendar className="mr-3 h-5 w-5" />
-              간호사 뷰로 전환
+              스텝 뷰로 전환
             </Link>
           </div>
 
