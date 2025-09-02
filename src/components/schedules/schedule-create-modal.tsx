@@ -191,14 +191,14 @@ export function ScheduleCreateModal({
       // Don't calculate the next cycle yet
       const firstDueDate = data.firstPerformedAt
 
-      // Convert weeks to days for database storage
-      const intervalDays = data.intervalValue * 7
+      // Use weeks directly - no conversion needed
+      const intervalWeeks = data.intervalValue
 
       // Create schedule
       await scheduleService.createWithCustomItem({
         patientId: data.patientId,
         itemName: data.itemName,
-        intervalDays,
+        intervalWeeks,
         intervalUnit: data.intervalUnit,
         intervalValue: data.intervalValue,
         startDate: formatDateForDB(data.firstPerformedAt),

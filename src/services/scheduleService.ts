@@ -74,14 +74,22 @@ export const scheduleService = {
             code: itemCode,
             name: input.itemName,
             category: '기타',
-            description: `${input.intervalValue}주 주기`,
+            description: `${input.intervalWeeks}주 주기`,
             default_interval_weeks: input.intervalWeeks,
             preparation_notes: null
           })
           .select()
           .single()
         
-        if (itemError) throw itemError
+        if (itemError) {
+          console.error('Error creating item:', {
+            code: itemError.code,
+            message: itemError.message,
+            details: itemError.details,
+            hint: itemError.hint
+          })
+          throw itemError
+        }
         itemId = newItem.id
       }
       
@@ -108,10 +116,25 @@ export const scheduleService = {
         .select()
         .single()
       
-      if (error) throw error
+      if (error) {
+        console.error('Database error creating schedule:', {
+          code: error.code,
+          message: error.message,
+          details: error.details,
+          hint: error.hint
+        })
+        throw error
+      }
       return snakeToCamel(data) as Schedule
-    } catch (error) {
-      console.error('Error creating schedule with custom item:', error)
+    } catch (error: any) {
+      console.error('Error creating schedule with custom item:', {
+        error,
+        code: error?.code,
+        message: error?.message,
+        details: error?.details,
+        hint: error?.hint,
+        fullError: JSON.stringify(error)
+      })
       throw new Error('일정 등록에 실패했습니다')
     }
   },
