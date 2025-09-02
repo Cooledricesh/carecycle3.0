@@ -73,34 +73,36 @@ export default function AdminUsersPage() {
     const { userId, action } = actionDialog;
 
     try {
-      let updateData: Partial<Profile> = {};
+      let error = null;
       
       switch (action) {
         case 'approve':
-          updateData = { 
-            approval_status: 'approved', 
-            is_active: true,
-            approved_at: new Date().toISOString()
-          };
+          const { error: approveError } = await supabase.rpc('approve_user', {
+            user_id: userId
+          });
+          error = approveError;
           break;
         case 'reject':
-          updateData = { 
-            approval_status: 'rejected',
-            is_active: false 
-          };
+          const { error: rejectError } = await supabase.rpc('reject_user', {
+            user_id: userId,
+            reason: '관리자에 의해 거부됨'
+          });
+          error = rejectError;
           break;
         case 'activate':
-          updateData = { is_active: true };
+          const { error: activateError } = await supabase.rpc('approve_user', {
+            user_id: userId
+          });
+          error = activateError;
           break;
         case 'deactivate':
-          updateData = { is_active: false };
+          const { error: deactivateError } = await supabase.rpc('deactivate_user', {
+            user_id: userId,
+            reason: '관리자에 의해 비활성화됨'
+          });
+          error = deactivateError;
           break;
       }
-
-      const { error } = await supabase
-        .from('profiles')
-        .update(updateData)
-        .eq('id', userId);
 
       if (error) throw error;
 
@@ -114,11 +116,11 @@ export default function AdminUsersPage() {
       });
 
       await fetchUsers();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating user:', error);
       toast({
         title: '오류',
-        description: '사용자 상태 업데이트에 실패했습니다.',
+        description: error?.message || '사용자 상태 업데이트에 실패했습니다.',
         variant: 'destructive',
       });
     } finally {
