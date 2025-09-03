@@ -106,6 +106,12 @@ test-*.ts
 **/test/**
 **/tests/**
 
+# Admin scripts with sensitive data (NEVER COMMIT)
+create-admin.js
+create-admin.ts
+*-admin.js
+*-admin.ts
+
 # Package manager specific
 .npm/
 .yarn-integrity

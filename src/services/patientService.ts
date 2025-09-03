@@ -20,17 +20,30 @@ export const patientService = {
       const validated = PatientCreateSchema.parse(input)
       console.log('[patientService.create] Validated:', validated)
       
+      // Check auth session before proceeding
+      const { data: { session }, error: sessionError } = await client.auth.getSession()
+      if (sessionError || !session) {
+        console.error('[patientService.create] Auth session error:', sessionError)
+        console.log('[patientService.create] Session status:', session ? 'exists' : 'missing')
+        
+        // Try to refresh session
+        const { error: refreshError } = await client.auth.refreshSession()
+        if (refreshError) {
+          throw new Error('인증 세션이 만료되었습니다. 다시 로그인해주세요.')
+        }
+      }
+      
       // Simple insert without encryption
       const insertData = {
         name: validated.name,
         patient_number: validated.patientNumber,
-        department: validated.department || null,
         care_type: validated.careType || null,
         is_active: validated.isActive ?? true,
         metadata: validated.metadata || {}
       }
       
       console.log('[patientService.create] Insert data:', insertData)
+      console.log('[patientService.create] Auth user ID:', session?.user?.id)
       
       const { data, error } = await (client as any)
         .from('patients')
@@ -39,14 +52,77 @@ export const patientService = {
         .single()
       
       if (error) {
-        console.error('[patientService.create] Supabase error:', error)
-        throw error
+        // Enhanced error logging
+        console.error('[patientService.create] Supabase error details:', {
+          code: error.code,
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          // Use replacer function to handle circular references
+          fullError: JSON.stringify(error, (key, value) => {
+            if (key === 'context' || key === 'originalError') return '[Circular]'
+            return value
+          }, 2)
+        })
+        
+        // If RLS policy error, try API route as fallback
+        if (error.code === '42501') {
+          console.log('[patientService.create] RLS policy error detected, using API route fallback')
+          
+          try {
+            const response = await fetch('/api/patients', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                name: validated.name,
+                patientNumber: validated.patientNumber,
+                department: validated.department,
+                careType: validated.careType,
+                isActive: validated.isActive,
+                metadata: validated.metadata
+              })
+            })
+            
+            const responseData = await response.json()
+            
+            if (!response.ok) {
+              console.error('[patientService.create] API route failed:', responseData)
+              throw new Error(responseData.error || '환자 등록에 실패했습니다.')
+            }
+            
+            console.log('[patientService.create] Successfully created via API route:', responseData)
+            return responseData as Patient
+            
+          } catch (apiError) {
+            console.error('[patientService.create] API route fallback failed:', apiError)
+            throw new Error('권한이 없습니다. 사용자 승인 상태를 확인해주세요.')
+          }
+        }
+        
+        // Handle other error types
+        if (error.code === '23505') {
+          throw new Error('이미 등록된 환자번호입니다.')
+        } else if (error.message?.includes('JWT') || error.message?.includes('token')) {
+          throw new Error('인증 토큰이 만료되었습니다. 다시 로그인해주세요.')
+        } else if (error.code === 'PGRST301') {
+          throw new Error('인증이 필요합니다. 다시 로그인해주세요.')
+        } else {
+          throw new Error(`환자 등록 실패: ${error.message || '알 수 없는 오류가 발생했습니다.'}`)
+        }
       }
       
       console.log('[patientService.create] Response data:', data)
       return toCamelCase(data) as Patient
     } catch (error) {
-      console.error('[patientService.create] Full error:', error)
+      console.error('[patientService.create] Caught error:', {
+        isError: error instanceof Error,
+        message: error instanceof Error ? error.message : String(error),
+        name: error instanceof Error ? error.name : 'Unknown',
+        stack: error instanceof Error ? error.stack : undefined
+      })
+      
       if (error instanceof Error) {
         throw error
       }
