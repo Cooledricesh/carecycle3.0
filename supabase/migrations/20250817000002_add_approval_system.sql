@@ -87,10 +87,14 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Update existing admin account to approved status
-UPDATE public.profiles 
-SET approval_status = 'approved', 
-    is_active = true
-WHERE email = 'cooldericesh@gmail.com';
+-- ⚠️  MANUAL ACTION REQUIRED: Replace 'your-admin-email@domain.com' with actual admin email
+-- UPDATE public.profiles 
+-- SET approval_status = 'approved', 
+--     is_active = true
+-- WHERE email = 'your-admin-email@domain.com';
+
+-- 🔧 Alternative: Use create-admin-secure.js script instead:
+-- node create-admin-secure.js
 
 -- Drop all existing RLS policies to recreate them
 DROP POLICY IF EXISTS "Users can view own profile" ON public.profiles;

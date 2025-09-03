@@ -1,7 +1,16 @@
--- Create a test user that we can actually login with
+-- ⚠️  SECURITY WARNING: Test user migration with hardcoded credentials
+-- ⚠️  FOR DEVELOPMENT/TESTING ONLY - NEVER USE IN PRODUCTION!
+-- 
+-- Original credentials (COMMENTED OUT FOR SECURITY):
 -- Email: admin@test.com
 -- Password: admin123
+--
+-- 🔧 RECOMMENDED ACTION: Use create-admin-secure.js script instead:
+-- node create-admin-secure.js
+--
+-- If you need to enable this migration for testing, uncomment the code block below
 
+/*
 BEGIN;
 
 -- First ensure we have a proper admin user
@@ -105,3 +114,7 @@ BEGIN
 END $$;
 
 COMMIT;
+*/
+
+-- 📝 Migration disabled for security reasons
+-- Use create-admin-secure.js script to create admin users safely

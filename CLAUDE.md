@@ -157,8 +157,28 @@ src/
 - Use valid picsum.photos stock images for placeholders
 
 ### Supabase Integration
-- Client-side auth: Use `@/lib/supabase/client.ts`
-- Server-side auth: Use `@/lib/supabase/server.ts`
+
+**⚠️ IMPORTANT: New API Key System (2025)**
+This project uses Supabase's **new API key system** (publishable/secret keys), **NOT** the legacy JWT token system (anon/service_role). Always use the helper functions below.
+
+#### Required Patterns
+- **Client-side operations**: Use `createClient()` from `@/lib/supabase/client.ts`
+  - Uses `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (safe for browser)
+  - For authentication, user data fetching, real-time subscriptions
+- **Server-side admin operations**: Use `createServiceClient()` from `@/lib/supabase/server.ts`
+  - Uses `SUPABASE_SECRET_KEY` (server-only, bypasses RLS)
+  - For admin operations, system tasks, service role actions
+- **Server-side user operations**: Use `createClient()` from `@/lib/supabase/server.ts`
+  - Uses publishable key with user session context
+  - For user-scoped database operations with RLS
+
+#### Key Implementation Rules
+- **Never import `@supabase/supabase-js` directly** in application code
+- **Always use helper functions** from `/lib/supabase/` directory
+- **Never mix key systems** - this project is 100% new API key system
+- **Environment validation**: All clients validate required environment variables
+
+#### Database & Migration Guidelines
 - Database types: Generated in `@/lib/database.types.ts`
 - RLS policies: Always enabled, defined in migration files
 - Migrations: Store in `/supabase/migrations/` with proper numbering
@@ -184,20 +204,39 @@ src/
 - **Performance**: Avoid altering large production tables directly
 
 ### Security & Data Handling
-- Never expose service role keys in client code
+- **Never expose secret keys in client code** - Only publishable keys are browser-safe
+- **Use proper client separation**: `createClient()` for users, `createServiceClient()` for admin operations
 - Always validate user input with Zod schemas
 - Use HTTPS for all communications
 - Implement proper error boundaries
 - Sanitize data before database operations
+- **Environment validation**: All Supabase clients validate required environment variables before creation
 
 ## Environment Configuration
 
+**⚠️ UPDATED: New API Key System Variables**
+
 Required environment variables (see `.env.example`):
+```env
+# ✅ NEW SYSTEM: Required for all environments
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your_publishable_key
+SUPABASE_SECRET_KEY=your_secret_key
+
+# Application Configuration
+NEXT_PUBLIC_APP_URL=http://localhost:3000
 ```
-NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_ANON_KEY=
-SUPABASE_SERVICE_ROLE_KEY=
-```
+
+**Key Differences from Legacy System:**
+- `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` replaces `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `SUPABASE_SECRET_KEY` replaces `SUPABASE_SERVICE_ROLE_KEY`
+- New keys are string-based, not JWT tokens
+- Publishable key is safe for browser exposure, secret key is server-only
+
+**Migration Notes:**
+- All legacy environment variables have been removed
+- Helper functions automatically validate these variables
+- See `/SUPABASE_NEW_API_KEYS_REFERENCE.md` for detailed migration guide
 
 ## Testing & Quality Assurance
 
@@ -451,6 +490,117 @@ onError: (error, variables, context) => {
 2. Ensure event subscriptions are unsubscribed
 3. Clear intervals/timeouts properly
 4. Check for circular references in state
+
+## 🔄 Supabase API System Migration Guide
+
+**📅 Migration Completed: January 2025**
+
+This project has been **completely migrated** from Supabase's legacy JWT token system to the new API key system. All developers must follow these updated patterns.
+
+### ⚠️ Critical Developer Guidelines
+
+#### What Changed
+- **Legacy System REMOVED**: No more `anon` or `service_role` JWT tokens
+- **New System ONLY**: Uses `publishable` and `secret` string-based keys
+- **Helper Functions Required**: Direct imports of `@supabase/supabase-js` are prohibited
+
+#### For New Developers
+```typescript
+// ✅ CORRECT: Use helper functions
+import { createClient } from '@/lib/supabase/client'
+import { createServiceClient } from '@/lib/supabase/server'
+
+// Client-side component
+const supabase = createClient()
+const { data } = await supabase.from('patients').select('*')
+
+// Server-side API route (admin operations)
+const supabase = await createServiceClient()
+const { data } = await supabase.from('patients').insert(newPatient)
+```
+
+```typescript
+// ❌ WRONG: Never do this
+import { createClient } from '@supabase/supabase-js'
+const supabase = createClient(url, anonKey) // Legacy pattern - will break
+```
+
+#### Environment Setup for New Developers
+1. Copy `.env.example` to `.env.local`
+2. Get new API keys from team lead or Supabase dashboard
+3. **Never use legacy JWT tokens** (the long `eyJ...` strings)
+
+```env
+# ✅ CORRECT: New API keys look like this
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_[project]_[string]
+SUPABASE_SECRET_KEY=sb_secret_[project]_[string]
+
+# ❌ WRONG: Legacy JWT tokens (DO NOT USE)
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ... (removed)
+SUPABASE_SERVICE_ROLE_KEY=eyJ... (removed)
+```
+
+#### Common Development Patterns
+
+**Authentication & User Operations:**
+```typescript
+// In components/pages (client-side)
+import { createClient } from '@/lib/supabase/client'
+
+const supabase = createClient()
+const { data: { user } } = await supabase.auth.getUser()
+```
+
+**Admin Operations in API Routes:**
+```typescript
+// In app/api/* (server-side)
+import { createServiceClient } from '@/lib/supabase/server'
+
+export async function POST() {
+  const supabase = await createServiceClient()
+  // This bypasses RLS for admin operations
+  const { data } = await supabase.from('patients').insert(adminData)
+}
+```
+
+**User-Scoped Operations in API Routes:**
+```typescript
+// In app/api/* (server-side with user context)
+import { createClient } from '@/lib/supabase/server'
+
+export async function GET() {
+  const supabase = await createClient() // Respects RLS
+  const { data } = await supabase.from('patients').select('*')
+}
+```
+
+#### Migration Verification
+Run this script to check for legacy patterns:
+```bash
+./scripts/check-legacy-keys.sh
+```
+
+#### Additional Resources
+- **Full migration guide**: `/SUPABASE_NEW_API_KEYS_REFERENCE.md`
+- **Emergency procedures**: `/emergency-security-measures.md`
+- **Detection scripts**: `/scripts/check-legacy-keys.sh`
+
+### 🚨 Troubleshooting
+
+**"Invalid API key" Error:**
+1. Check environment variables are set correctly
+2. Ensure using new API keys, not legacy JWT tokens
+3. Verify helper functions are being used, not direct imports
+
+**"Environment variables missing" Error:**
+1. Create `.env.local` file in project root
+2. Add all required variables from `.env.example`
+3. Restart development server
+
+**Legacy Code Found:**
+1. Run `./scripts/check-legacy-keys.sh` to identify issues
+2. Replace direct imports with helper functions
+3. Update environment variables to new system
 
 ## Internationalization
 
