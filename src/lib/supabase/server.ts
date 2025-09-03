@@ -3,16 +3,25 @@ import { cookies } from "next/headers";
 import { Database } from "../database.types";
 
 /**
+ * Creates a Supabase client for regular user operations using the publishable key
+ * This client respects RLS policies and user sessions
+ * 
  * Especially important if using Fluid compute: Don't put this client in a
  * global variable. Always create a new client within each function when using
  * it.
  */
 export async function createClient() {
   const cookieStore = await cookies();
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const publishableKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+
+  if (!url || !publishableKey) {
+    throw new Error('NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY are required');
+  }
 
   return createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    url,
+    publishableKey,
     {
       cookies: {
         getAll() {
@@ -34,11 +43,22 @@ export async function createClient() {
   );
 }
 
-// Service role client for admin operations
+/**
+ * Creates a Supabase client for admin operations using the secret key
+ * This client bypasses RLS policies and should ONLY be used on trusted servers
+ * NEVER expose this client or its key to the browser
+ */
 export async function createServiceClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const secretKey = process.env.SUPABASE_SECRET_KEY;
+
+  if (!url || !secretKey) {
+    throw new Error('NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SECRET_KEY are required for admin operations');
+  }
+
   return createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    url,
+    secretKey,
     {
       cookies: {
         getAll() {

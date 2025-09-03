@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { PatientCreateSchema } from '@/schemas/patient'
 import { toCamelCase } from '@/lib/database-utils'
+import { ZodError } from 'zod'
 
 export async function POST(request: NextRequest) {
   try {
@@ -107,13 +108,23 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('[API /patients] Unexpected error:', error)
     
-    if (error instanceof Error && error.message.includes('validation')) {
+    // Handle Zod validation errors explicitly
+    if (error instanceof ZodError) {
+      const errors = error.errors.map(err => ({
+        field: err.path.join('.'),
+        message: err.message
+      }))
+      
       return NextResponse.json(
-        { error: '입력 데이터가 올바르지 않습니다.' },
+        { 
+          error: '입력 데이터가 올바르지 않습니다.',
+          details: errors
+        },
         { status: 400 }
       )
     }
     
+    // Handle all other errors as 500
     return NextResponse.json(
       { error: '환자 등록 중 오류가 발생했습니다.' },
       { status: 500 }

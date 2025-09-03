@@ -2,9 +2,9 @@
 const { createClient } = require('@supabase/supabase-js');
 
 const supabaseUrl = 'https://xlhtmakvxbdjnpvtzdqh.supabase.co';
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhsaHRtYWt2eGJkam5wdnR6ZHFoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUzMzA2ODQsImV4cCI6MjA3MDkwNjY4NH0.QpfEbVS4zTsBg5F1TT9-ZDkb9AtnLaaTvQ0kh1MCKdQ';
+const supabasePublishableKey = 'sb_publishable_test_xlhtmakvxbdjnpvtzdqh_eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhsaHRtYWt2eGJkam5wdnR6ZHFoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUzMzA2ODQsImV4cCI6MjA3MDkwNjY4NH0QpfEbVS4zTsBg5F1TT9-ZDkb9AtnLaaTvQ0kh1MCKdQ';
 
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+const supabase = createClient(supabaseUrl, supabasePublishableKey);
 
 async function testSignup() {
   const testEmail = `nurse${Date.now()}@hospital.kr`;

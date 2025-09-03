@@ -1,7 +1,5 @@
-import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
-import type { Database } from '@/lib/database.types'
-import { createClient as getSupabaseServer } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 
 export async function POST(
   request: Request,
@@ -10,10 +8,8 @@ export async function POST(
   try {
     const { id } = await params
     
-    // First try with regular auth
-    const supabase = await getSupabaseServer()
-    
-    // Check if user is authenticated
+    // First check if user is authenticated
+    const supabase = await createClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     
     if (authError || !user) {
@@ -25,7 +21,7 @@ export async function POST(
     
     // Try to update patient with regular client first
     // The database trigger will automatically cascade delete all related schedules
-    const { error: updateError } = await (supabase as any)
+    const { error: updateError } = await supabase
       .from('patients')
       .update({ 
         is_active: false,
@@ -37,26 +33,14 @@ export async function POST(
       return NextResponse.json({ success: true })
     }
     
-    // If regular update fails due to RLS, use service role
-    console.log('[API] Regular update failed, trying with service role:', updateError)
+    // If regular update fails due to RLS, use service client
+    console.log('[API] Regular update failed, trying with service client:', updateError)
     
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+    const serviceSupabase = await createServiceClient()
     
-    const supabaseAdmin = createClient<Database>(
-      supabaseUrl,
-      supabaseServiceKey,
-      {
-        auth: {
-          persistSession: false,
-          autoRefreshToken: false,
-        }
-      }
-    )
-    
-    // Deactivate patient with admin client
+    // Deactivate patient with service client
     // The database trigger will automatically cascade delete all related schedules
-    const { error: adminError } = await (supabaseAdmin as any)
+    const { error: adminError } = await serviceSupabase
       .from('patients')
       .update({ 
         is_active: false,
@@ -65,7 +49,7 @@ export async function POST(
       .eq('id', id)
     
     if (adminError) {
-      console.error('[API] Admin update also failed:', adminError)
+      console.error('[API] Service client update also failed:', adminError)
       return NextResponse.json(
         { error: 'Failed to delete patient' },
         { status: 500 }

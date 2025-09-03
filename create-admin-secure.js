@@ -1,11 +1,22 @@
-// Script to create admin account
+// Secure script to create admin account
+// This version uses environment variables for sensitive data
+require('dotenv').config();
 const { createClient } = require('@supabase/supabase-js');
 
-const supabaseUrl = 'https://xlhtmakvxbdjnpvtzdqh.supabase.co';
-const supabaseServiceKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhsaHRtYWt2eGJkam5wdnR6ZHFoIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NTMzMDY4NCwiZXhwIjoyMDcwOTA2Njg0fQ.C_UXwFyhxErAgjMoTimfq-Gdp0cOJw6gHheHn_bBikw';
+// Load credentials from environment variables (New API Key System)
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseSecretKey = process.env.SUPABASE_SECRET_KEY;
 
-// Use service role key to bypass RLS
-const supabase = createClient(supabaseUrl, supabaseServiceKey, {
+if (!supabaseUrl || !supabaseSecretKey) {
+  console.error('❌ Missing required environment variables!');
+  console.error('Please ensure the following are set in your .env file:');
+  console.error('- NEXT_PUBLIC_SUPABASE_URL');
+  console.error('- SUPABASE_SECRET_KEY (New API Key System)');
+  process.exit(1);
+}
+
+// Use secret key to bypass RLS (New API Key System)
+const supabase = createClient(supabaseUrl, supabaseSecretKey, {
   auth: {
     autoRefreshToken: false,
     persistSession: false
@@ -13,15 +24,20 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey, {
 });
 
 async function createAdminAccount() {
+  const adminEmail = process.env.ADMIN_EMAIL || 'admin@example.com';
+  const adminPassword = process.env.ADMIN_PASSWORD || 'Admin@1234!';
+  const adminName = process.env.ADMIN_NAME || 'System Administrator';
+  
   console.log('Creating admin account...');
+  console.log('Email:', adminEmail);
   
   // Step 1: Create auth user
   const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-    email: 'cooldericesh@gmail.com',
-    password: 'Admin@1234!', // Stronger temporary password
+    email: adminEmail,
+    password: adminPassword,
     email_confirm: true, // Auto-confirm email
     user_metadata: {
-      name: 'System Administrator',
+      name: adminName,
       role: 'admin'
     }
   });
@@ -38,8 +54,8 @@ async function createAdminAccount() {
     .from('profiles')
     .upsert({
       id: authData.user.id,
-      email: 'cooldericesh@gmail.com',
-      name: 'System Administrator',
+      email: adminEmail,
+      name: adminName,
       role: 'admin',
       is_active: true,
       department: 'System Administration'
@@ -53,8 +69,7 @@ async function createAdminAccount() {
   }
   
   console.log('✅ Admin profile created successfully!');
-  console.log('Email: cooldericesh@gmail.com');
-  console.log('Temporary Password: Admin@1234!');
+  console.log('Email:', adminEmail);
   console.log('⚠️  Please change the password after first login!');
   
   return true;

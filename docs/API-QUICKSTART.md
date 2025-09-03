@@ -13,10 +13,13 @@
 Create a `.env.local` file in the project root:
 
 ```env
-NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
-SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+# ✅ NEW SYSTEM: Required environment variables
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your_supabase_publishable_key
+SUPABASE_SECRET_KEY=your_supabase_secret_key
 ```
+
+> **⚠️ Important:** This project uses Supabase's new API key system (publishable/secret keys) instead of the legacy anon/service_role JWT tokens. The publishable key is safe for browser use, while the secret key is for server-side operations only.
 
 ### 2. Install Dependencies
 
@@ -168,7 +171,7 @@ const response = await fetch(`http://localhost:3000/api/schedules/${scheduleId}/
 ```javascript
 import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(url, anonKey);
+const supabase = createClient(url, publishableKey);
 
 // Subscribe to patient changes
 const subscription = supabase

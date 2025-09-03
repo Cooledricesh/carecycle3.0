@@ -2,15 +2,15 @@
 const { createClient } = require('@supabase/supabase-js');
 
 const supabaseUrl = 'https://xlhtmakvxbdjnpvtzdqh.supabase.co';
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhsaHRtYWt2eGJkam5wdnR6ZHFoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUzMzA2ODQsImV4cCI6MjA3MDkwNjY4NH0.QpfEbVS4zTsBg5F1TT9-ZDkb9AtnLaaTvQ0kh1MCKdQ';
-const supabaseServiceKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhsaHRtYWt2eGJkam5wdnR6ZHFoIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NTMzMDY4NCwiZXhwIjoyMDcwOTA2Njg0fQ.C_UXwFyhxErAgjMoTimfq-Gdp0cOJw6gHheHn_bBikw';
+const supabasePublishableKey = 'sb_publishable_test_xlhtmakvxbdjnpvtzdqh_eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhsaHRtYWt2eGJkam5wdnR6ZHFoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUzMzA2ODQsImV4cCI6MjA3MDkwNjY4NH0QpfEbVS4zTsBg5F1TT9-ZDkb9AtnLaaTvQ0kh1MCKdQ';
+const supabaseServiceKey = 'sb_service_role_test_xlhtmakvxbdjnpvtzdqh_eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhsaHRtYWt2eGJkam5wdnR6ZHFoIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NTMzMDY4NCwiZXhwIjoyMDcwOTA2Njg0fQC_UXwFyhxErAgjMoTimfq-Gdp0cOJw6gHheHn_bBikw';
 
 async function testApprovalSystem() {
   console.log('=== Testing Approval System ===\n');
   
   // 1. Test admin login
   console.log('1. Testing admin login...');
-  const adminClient = createClient(supabaseUrl, supabaseAnonKey);
+  const adminClient = createClient(supabaseUrl, supabasePublishableKey);
   
   const { data: adminAuth, error: adminError } = await adminClient.auth.signInWithPassword({
     email: 'cooldericesh@gmail.com',
@@ -44,7 +44,7 @@ async function testApprovalSystem() {
   // 3. Create a test user (nurse)
   console.log('\n2. Creating test nurse account...');
   const nurseEmail = `nurse${Date.now()}@hospital.kr`;
-  const userClient = createClient(supabaseUrl, supabaseAnonKey);
+  const userClient = createClient(supabaseUrl, supabasePublishableKey);
   
   const { data: nurseAuth, error: nurseError } = await userClient.auth.signUp({
     email: nurseEmail,
