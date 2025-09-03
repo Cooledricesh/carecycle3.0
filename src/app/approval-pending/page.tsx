@@ -27,6 +27,7 @@ function ApprovalPendingPageContent() {
   const router = useRouter()
   const supabase = createClient()
 
+  // Effect for checking initial user status
   useEffect(() => {
     const checkUserStatus = async () => {
       try {
@@ -64,15 +65,23 @@ function ApprovalPendingPageContent() {
     }
 
     checkUserStatus()
+  }, [router, supabase])
+
+  // Separate effect for real-time subscription that depends on profile.id
+  useEffect(() => {
+    // Skip subscription if profile or profile.id is not available
+    if (!profile?.id) {
+      return
+    }
 
     // Set up real-time subscription for profile changes
     const channel = supabase
-      .channel('profile-changes')
+      .channel(`profile-changes-${profile.id}`)
       .on('postgres_changes', {
         event: 'UPDATE',
         schema: 'public',
         table: 'profiles',
-        filter: `id=eq.${profile?.id}`
+        filter: `id=eq.${profile.id}`
       }, (payload) => {
         const updatedProfile = payload.new as UserProfile
         setProfile(updatedProfile)
@@ -84,10 +93,11 @@ function ApprovalPendingPageContent() {
       })
       .subscribe()
 
+    // Cleanup function to unsubscribe when profile.id changes or component unmounts
     return () => {
       channel.unsubscribe()
     }
-  }, [router, supabase])
+  }, [profile?.id, router, supabase])
 
   const handleSignOut = async () => {
     try {
@@ -201,7 +211,7 @@ function ApprovalPendingPageContent() {
                 <h4 className="font-semibold text-blue-900 mb-2">What happens next?</h4>
                 <ul className="text-sm text-blue-700 space-y-1">
                   <li>• An administrator will review your account</li>
-                  <li>• You'll receive an email notification when approved</li>
+                  <li>• You&apos;ll receive an email notification when approved</li>
                   <li>• This page will automatically update when your status changes</li>
                   <li>• Approval typically takes 1-2 business days</li>
                 </ul>

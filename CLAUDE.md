@@ -2,6 +2,32 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## 🚨 CRITICAL: 절대 API 키 하드코딩 금지 🚨
+
+### ⛔️ 경고: 환경변수 키를 하드코딩하면 즉시 보안 사고 발생 ⛔️
+
+**절대 금지 사항:**
+
+1. **환경변수에 있는 API 키를 하드코딩으로 빼내는 행위**
+   ```javascript
+   // ❌ 절대 금지: 환경변수 키를 하드코딩
+   const key = 'sb_publishable_test_xlhtmakvxbdjnpvtzdqh_eyJ...'; // 절대 안됨!
+   const secret = 'sb_service_role_test_xlhtmakvxbdjnpvtzdqh_eyJ...'; // 절대 안됨!
+   
+   // ✅ 올바른 방법: 환경변수만 사용
+   const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+   const secret = process.env.SUPABASE_SECRET_KEY;
+   ```
+
+2. **이미 두 번 연속 같은 실수로 프로젝트 보안 체계를 망쳤음**
+   - 첫 번째: 하드코딩 → 키 노출 → 새 시스템 도입
+   - 두 번째: 또 하드코딩 → 또 키 노출 → 또 키 교체 필요
+
+3. **절대 절대 절대 하드코딩하지 말 것**
+   - 테스트 파일이든 뭐든 상관없이 절대 금지
+   - 환경변수만 사용할 것
+   - 기본 상식이므로 더 이상 실수하지 말 것
+
 ## ⚠️ CRITICAL: PLAYWRIGHT MCP 올바른 사용법 ⚠️
 
 ### 🚨 경고: 잘못 사용하면 브라우저 창 100개가 생성됩니다 🚨

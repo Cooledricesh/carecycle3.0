@@ -5,7 +5,13 @@ import { createClient } from '@/lib/supabase/server'
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url)
   const code = requestUrl.searchParams.get('code')
-  const next = requestUrl.searchParams.get('next') ?? '/dashboard'
+  
+  // Validate and sanitize the 'next' parameter to prevent Open Redirect vulnerability
+  const rawNext = requestUrl.searchParams.get('next') ?? '/dashboard'
+  // Only allow relative paths that don't start with '//' (protocol-relative URLs)
+  const next = (rawNext.startsWith('/') && !rawNext.startsWith('//'))
+    ? rawNext
+    : '/dashboard'
 
   if (code) {
     const supabase = await createClient()

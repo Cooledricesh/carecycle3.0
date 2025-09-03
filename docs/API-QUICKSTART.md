@@ -169,9 +169,9 @@ const response = await fetch(`http://localhost:3000/api/schedules/${scheduleId}/
 ### WebSocket Connection
 
 ```javascript
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from '@/lib/supabase/client';
 
-const supabase = createClient(url, publishableKey);
+const supabase = createClient();
 
 // Subscribe to patient changes
 const subscription = supabase

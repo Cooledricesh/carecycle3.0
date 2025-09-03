@@ -1,8 +1,18 @@
 // Test signup functionality
 const { createClient } = require('@supabase/supabase-js');
 
-const supabaseUrl = 'https://xlhtmakvxbdjnpvtzdqh.supabase.co';
-const supabasePublishableKey = 'sb_publishable_test_xlhtmakvxbdjnpvtzdqh_eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhsaHRtYWt2eGJkam5wdnR6ZHFoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUzMzA2ODQsImV4cCI6MjA3MDkwNjY4NH0QpfEbVS4zTsBg5F1TT9-ZDkb9AtnLaaTvQ0kh1MCKdQ';
+// Environment variables for secure API key access
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabasePublishableKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+
+// Validate required environment variables
+if (!supabaseUrl || !supabasePublishableKey) {
+  console.error('❌ Missing required environment variables:');
+  console.error('  - NEXT_PUBLIC_SUPABASE_URL:', supabaseUrl ? '✓' : '❌');
+  console.error('  - NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY:', supabasePublishableKey ? '✓' : '❌');
+  console.error('\nPlease set these environment variables in your .env.local file');
+  process.exit(1);
+}
 
 const supabase = createClient(supabaseUrl, supabasePublishableKey);
 

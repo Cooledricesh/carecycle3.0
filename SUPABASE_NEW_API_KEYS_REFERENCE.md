@@ -86,26 +86,28 @@
 ```bash
 # .env.local (기존)
 NEXT_PUBLIC_SUPABASE_URL=https://xxx.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...  # Legacy
-SUPABASE_SERVICE_ROLE_KEY=eyJ...      # Legacy
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_xxx  # NEW (formerly ANON_KEY)
+SUPABASE_SECRET_KEY=sb_secret_xxx                        # NEW (formerly SERVICE_ROLE_KEY)
 
 # .env.local (새로운)
 NEXT_PUBLIC_SUPABASE_URL=https://xxx.supabase.co
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_xxx  # NEW
 SUPABASE_SECRET_KEY=sb_secret_xxx                        # NEW
 
-# Legacy 키는 마이그레이션 완료까지 유지
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...      # 임시 유지
-# SUPABASE_SERVICE_ROLE_KEY=제거됨         # 즉시 제거
+# Legacy 키는 모두 제거됨 (완전 마이그레이션 완료)
+# NEXT_PUBLIC_SUPABASE_ANON_KEY → NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+# SUPABASE_SERVICE_ROLE_KEY → SUPABASE_SECRET_KEY
 ```
 
 #### Step 3: 점진적 코드 마이그레이션
 ```typescript
-// 단계적 전환을 위한 호환성 레이어
+// 새 키 시스템 전용 (Legacy 지원 제거됨)
 const getApiKey = () => {
-  // 새 키 우선 사용, 없으면 Legacy 키 사용
-  return process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY 
-    || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  // 새 키만 사용 (Legacy 키는 지원하지 않음)
+  if (!process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY) {
+    throw new Error('NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY is required');
+  }
+  return process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
 };
 
 const getSecretKey = () => {

@@ -67,14 +67,14 @@ check_new_pattern() {
 
 # Check for legacy environment variable patterns
 echo -e "${YELLOW}🔍 Phase 1: Legacy Environment Variables${NC}"
-check_legacy_pattern "NEXT_PUBLIC_SUPABASE_ANON_KEY" "Legacy Anonymous Key"
-check_legacy_pattern "SUPABASE_SERVICE_ROLE_KEY" "Legacy Service Role Key"
+check_legacy_pattern "NEXT_PUBLIC_SUPABASE_ANON_KEY" "Legacy Anonymous Key (should be NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY)"
+check_legacy_pattern "SUPABASE_SERVICE_ROLE_KEY" "Legacy Service Role Key (should be SUPABASE_SECRET_KEY)"
 
 # Check for legacy import patterns
 echo -e "\n${YELLOW}🔍 Phase 2: Legacy Import Patterns${NC}"
 check_legacy_pattern "createClient.*supabase-js" "Direct @supabase/supabase-js imports"
-check_legacy_pattern "process\.env\.NEXT_PUBLIC_SUPABASE_ANON_KEY" "Direct anon key usage"
-check_legacy_pattern "process\.env\.SUPABASE_SERVICE_ROLE_KEY" "Direct service role key usage"
+check_legacy_pattern "process\.env\.NEXT_PUBLIC_SUPABASE_ANON_KEY" "Direct anon key usage (should use NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY)"
+check_legacy_pattern "process\.env\.SUPABASE_SERVICE_ROLE_KEY" "Direct service role key usage (should use SUPABASE_SECRET_KEY)"
 
 # Check for legacy comments and documentation
 echo -e "\n${YELLOW}🔍 Phase 3: Legacy Documentation${NC}"
@@ -103,7 +103,7 @@ for file in "${critical_files[@]}"; do
         echo -e "\n${BLUE}📄 Checking critical file: $file${NC}"
         
         # Check if file contains legacy patterns
-        if grep -q "SUPABASE_ANON_KEY\|SUPABASE_SERVICE_ROLE_KEY" "$file" 2>/dev/null; then
+        if grep -q "NEXT_PUBLIC_SUPABASE_ANON_KEY\|SUPABASE_SERVICE_ROLE_KEY" "$file" 2>/dev/null; then
             echo -e "${RED}❌ File contains legacy keys${NC}"
             ERROR_COUNT=$((ERROR_COUNT + 1))
         else
@@ -136,9 +136,9 @@ for env_file in "${env_files[@]}"; do
         echo -e "\n${BLUE}📄 Checking environment file: $env_file${NC}"
         
         # Check for legacy keys in env files
-        if grep -q "SUPABASE_ANON_KEY\|SUPABASE_SERVICE_ROLE_KEY" "$env_file" 2>/dev/null; then
+        if grep -q "NEXT_PUBLIC_SUPABASE_ANON_KEY\|SUPABASE_SERVICE_ROLE_KEY" "$env_file" 2>/dev/null; then
             # Check if they are commented out or empty
-            if grep "^#.*SUPABASE_ANON_KEY\|^SUPABASE_ANON_KEY=\"\"\|^#.*SUPABASE_SERVICE_ROLE_KEY\|^SUPABASE_SERVICE_ROLE_KEY=\"\"" "$env_file" >/dev/null 2>&1; then
+            if grep "^#.*NEXT_PUBLIC_SUPABASE_ANON_KEY\|^NEXT_PUBLIC_SUPABASE_ANON_KEY=\"\"\|^#.*SUPABASE_SERVICE_ROLE_KEY\|^SUPABASE_SERVICE_ROLE_KEY=\"\"" "$env_file" >/dev/null 2>&1; then
                 echo -e "${GREEN}✅ Legacy keys are properly disabled${NC}"
             else
                 echo -e "${RED}❌ Active legacy keys found${NC}"
