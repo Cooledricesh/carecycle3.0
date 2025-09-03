@@ -1,20 +1,38 @@
 // Test the approval system
-const { createClient } = require('@supabase/supabase-js');
+// IMPORTANT: Using helper functions instead of direct import for new API key system
 
-const supabaseUrl = 'https://xlhtmakvxbdjnpvtzdqh.supabase.co';
-const supabasePublishableKey = 'sb_publishable_test_xlhtmakvxbdjnpvtzdqh_eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhsaHRtYWt2eGJkam5wdnR6ZHFoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUzMzA2ODQsImV4cCI6MjA3MDkwNjY4NH0QpfEbVS4zTsBg5F1TT9-ZDkb9AtnLaaTvQ0kh1MCKdQ';
-const supabaseServiceKey = 'sb_service_role_test_xlhtmakvxbdjnpvtzdqh_eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhsaHRtYWt2eGJkam5wdnR6ZHFoIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NTMzMDY4NCwiZXhwIjoyMDcwOTA2Njg0fQC_UXwFyhxErAgjMoTimfq-Gdp0cOJw6gHheHn_bBikw';
+// Load environment variables from .env.local file
+require('dotenv').config({ path: '.env.local' });
+
+const path = require('path');
+const { createClient } = require('./src/lib/supabase/client.js');
+const { createServiceClient } = require('./src/lib/supabase/server.js');
+
+// Environment variables are validated by helper functions
+// The helper functions will use process.env variables loaded by dotenv
 
 async function testApprovalSystem() {
   console.log('=== Testing Approval System ===\n');
   
+  // Validate test credentials from environment
+  const adminEmail = process.env.TEST_ADMIN_EMAIL;
+  const adminPassword = process.env.TEST_ADMIN_PASSWORD;
+  
+  if (!adminEmail || !adminPassword) {
+    console.error('❌ Missing test credentials:');
+    console.error('  - TEST_ADMIN_EMAIL:', adminEmail ? '✓' : '❌');
+    console.error('  - TEST_ADMIN_PASSWORD:', adminPassword ? '✓ (HIDDEN)' : '❌');
+    console.error('\nPlease set these environment variables in your .env.local file');
+    process.exit(1);
+  }
+  
   // 1. Test admin login
   console.log('1. Testing admin login...');
-  const adminClient = createClient(supabaseUrl, supabasePublishableKey);
+  const adminClient = createClient();
   
   const { data: adminAuth, error: adminError } = await adminClient.auth.signInWithPassword({
-    email: 'cooldericesh@gmail.com',
-    password: 'Admin@1234!'
+    email: adminEmail,
+    password: adminPassword
   });
   
   if (adminError) {
@@ -44,11 +62,12 @@ async function testApprovalSystem() {
   // 3. Create a test user (nurse)
   console.log('\n2. Creating test nurse account...');
   const nurseEmail = `nurse${Date.now()}@hospital.kr`;
-  const userClient = createClient(supabaseUrl, supabasePublishableKey);
+  const testPassword = process.env.TEST_USER_PASSWORD || 'Test@1234!';
+  const userClient = createClient();
   
   const { data: nurseAuth, error: nurseError } = await userClient.auth.signUp({
     email: nurseEmail,
-    password: 'Test@1234!',
+    password: testPassword,
     options: {
       data: {
         name: 'Test Nurse',
@@ -64,7 +83,7 @@ async function testApprovalSystem() {
   console.log('✅ Nurse account created:', nurseAuth.user.id);
   
   // 4. Check nurse profile status (should be pending)
-  const serviceClient = createClient(supabaseUrl, supabaseServiceKey);
+  const serviceClient = await createServiceClient();
   const { data: nurseProfile, error: nurseProfileError } = await serviceClient
     .from('profiles')
     .select('*')
@@ -86,7 +105,7 @@ async function testApprovalSystem() {
   console.log('\n3. Testing nurse login before approval...');
   const { data: nurseLogin, error: nurseLoginError } = await userClient.auth.signInWithPassword({
     email: nurseEmail,
-    password: 'Test@1234!'
+    password: testPassword
   });
   
   if (nurseLoginError) {

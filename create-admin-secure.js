@@ -1,32 +1,27 @@
 // Secure script to create admin account
 // This version uses environment variables for sensitive data
 require('dotenv').config();
-const { createClient } = require('@supabase/supabase-js');
-
-// Load credentials from environment variables (New API Key System)
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseSecretKey = process.env.SUPABASE_SECRET_KEY;
-
-if (!supabaseUrl || !supabaseSecretKey) {
-  console.error('❌ Missing required environment variables!');
-  console.error('Please ensure the following are set in your .env file:');
-  console.error('- NEXT_PUBLIC_SUPABASE_URL');
-  console.error('- SUPABASE_SECRET_KEY (New API Key System)');
-  process.exit(1);
-}
-
-// Use secret key to bypass RLS (New API Key System)
-const supabase = createClient(supabaseUrl, supabaseSecretKey, {
-  auth: {
-    autoRefreshToken: false,
-    persistSession: false
-  }
-});
+// IMPORTANT: Using helper functions for new API key system
+const { createServiceClient } = require('./src/lib/supabase/server.js');
 
 async function createAdminAccount() {
-  const adminEmail = process.env.ADMIN_EMAIL || 'admin@example.com';
-  const adminPassword = process.env.ADMIN_PASSWORD || 'Admin@1234!';
+  // Validate required environment variables
+  const adminEmail = process.env.ADMIN_EMAIL;
+  const adminPassword = process.env.ADMIN_PASSWORD;
   const adminName = process.env.ADMIN_NAME || 'System Administrator';
+  
+  if (!adminEmail || !adminPassword) {
+    console.error('❌ Missing required admin credentials!');
+    console.error('Please ensure the following are set in your .env.local file:');
+    console.error('- ADMIN_EMAIL:', adminEmail ? '✓' : '❌');
+    console.error('- ADMIN_PASSWORD:', adminPassword ? '✓ (HIDDEN)' : '❌');
+    console.error('- ADMIN_NAME:', adminName);
+    console.error('\n🚨 NEVER use default passwords in production!');
+    process.exit(1);
+  }
+  
+  // Use helper function for service client
+  const supabase = await createServiceClient();
   
   console.log('Creating admin account...');
   console.log('Email:', adminEmail);
