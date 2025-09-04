@@ -107,8 +107,8 @@ test-*.ts
 **/tests/**
 
 # Admin scripts with sensitive data (NEVER COMMIT)
-create-admin.js
-create-admin.ts
+create-admin*.js
+create-admin*.ts
 *-admin.js
 *-admin.ts
 
@@ -126,3 +126,19 @@ dist/
 
 # SWC
 .swc/
+
+# Data migration and backup files (potentially sensitive)
+*.csv
+lai_migration.sql
+migration-*.sql
+
+# Development utility scripts (environment-specific)
+remove-secrets*.sh
+kill-*.sh
+
+# Additional debug and temporary files
+**/debug-*.*
+test-helpers.*
+
+claude.md
+*.png
