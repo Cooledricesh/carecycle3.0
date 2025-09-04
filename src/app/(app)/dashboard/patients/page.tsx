@@ -49,10 +49,15 @@ export default function PatientsPage() {
     
     const searchLower = searchTerm.toLowerCase()
     return patients.filter((patient) => {
+      // Safely convert each field to string before calling toLowerCase/includes
+      const name = String(patient.name ?? '').toLowerCase()
+      const patientNumber = String(patient.patientNumber ?? '').toLowerCase()
+      const careType = String(patient.careType ?? '').toLowerCase()
+      
       return (
-        patient.name?.toLowerCase().includes(searchLower) ||
-        patient.patientNumber?.toLowerCase().includes(searchLower) ||
-        patient.careType?.toLowerCase().includes(searchLower)
+        name.includes(searchLower) ||
+        patientNumber.includes(searchLower) ||
+        careType.includes(searchLower)
       )
     })
   }, [patients, searchTerm])
