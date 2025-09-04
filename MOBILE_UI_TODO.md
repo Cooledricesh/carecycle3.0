@@ -59,24 +59,24 @@
 ## 📝 Phase 3: 대시보드 반응형 처리
 
 ### 통계 카드 그리드
-- [ ] `src/app/(app)/dashboard/page.tsx`
-  - [ ] 데스크톱: `grid-cols-4`
-  - [ ] 태블릿: `sm:grid-cols-2`
-  - [ ] 모바일: `grid-cols-2` (2x2 레이아웃)
-  - [ ] 카드 간격 조정
+- [x] `src/app/(app)/dashboard/page.tsx`
+  - [x] 데스크톱: `grid-cols-4`
+  - [x] 태블릿: `sm:grid-cols-2`
+  - [x] 모바일: `grid-cols-2` (2x2 레이아웃)
+  - [x] 카드 간격 조정
 
 ### 오늘의 체크리스트 변환
-- [ ] 테이블 → 카드 변환 구현
-  - [ ] useIsMobile 훅 활용
-  - [ ] 모바일: Card 컴포넌트
-  - [ ] 데스크톱: 기존 Table 유지
-  - [ ] 카드 내 정보 우선순위 정리
+- [x] 테이블 → 카드 변환 구현
+  - [x] useIsMobile 훅 활용
+  - [x] 모바일: Card 컴포넌트
+  - [x] 데스크톱: 기존 Table 유지
+  - [x] 카드 내 정보 우선순위 정리
 
 ### 통계 카드 최적화
-- [ ] `src/components/dashboard/stats-card.tsx` (없다면 인라인 수정)
-  - [ ] 모바일 폰트 크기 조정
-  - [ ] 아이콘 크기 반응형 처리
-  - [ ] 패딩 최적화
+- [x] `src/components/dashboard/stats-card.tsx` (없다면 인라인 수정)
+  - [x] 모바일 폰트 크기 조정
+  - [x] 아이콘 크기 반응형 처리
+  - [x] 패딩 최적화
 
 ---
 
