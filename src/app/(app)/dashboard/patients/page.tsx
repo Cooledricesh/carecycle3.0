@@ -22,7 +22,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Input } from '@/components/ui/input'
-import { Users, Calendar, AlertCircle, RefreshCw, ChevronLeft, ChevronRight, Search } from 'lucide-react'
+import { Users, Calendar, AlertCircle, RefreshCw, ChevronLeft, ChevronRight, Search, MoreVertical } from 'lucide-react'
 import {
   Select,
   SelectContent,
@@ -30,6 +30,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { useIsMobile } from '@/hooks/useIsMobile'
+import { touchTarget, responsiveText, responsivePadding } from '@/lib/utils'
 
 export default function PatientsPage() {
   const { patients, isLoading, error, refetch, deletePatient, isDeleting } = usePatients()
@@ -40,6 +48,7 @@ export default function PatientsPage() {
   const [itemsPerPage, setItemsPerPage] = useState(20)
   const queryClient = useQueryClient()
   const { toast } = useToast()
+  const isMobile = useIsMobile()
 
   // Filter patients based on search term
   const filteredPatients = useMemo(() => {
@@ -120,42 +129,44 @@ export default function PatientsPage() {
   }
 
   return (
-    <div className="container mx-auto py-6 px-4 sm:px-6 lg:px-8">
-      <div className="flex justify-between items-center mb-6">
+    <div className={`container mx-auto ${responsivePadding.page}`}>
+      <div className={`flex ${isMobile ? 'flex-col gap-3' : 'justify-between items-center'} mb-4 sm:mb-6`}>
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">환자 관리</h1>
-          <p className="text-muted-foreground mt-1">
+          <h1 className={`${responsiveText.h1} font-bold tracking-tight`}>환자 관리</h1>
+          <p className="text-xs sm:text-base text-muted-foreground mt-1">
             등록된 환자 목록을 관리하고 새로운 환자를 추가합니다.
-            <span className="text-xs text-gray-400 ml-2">
+            <span className={`text-xs text-gray-400 ${isMobile ? 'block mt-1' : 'ml-2'}`}>
               마지막 업데이트: {format(lastUpdated, 'HH:mm:ss')}
             </span>
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className={`flex items-center gap-2 ${isMobile ? 'w-full' : ''}`}>
           <Button
             variant="outline"
-            size="sm"
+            size={isMobile ? "default" : "sm"}
             onClick={handleRefresh}
             disabled={isRefreshing}
-            className="flex items-center gap-2"
+            className={`flex items-center gap-2 ${isMobile ? 'flex-1' : ''} ${touchTarget.button}`}
           >
             <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
             새로고침
           </Button>
-          <PatientRegistrationModal
-            onSuccess={handleRegistrationSuccess}
-            triggerClassName="bg-primary"
-          />
+          <div className={isMobile ? 'flex-1' : ''}>
+            <PatientRegistrationModal
+              onSuccess={handleRegistrationSuccess}
+              triggerClassName={`bg-primary ${isMobile ? 'w-full' : ''}`}
+            />
+          </div>
         </div>
       </div>
 
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Users className="w-5 h-5" />
+        <CardHeader className={isMobile ? 'p-4' : ''}>
+          <CardTitle className={`flex items-center gap-2 ${responsiveText.h3}`}>
+            <Users className="w-4 h-4 sm:w-5 sm:h-5" />
             환자 목록
           </CardTitle>
-          <CardDescription>
+          <CardDescription className="text-xs sm:text-sm">
             총 {patients.length}명의 환자가 등록되어 있습니다.
             {searchTerm && filteredPatients.length !== patients.length && (
               <span className="ml-2 text-primary">
@@ -164,16 +175,16 @@ export default function PatientsPage() {
             )}
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className={isMobile ? 'p-4 pt-0' : ''}>
           {/* Search Bar */}
           <div className="mb-4">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
               <Input
-                placeholder="환자명, 환자번호, 진료구분으로 검색..."
+                placeholder={isMobile ? "검색..." : "환자명, 환자번호, 진료구분으로 검색..."}
                 value={searchTerm}
                 onChange={(e) => handleSearchChange(e.target.value)}
-                className="pl-10"
+                className={`pl-10 ${touchTarget.input}`}
               />
             </div>
           </div>
@@ -213,41 +224,45 @@ export default function PatientsPage() {
               </p>
             </div>
           ) : (
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>환자번호</TableHead>
-                    <TableHead>환자명</TableHead>
-                    <TableHead>진료구분</TableHead>
-                    <TableHead>상태</TableHead>
-                    <TableHead>등록일</TableHead>
-                    <TableHead className="text-right">작업</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
+            <>
+              {isMobile ? (
+                // Mobile: Card Layout
+                <div className="space-y-3">
                   {paginatedPatients.map((patient) => (
-                    <TableRow key={patient.id}>
-                      <TableCell className="font-medium">
-                        {patient.patientNumber}
-                      </TableCell>
-                      <TableCell>{patient.name}</TableCell>
-                      <TableCell>{patient.careType || '-'}</TableCell>
-                      <TableCell>
-                        <Badge variant={patient.isActive ? 'default' : 'secondary'}>
-                          {patient.isActive ? '활성' : '비활성'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        {new Date(patient.createdAt).toLocaleDateString('ko-KR')}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-2">
+                    <Card key={patient.id} className="p-4">
+                      <div className="space-y-3">
+                        {/* Patient Header */}
+                        <div className="flex items-start justify-between">
+                          <div className="space-y-1">
+                            <h4 className="font-medium text-base">{patient.name}</h4>
+                            <p className="text-sm text-gray-500">#{patient.patientNumber}</p>
+                          </div>
+                          <Badge variant={patient.isActive ? 'default' : 'secondary'} className="shrink-0">
+                            {patient.isActive ? '활성' : '비활성'}
+                          </Badge>
+                        </div>
+                        
+                        {/* Patient Details */}
+                        <div className="flex flex-col gap-1 text-sm text-gray-600">
+                          <div className="flex justify-between">
+                            <span>진료구분</span>
+                            <span className="font-medium">{patient.careType || '-'}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>등록일</span>
+                            <span className="font-medium">
+                              {new Date(patient.createdAt).toLocaleDateString('ko-KR')}
+                            </span>
+                          </div>
+                        </div>
+                        
+                        {/* Action Buttons */}
+                        <div className="flex gap-2 pt-2 border-t">
                           <ScheduleCreateModal
                             presetPatientId={patient.id}
                             onSuccess={handleScheduleSuccess}
                             triggerButton={
-                              <Button variant="outline" size="sm">
+                              <Button variant="outline" size="default" className={`flex-1 ${touchTarget.button}`}>
                                 <Calendar className="mr-2 h-4 w-4" />
                                 스케줄 추가
                               </Button>
@@ -260,23 +275,78 @@ export default function PatientsPage() {
                             isDeleting={isDeleting}
                           />
                         </div>
-                      </TableCell>
-                    </TableRow>
+                      </div>
+                    </Card>
                   ))}
-                </TableBody>
-              </Table>
-            </div>
+                </div>
+              ) : (
+                // Desktop: Table Layout
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>환자번호</TableHead>
+                        <TableHead>환자명</TableHead>
+                        <TableHead>진료구분</TableHead>
+                        <TableHead>상태</TableHead>
+                        <TableHead>등록일</TableHead>
+                        <TableHead className="text-right">작업</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {paginatedPatients.map((patient) => (
+                        <TableRow key={patient.id}>
+                          <TableCell className="font-medium">
+                            {patient.patientNumber}
+                          </TableCell>
+                          <TableCell>{patient.name}</TableCell>
+                          <TableCell>{patient.careType || '-'}</TableCell>
+                          <TableCell>
+                            <Badge variant={patient.isActive ? 'default' : 'secondary'}>
+                              {patient.isActive ? '활성' : '비활성'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            {new Date(patient.createdAt).toLocaleDateString('ko-KR')}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              <ScheduleCreateModal
+                                presetPatientId={patient.id}
+                                onSuccess={handleScheduleSuccess}
+                                triggerButton={
+                                  <Button variant="outline" size="sm">
+                                    <Calendar className="mr-2 h-4 w-4" />
+                                    스케줄 추가
+                                  </Button>
+                                }
+                              />
+                              <PatientDeleteDialog
+                                patientName={patient.name}
+                                patientNumber={patient.patientNumber}
+                                onConfirm={() => handleDeletePatient(patient.id)}
+                                isDeleting={isDeleting}
+                              />
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </>
           )}
           
           {/* Pagination Controls */}
           {filteredPatients.length > 0 && (
-            <div className="flex items-center justify-between mt-4">
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground">
+            <div className={`${isMobile ? 'flex-col space-y-3' : 'flex items-center justify-between'} mt-4`}>
+              <div className={`flex items-center gap-2 ${isMobile ? 'justify-center' : ''}`}>
+                <span className="text-xs sm:text-sm text-muted-foreground">
                   표시 개수:
                 </span>
                 <Select value={String(itemsPerPage)} onValueChange={handleItemsPerPageChange}>
-                  <SelectTrigger className="w-20">
+                  <SelectTrigger className={`w-20 ${touchTarget.input}`}>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -286,33 +356,43 @@ export default function PatientsPage() {
                     <SelectItem value="100">100</SelectItem>
                   </SelectContent>
                 </Select>
-                <span className="text-sm text-muted-foreground ml-4">
-                  총 {filteredPatients.length}명 중 {((currentPage - 1) * itemsPerPage) + 1}-{Math.min(currentPage * itemsPerPage, filteredPatients.length)}명 표시
-                </span>
+                {!isMobile && (
+                  <span className="text-sm text-muted-foreground ml-4">
+                    총 {filteredPatients.length}명 중 {((currentPage - 1) * itemsPerPage) + 1}-{Math.min(currentPage * itemsPerPage, filteredPatients.length)}명 표시
+                  </span>
+                )}
               </div>
               
-              <div className="flex items-center gap-2">
+              {isMobile && (
+                <div className="text-center text-xs text-muted-foreground">
+                  총 {filteredPatients.length}명 중 {((currentPage - 1) * itemsPerPage) + 1}-{Math.min(currentPage * itemsPerPage, filteredPatients.length)}명 표시
+                </div>
+              )}
+              
+              <div className={`flex items-center gap-2 ${isMobile ? 'justify-center' : ''}`}>
                 <Button
                   variant="outline"
-                  size="sm"
+                  size={isMobile ? "default" : "sm"}
                   onClick={() => handlePageChange(currentPage - 1)}
                   disabled={currentPage === 1}
+                  className={touchTarget.button}
                 >
                   <ChevronLeft className="h-4 w-4" />
-                  이전
+                  {!isMobile && '이전'}
                 </Button>
                 <div className="flex items-center gap-1">
-                  <span className="text-sm">
+                  <span className="text-xs sm:text-sm">
                     {currentPage} / {totalPages} 페이지
                   </span>
                 </div>
                 <Button
                   variant="outline"
-                  size="sm"
+                  size={isMobile ? "default" : "sm"}
                   onClick={() => handlePageChange(currentPage + 1)}
                   disabled={currentPage === totalPages}
+                  className={touchTarget.button}
                 >
-                  다음
+                  {!isMobile && '다음'}
                   <ChevronRight className="h-4 w-4" />
                 </Button>
               </div>

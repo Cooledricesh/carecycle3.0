@@ -83,24 +83,24 @@
 ## 📝 Phase 4: 데이터 테이블 모바일 변환
 
 ### 환자 목록 페이지
-- [ ] `src/app/(app)/dashboard/patients/page.tsx`
-  - [ ] useIsMobile 훅 import
-  - [ ] 모바일 카드 레이아웃 구현
-  - [ ] 카드 디자인 (이름, 번호, 부서 표시)
-  - [ ] 액션 버튼 배치 (상세, 편집, 삭제)
-  - [ ] 검색 바 모바일 최적화
+- [x] `src/app/(app)/dashboard/patients/page.tsx`
+  - [x] useIsMobile 훅 import
+  - [x] 모바일 카드 레이아웃 구현
+  - [x] 카드 디자인 (이름, 번호, 부서 표시)
+  - [x] 액션 버튼 배치 (상세, 편집, 삭제)
+  - [x] 검색 바 모바일 최적화
 
 ### 스케줄 목록 페이지
-- [ ] `src/app/(app)/dashboard/schedules/page.tsx`
-  - [ ] 테이블 → 카드 패턴 적용
-  - [ ] 중요 정보 상단 배치
-  - [ ] 날짜/시간 표시 최적화
-  - [ ] 상태 뱃지 크기 조정
+- [x] `src/app/(app)/dashboard/schedules/page.tsx`
+  - [x] 테이블 → 카드 패턴 적용
+  - [x] 중요 정보 상단 배치
+  - [x] 날짜/시간 표시 최적화
+  - [x] 상태 뱃지 크기 조정
 
 ### 프로필 페이지
-- [ ] `src/app/(app)/dashboard/profile/page.tsx`
-  - [ ] 폼 레이아웃 단일 컬럼화
-  - [ ] 버튼 전체 너비 적용
+- [x] `src/app/(app)/dashboard/profile/page.tsx`
+  - [x] 폼 레이아웃 단일 컬럼화
+  - [x] 버튼 전체 너비 적용
 
 ---
 
