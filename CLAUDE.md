@@ -2,6 +2,26 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## 🚨 개발 서버 실행 전 필수 체크 🚨
+
+**⚠️ 절대 잊지 말 것: npm run dev 실행 전 반드시 포트 체크**
+
+```bash
+# 1. 반드시 먼저 포트 상태 확인
+lsof -i :3000
+
+# 2. 이미 실행 중이면 절대 새로 실행하지 말 것
+# 3. 필요시 기존 프로세스 종료 후 실행
+
+# 포트가 비어있을 때만 실행
+npm run dev
+```
+
+**⛔️ 금지 사항:**
+- npm run dev 실행 전 포트 체크 생략
+- 이미 실행 중인 상태에서 또 다른 포트로 실행
+- "확인하겠습니다"라는 말만 하고 실제로는 체크 안 하기
+
 ## 🚨 CRITICAL: 절대 API 키 하드코딩 금지 🚨
 
 ### ⛔️ 경고: 환경변수 키를 하드코딩하면 즉시 보안 사고 발생 ⛔️
