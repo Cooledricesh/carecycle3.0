@@ -7,19 +7,22 @@ import { useState, useEffect } from 'react';
  * 640px 미만을 모바일로 판정 (Tailwind sm breakpoint)
  */
 export function useIsMobile(): boolean {
-  const [isMobile, setIsMobile] = useState<boolean>(false);
+  const [isMobile, setIsMobile] = useState<boolean>(() => {
+    // 초기값을 즉시 계산하여 hydration 불일치 방지
+    if (typeof window !== 'undefined') {
+      return window.innerWidth < 640;
+    }
+    return false;
+  });
 
   useEffect(() => {
     // SSR 환경에서 window 객체 체크
     if (typeof window === 'undefined') return;
 
-    // 초기값 설정
+    // 리사이즈 시 체크 함수
     const checkIsMobile = () => {
       setIsMobile(window.innerWidth < 640);
     };
-
-    // 초기 체크
-    checkIsMobile();
 
     // 리사이즈 이벤트 핸들러 (디바운싱 포함)
     let timeoutId: NodeJS.Timeout;
@@ -46,15 +49,18 @@ export function useIsMobile(): boolean {
  * CSS 미디어 쿼리와 동기화
  */
 export function useMediaQuery(query: string): boolean {
-  const [matches, setMatches] = useState<boolean>(false);
+  const [matches, setMatches] = useState<boolean>(() => {
+    // 초기값을 즉시 계산하여 hydration 불일치 방지
+    if (typeof window !== 'undefined') {
+      return window.matchMedia(query).matches;
+    }
+    return false;
+  });
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
     const media = window.matchMedia(query);
-    
-    // 초기값 설정
-    setMatches(media.matches);
 
     // 미디어 쿼리 변경 감지
     const listener = (event: MediaQueryListEvent) => {

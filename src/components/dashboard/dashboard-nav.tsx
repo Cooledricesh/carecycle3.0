@@ -75,7 +75,23 @@ export default function DashboardNav({ profile }: DashboardNavProps) {
       <nav className="flex-1 px-4 py-4">
         <ul className="space-y-2">
           {navigation.map((item) => {
-            const isActive = pathname === item.href;
+            // Check if current route is active
+            // Special handling for the root dashboard path to avoid marking everything active
+            let isActive = false;
+            
+            if (item.href === "/dashboard") {
+              // For the root dashboard, only mark active if we're exactly on /dashboard
+              // or if no other more specific route matches
+              isActive = pathname === "/dashboard" || 
+                (!pathname.startsWith("/dashboard/patients") && 
+                 !pathname.startsWith("/dashboard/schedules") && 
+                 !pathname.startsWith("/dashboard/profile") &&
+                 pathname.startsWith("/dashboard"));
+            } else {
+              // For other routes, check if the current pathname starts with the item's href
+              isActive = pathname.startsWith(item.href);
+            }
+            
             return (
               <li key={item.name}>
                 <Link

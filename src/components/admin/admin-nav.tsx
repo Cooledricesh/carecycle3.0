@@ -25,7 +25,6 @@ import {
 import { Profile } from "@/lib/database.types";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
-import { useIsMobile } from "@/hooks/useIsMobile";
 import { touchTarget } from "@/lib/utils";
 
 interface AdminNavProps {
@@ -45,7 +44,6 @@ export default function AdminNav({ profile }: AdminNavProps) {
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
-  const isMobile = useIsMobile();
 
   const handleSignOut = async () => {
     try {
@@ -97,15 +95,15 @@ export default function AdminNav({ profile }: AdminNavProps) {
                 <Link
                   href={item.href}
                   className={`
-                    flex items-center px-3 py-3 text-sm font-medium rounded-md transition-colors
-                    ${touchTarget.link}
+                    w-full flex items-center px-3 py-3 text-sm font-medium rounded-md transition-colors
+                    min-h-[44px] sm:min-h-[36px]
                     ${
                       isActive
                         ? "bg-red-100 text-red-700"
                         : "text-gray-700 hover:bg-gray-100 hover:text-gray-900"
                     }
                   `}
-                  onClick={() => isMobile && setIsSheetOpen(false)}
+                  onClick={() => setIsSheetOpen(false)}
                 >
                   <item.icon className="mr-3 h-5 w-5 flex-shrink-0" />
                   <span>{item.name}</span>
@@ -121,7 +119,7 @@ export default function AdminNav({ profile }: AdminNavProps) {
         <Link
           href="/dashboard"
           className={`flex items-center px-3 py-2 text-sm font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-md transition-colors ${touchTarget.link}`}
-          onClick={() => isMobile && setIsSheetOpen(false)}
+          onClick={() => setIsSheetOpen(false)}
         >
           <Calendar className="mr-3 h-5 w-5" />
           스텝 뷰로 전환
@@ -142,9 +140,9 @@ export default function AdminNav({ profile }: AdminNavProps) {
     </div>
   );
 
-  // 모바일: Sheet 사용
-  if (isMobile) {
-    return (
+  return (
+    <>
+      {/* Mobile Navigation - Sheet */}
       <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
         <SheetTrigger asChild>
           <Button
@@ -156,20 +154,18 @@ export default function AdminNav({ profile }: AdminNavProps) {
             <span className="sr-only">메뉴 열기</span>
           </Button>
         </SheetTrigger>
-        <SheetContent side="left" className="w-[280px] sm:w-[350px] p-0">
+        <SheetContent side="left" className="w-[280px] sm:w-[350px] p-0 lg:hidden">
           <SheetHeader className="px-6 py-4 border-b">
             <SheetTitle>관리자 패널</SheetTitle>
           </SheetHeader>
           <NavigationContent />
         </SheetContent>
       </Sheet>
-    );
-  }
 
-  // 데스크톱: 기존 사이드바
-  return (
-    <aside className="hidden lg:block fixed lg:static inset-y-0 left-0 z-40 w-64 bg-white shadow-lg">
-      <NavigationContent />
-    </aside>
+      {/* Desktop Navigation - Sidebar */}
+      <aside className="hidden lg:block fixed lg:static inset-y-0 left-0 z-40 w-64 bg-white shadow-lg">
+        <NavigationContent />
+      </aside>
+    </>
   );
 }

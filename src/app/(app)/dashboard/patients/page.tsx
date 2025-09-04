@@ -179,12 +179,12 @@ export default function PatientsPage() {
           {/* Search Bar */}
           <div className="mb-4">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4 z-10 pointer-events-none" />
               <Input
                 placeholder={isMobile ? "검색..." : "환자명, 환자번호, 진료구분으로 검색..."}
                 value={searchTerm}
                 onChange={(e) => handleSearchChange(e.target.value)}
-                className={`pl-10 ${touchTarget.input}`}
+                className={`!pl-20 ${touchTarget.input}`}
               />
             </div>
           </div>
@@ -371,6 +371,7 @@ export default function PatientsPage() {
               
               <div className={`flex items-center gap-2 ${isMobile ? 'justify-center' : ''}`}>
                 <Button
+                  aria-label="이전 페이지"
                   variant="outline"
                   size={isMobile ? "default" : "sm"}
                   onClick={() => handlePageChange(currentPage - 1)}
@@ -386,6 +387,7 @@ export default function PatientsPage() {
                   </span>
                 </div>
                 <Button
+                  aria-label="다음 페이지"
                   variant="outline"
                   size={isMobile ? "default" : "sm"}
                   onClick={() => handlePageChange(currentPage + 1)}

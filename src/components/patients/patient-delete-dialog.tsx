@@ -41,6 +41,7 @@ export function PatientDeleteDialog({
         <Button 
           variant="ghost" 
           size="sm"
+          aria-label="환자 삭제"
           className="text-destructive hover:text-destructive hover:bg-destructive/10"
           disabled={isDeleting}
         >

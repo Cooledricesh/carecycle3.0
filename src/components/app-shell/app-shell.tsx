@@ -5,7 +5,6 @@ import { Sidebar } from './sidebar';
 import { Header } from './header';
 import { Footer } from './footer';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useIsMobile } from '@/hooks/useIsMobile';
 import { responsivePadding } from '@/lib/utils';
 
 interface AppShellProps {
@@ -13,8 +12,6 @@ interface AppShellProps {
 }
 
 export function AppShell({ children }: AppShellProps) {
-  const isMobile = useIsMobile();
-
   return (
     <div className="min-h-screen flex flex-col">
       <div className="flex flex-1">
@@ -31,8 +28,10 @@ export function AppShell({ children }: AppShellProps) {
           <main className="flex-1 bg-gray-50">
             <ScrollArea className="h-[calc(100vh-4rem)]">
               <div className={`container max-w-[1200px] mx-auto ${responsivePadding.page}`}>
-                <div className={`${isMobile ? 'space-y-4' : 'grid grid-cols-12 gap-4'}`}>
-                  <div className={isMobile ? 'w-full' : 'col-span-12'}>
+                {/* Mobile: space-y-4, Desktop: grid with gap */}
+                <div className="space-y-4 sm:grid sm:grid-cols-12 sm:gap-4 sm:space-y-0">
+                  {/* Always full width on mobile, span all columns on desktop */}
+                  <div className="w-full sm:col-span-12">
                     {children}
                   </div>
                 </div>

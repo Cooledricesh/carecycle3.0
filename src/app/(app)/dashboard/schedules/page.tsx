@@ -161,12 +161,12 @@ export default function SchedulesPage() {
       {/* Search & Filter */}
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4 z-10 pointer-events-none" />
           <Input
             placeholder={isMobile ? "검색..." : "환자명 또는 검사/주사명으로 검색..."}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className={`pl-10 ${touchTarget.input}`}
+            className={`!pl-20 ${touchTarget.input}`}
           />
         </div>
       </div>
@@ -292,6 +292,7 @@ export default function SchedulesPage() {
                               <Button
                                 size="default"
                                 variant="destructive"
+                                aria-label="스케줄 삭제"
                                 onClick={() => handleDeleteSchedule(schedule.id)}
                                 className={touchTarget.iconButton}
                               >
@@ -360,6 +361,7 @@ export default function SchedulesPage() {
                                 <Button
                                   size="sm"
                                   variant="destructive"
+                                  aria-label="스케줄 삭제"
                                   onClick={() => handleDeleteSchedule(schedule.id)}
                                 >
                                   <Trash2 className="h-4 w-4" />

@@ -28,7 +28,7 @@ export const touchTarget = {
   input: "h-11 sm:h-10 px-4 text-base sm:text-sm",
   
   // 링크 및 네비게이션 아이템
-  link: "inline-flex items-center justify-center min-h-[44px] px-3 sm:min-h-[36px]",
+  link: "min-h-[44px] px-3 sm:min-h-[36px]",
   
   // 체크박스, 라디오 버튼
   checkbox: "h-5 w-5 sm:h-4 sm:w-4",

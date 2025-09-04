@@ -27,7 +27,16 @@ export function useMobileLayout(): MobileLayoutState {
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    const stored = localStorage.getItem(STORAGE_KEY);
+    let stored: string | null = null;
+    
+    try {
+      stored = localStorage.getItem(STORAGE_KEY);
+    } catch (error) {
+      // Safari private mode 등에서 localStorage 접근 시 예외 발생 가능
+      // 에러를 무시하고 기본값 사용
+      return;
+    }
+    
     if (stored && ['auto', 'mobile', 'desktop'].includes(stored)) {
       setPreferenceState(stored as LayoutPreference);
     }
@@ -51,7 +60,13 @@ export function useMobileLayout(): MobileLayoutState {
   const setPreference = useCallback((pref: LayoutPreference) => {
     setPreferenceState(pref);
     if (typeof window !== 'undefined') {
-      localStorage.setItem(STORAGE_KEY, pref);
+      try {
+        localStorage.setItem(STORAGE_KEY, pref);
+      } catch (error) {
+        // Safari private mode 등에서 localStorage 쓰기 시 예외 발생 가능
+        // 에러를 무시하고 메모리 상태만 업데이트
+        console.warn('Failed to persist layout preference to localStorage:', error);
+      }
     }
   }, []);
 
