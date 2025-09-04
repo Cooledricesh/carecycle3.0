@@ -14,12 +14,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { User, Mail, Phone, Building, Shield, Save, Key } from "lucide-react";
 import { Profile } from "@/lib/database.types";
+import { useIsMobile } from "@/hooks/useIsMobile";
+import { touchTarget, responsiveText, responsivePadding } from "@/lib/utils";
 
 export default function ProfilePage() {
   const { user } = useAuth();
   const [profile, setProfile] = useState<Profile | null>(null);
   const { toast } = useToast();
   const supabase = createClient();
+  const isMobile = useIsMobile();
   
   useEffect(() => {
     if (user) {
@@ -156,36 +159,36 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className={`${responsivePadding.page} space-y-4 sm:space-y-6`}>
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold">프로필 설정</h1>
-        <p className="text-gray-500 mt-1">
+        <h1 className={`${responsiveText.h1} font-bold`}>프로필 설정</h1>
+        <p className="text-xs sm:text-base text-gray-500 mt-1">
           계정 정보와 보안 설정을 관리합니다
         </p>
       </div>
 
       {/* Profile Overview Card */}
       <Card>
-        <CardContent className="pt-6">
-          <div className="flex items-center space-x-4">
-            <Avatar className="h-20 w-20">
-              <AvatarFallback className="text-2xl">
+        <CardContent className={`pt-6 ${isMobile ? 'px-4' : ''}`}>
+          <div className={`flex ${isMobile ? 'flex-col items-center text-center' : 'items-center'} ${isMobile ? 'space-y-3' : 'space-x-4'}`}>
+            <Avatar className={`${isMobile ? 'h-16 w-16' : 'h-20 w-20'}`}>
+              <AvatarFallback className={`${isMobile ? 'text-xl' : 'text-2xl'}`}>
                 {profile.name.charAt(0).toUpperCase()}
               </AvatarFallback>
             </Avatar>
             <div className="space-y-1">
-              <h2 className="text-2xl font-semibold">{profile.name}</h2>
-              <p className="text-gray-500">{profile.email}</p>
-              <div className="flex items-center gap-2">
-                <Shield className="h-4 w-4 text-gray-400" />
-                <span className="text-sm text-gray-600">
+              <h2 className={`${responsiveText.h2} font-semibold`}>{profile.name}</h2>
+              <p className="text-xs sm:text-base text-gray-500">{profile.email}</p>
+              <div className={`flex ${isMobile ? 'justify-center' : ''} items-center gap-2`}>
+                <Shield className="h-3 w-3 sm:h-4 sm:w-4 text-gray-400" />
+                <span className="text-xs sm:text-sm text-gray-600">
                   {profile.role === "admin" ? "관리자" : "스텝"}
                 </span>
                 {profile.department && (
                   <>
                     <span className="text-gray-400">•</span>
-                    <span className="text-sm text-gray-600">
+                    <span className="text-xs sm:text-sm text-gray-600">
                       {profile.department}
                     </span>
                   </>
@@ -198,23 +201,23 @@ export default function ProfilePage() {
 
       {/* Tabs for Profile and Security */}
       <Tabs defaultValue="profile" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="profile">프로필 정보</TabsTrigger>
-          <TabsTrigger value="security">보안 설정</TabsTrigger>
+        <TabsList className={`${isMobile ? 'grid w-full grid-cols-2' : ''}`}>
+          <TabsTrigger value="profile" className="text-xs sm:text-sm">프로필 정보</TabsTrigger>
+          <TabsTrigger value="security" className="text-xs sm:text-sm">보안 설정</TabsTrigger>
         </TabsList>
 
         {/* Profile Tab */}
         <TabsContent value="profile">
           <Card>
-            <CardHeader>
-              <CardTitle>기본 정보</CardTitle>
-              <CardDescription>
+            <CardHeader className={isMobile ? 'p-4' : ''}>
+              <CardTitle className={responsiveText.h3}>기본 정보</CardTitle>
+              <CardDescription className="text-xs sm:text-sm">
                 프로필 정보를 수정하고 업데이트할 수 있습니다
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className={isMobile ? 'p-4 pt-0' : ''}>
               <form onSubmit={handleProfileUpdate} className="space-y-4">
-                <div className="grid gap-4 md:grid-cols-2">
+                <div className={`grid gap-4 ${isMobile ? 'grid-cols-1' : 'md:grid-cols-2'}`}>
                   <div className="space-y-2">
                     <Label htmlFor="name">이름</Label>
                     <div className="relative">
@@ -225,7 +228,7 @@ export default function ProfilePage() {
                         onChange={(e) =>
                           setFormData({ ...formData, name: e.target.value })
                         }
-                        className="pl-10"
+                        className={`pl-10 ${touchTarget.input}`}
                         required
                       />
                     </div>
@@ -239,7 +242,7 @@ export default function ProfilePage() {
                         id="email"
                         type="email"
                         value={formData.email}
-                        className="pl-10"
+                        className={`pl-10 ${touchTarget.input}`}
                         disabled
                         title="이메일은 변경할 수 없습니다"
                       />
@@ -257,7 +260,7 @@ export default function ProfilePage() {
                         onChange={(e) =>
                           setFormData({ ...formData, phone: e.target.value })
                         }
-                        className="pl-10"
+                        className={`pl-10 ${touchTarget.input}`}
                         placeholder="010-0000-0000"
                       />
                     </div>
@@ -273,15 +276,19 @@ export default function ProfilePage() {
                         onChange={(e) =>
                           setFormData({ ...formData, department: e.target.value })
                         }
-                        className="pl-10"
+                        className={`pl-10 ${touchTarget.input}`}
                         placeholder="소속 부서"
                       />
                     </div>
                   </div>
                 </div>
 
-                <div className="flex justify-end">
-                  <Button type="submit" disabled={isLoading}>
+                <div className={`flex ${isMobile ? 'w-full' : 'justify-end'}`}>
+                  <Button 
+                    type="submit" 
+                    disabled={isLoading}
+                    className={`${isMobile ? 'w-full' : ''} ${touchTarget.button}`}
+                  >
                     <Save className="mr-2 h-4 w-4" />
                     {isLoading ? "저장 중..." : "변경사항 저장"}
                   </Button>
@@ -317,7 +324,7 @@ export default function ProfilePage() {
                             newPassword: e.target.value,
                           })
                         }
-                        className="pl-10"
+                        className={`pl-10 ${touchTarget.input}`}
                         placeholder="최소 6자 이상"
                         required
                       />
@@ -338,7 +345,7 @@ export default function ProfilePage() {
                             confirmPassword: e.target.value,
                           })
                         }
-                        className="pl-10"
+                        className={`pl-10 ${touchTarget.input}`}
                         placeholder="비밀번호 재입력"
                         required
                       />

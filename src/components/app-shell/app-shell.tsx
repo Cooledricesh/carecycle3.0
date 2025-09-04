@@ -5,6 +5,7 @@ import { Sidebar } from './sidebar';
 import { Header } from './header';
 import { Footer } from './footer';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { responsivePadding } from '@/lib/utils';
 
 interface AppShellProps {
   children: ReactNode;
@@ -23,12 +24,14 @@ export function AppShell({ children }: AppShellProps) {
         <div className="flex-1 flex flex-col">
           <Header />
           
-          {/* Content with 12-column grid */}
+          {/* Content with responsive padding */}
           <main className="flex-1 bg-gray-50">
             <ScrollArea className="h-[calc(100vh-4rem)]">
-              <div className="container max-w-[1200px] mx-auto p-4 lg:p-6">
-                <div className="grid grid-cols-12 gap-4">
-                  <div className="col-span-12">
+              <div className={`container max-w-[1200px] mx-auto ${responsivePadding.page}`}>
+                {/* Mobile: space-y-4, Desktop: grid with gap */}
+                <div className="space-y-4 sm:grid sm:grid-cols-12 sm:gap-4 sm:space-y-0">
+                  {/* Always full width on mobile, span all columns on desktop */}
+                  <div className="w-full sm:col-span-12">
                     {children}
                   </div>
                 </div>
