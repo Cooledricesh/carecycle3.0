@@ -25,9 +25,9 @@ export function useIsMobile(): boolean {
     };
 
     // 리사이즈 이벤트 핸들러 (디바운싱 포함)
-    let timeoutId: NodeJS.Timeout;
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
     const handleResize = () => {
-      clearTimeout(timeoutId);
+      if (timeoutId) clearTimeout(timeoutId);
       timeoutId = setTimeout(checkIsMobile, 150);
     };
 
@@ -36,7 +36,7 @@ export function useIsMobile(): boolean {
 
     // 클린업
     return () => {
-      clearTimeout(timeoutId);
+      if (timeoutId) clearTimeout(timeoutId);
       window.removeEventListener('resize', handleResize);
     };
   }, []);
@@ -61,6 +61,9 @@ export function useMediaQuery(query: string): boolean {
     if (typeof window === 'undefined') return;
 
     const media = window.matchMedia(query);
+    
+    // Immediately sync the current state when query changes
+    setMatches(media.matches);
 
     // 미디어 쿼리 변경 감지
     const listener = (event: MediaQueryListEvent) => {

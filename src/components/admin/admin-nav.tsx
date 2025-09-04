@@ -57,32 +57,37 @@ export default function AdminNav({ profile }: AdminNavProps) {
   };
 
   // 네비게이션 콘텐츠 (모바일/데스크톱 공통)
-  const NavigationContent = () => (
-    <div className="flex h-full flex-col">
-      {/* Header - 데스크톱에서만 표시 */}
-      <div className="hidden lg:flex h-16 items-center px-6 border-b">
-        <h1 className="text-xl font-semibold text-gray-900">관리자 패널</h1>
-      </div>
+  const NavigationContent = () => {
+    // Compute safe display name and initial with fallbacks
+    const displayName = profile?.name?.trim() || profile?.email || "사용자";
+    const initial = displayName.charAt(0).toUpperCase() || "U";
 
-      {/* User info */}
-      <div className="px-6 py-4 border-b">
-        <div className="flex items-center space-x-3">
-          <Avatar className="h-10 w-10">
-            <AvatarFallback className="bg-red-100 text-red-700">
-              {profile.name.charAt(0).toUpperCase()}
-            </AvatarFallback>
-          </Avatar>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-gray-900 truncate">
-              {profile.name}
-            </p>
-            <p className="text-xs text-gray-500 truncate">
-              관리자
-              {profile.department && ` • ${profile.department}`}
-            </p>
+    return (
+      <div className="flex h-full flex-col">
+        {/* Header - 데스크톱에서만 표시 */}
+        <div className="hidden lg:flex h-16 items-center px-6 border-b">
+          <h1 className="text-xl font-semibold text-gray-900">관리자 패널</h1>
+        </div>
+
+        {/* User info */}
+        <div className="px-6 py-4 border-b">
+          <div className="flex items-center space-x-3">
+            <Avatar className="h-10 w-10">
+              <AvatarFallback className="bg-red-100 text-red-700">
+                {initial}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-gray-900 truncate">
+                {displayName}
+              </p>
+              <p className="text-xs text-gray-500 truncate">
+                관리자
+                {profile?.department && ` • ${profile.department}`}
+              </p>
+            </div>
           </div>
         </div>
-      </div>
 
       {/* Navigation */}
       <nav className="flex-1 px-4 py-4">
@@ -126,19 +131,20 @@ export default function AdminNav({ profile }: AdminNavProps) {
         </Link>
       </div>
 
-      {/* Logout */}
-      <div className="px-4 py-4">
-        <Button
-          variant="ghost"
-          className={`w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50 ${touchTarget.button}`}
-          onClick={handleSignOut}
-        >
-          <LogOut className="mr-3 h-5 w-5" />
-          로그아웃
-        </Button>
+        {/* Logout */}
+        <div className="px-4 py-4">
+          <Button
+            variant="ghost"
+            className={`w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50 ${touchTarget.button}`}
+            onClick={handleSignOut}
+          >
+            <LogOut className="mr-3 h-5 w-5" />
+            로그아웃
+          </Button>
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <>

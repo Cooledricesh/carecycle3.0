@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { 
   Calendar, 
+  CalendarDays,
   Clock, 
   User, 
   LogOut, 
@@ -33,6 +34,7 @@ interface NavItem {
 
 const navigation: NavItem[] = [
   { name: '내 스케줄', href: '/dashboard', icon: Calendar },
+  { name: '캘린더 보기', href: '/dashboard/calendar', icon: CalendarDays },
   { name: '환자 관리', href: '/dashboard/patients', icon: Users },
   { name: '스케줄 관리', href: '/dashboard/schedules', icon: Clock },
   { name: '항목 관리', href: '/dashboard/items', icon: List },
