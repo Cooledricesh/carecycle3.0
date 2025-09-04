@@ -3,9 +3,16 @@
 import { useState } from 'react';
 import { Menu, Bell, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { 
+  Sheet, 
+  SheetContent, 
+  SheetTrigger,
+  SheetTitle,
+  SheetDescription 
+} from '@/components/ui/sheet';
 import { Input } from '@/components/ui/input';
 import { Sidebar } from './sidebar';
+import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
 
 export function Header() {
   const [isOpen, setIsOpen] = useState(false);
@@ -26,6 +33,12 @@ export function Header() {
             </Button>
           </SheetTrigger>
           <SheetContent side="left" className="p-0 w-64">
+            <VisuallyHidden>
+              <SheetTitle>Navigation Menu</SheetTitle>
+              <SheetDescription>
+                Main navigation menu for the application
+              </SheetDescription>
+            </VisuallyHidden>
             <Sidebar />
           </SheetContent>
         </Sheet>
