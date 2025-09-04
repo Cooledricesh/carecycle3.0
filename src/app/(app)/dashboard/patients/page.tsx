@@ -21,7 +21,8 @@ import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { Users, Calendar, AlertCircle, RefreshCw, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Input } from '@/components/ui/input'
+import { Users, Calendar, AlertCircle, RefreshCw, ChevronLeft, ChevronRight, Search } from 'lucide-react'
 import {
   Select,
   SelectContent,
@@ -34,19 +35,41 @@ export default function PatientsPage() {
   const { patients, isLoading, error, refetch, deletePatient, isDeleting } = usePatients()
   const [lastUpdated, setLastUpdated] = useState(new Date())
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const [searchTerm, setSearchTerm] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage, setItemsPerPage] = useState(20)
   const queryClient = useQueryClient()
   const { toast } = useToast()
 
-  // Pagination logic
+  // Filter patients based on search term
+  const filteredPatients = useMemo(() => {
+    if (!searchTerm.trim()) {
+      return patients
+    }
+    
+    const searchLower = searchTerm.toLowerCase()
+    return patients.filter((patient) => {
+      // Safely convert each field to string before calling toLowerCase/includes
+      const name = String(patient.name ?? '').toLowerCase()
+      const patientNumber = String(patient.patientNumber ?? '').toLowerCase()
+      const careType = String(patient.careType ?? '').toLowerCase()
+      
+      return (
+        name.includes(searchLower) ||
+        patientNumber.includes(searchLower) ||
+        careType.includes(searchLower)
+      )
+    })
+  }, [patients, searchTerm])
+
+  // Pagination logic - now using filtered patients
   const paginatedPatients = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage
     const endIndex = startIndex + itemsPerPage
-    return patients.slice(startIndex, endIndex)
-  }, [patients, currentPage, itemsPerPage])
+    return filteredPatients.slice(startIndex, endIndex)
+  }, [filteredPatients, currentPage, itemsPerPage])
 
-  const totalPages = Math.ceil(patients.length / itemsPerPage)
+  const totalPages = Math.ceil(filteredPatients.length / itemsPerPage)
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page)
@@ -55,6 +78,11 @@ export default function PatientsPage() {
   const handleItemsPerPageChange = (value: string) => {
     setItemsPerPage(Number(value))
     setCurrentPage(1) // Reset to first page when changing items per page
+  }
+
+  const handleSearchChange = (value: string) => {
+    setSearchTerm(value)
+    setCurrentPage(1) // Reset to first page when searching
   }
 
   const handleRegistrationSuccess = () => {
@@ -129,9 +157,26 @@ export default function PatientsPage() {
           </CardTitle>
           <CardDescription>
             총 {patients.length}명의 환자가 등록되어 있습니다.
+            {searchTerm && filteredPatients.length !== patients.length && (
+              <span className="ml-2 text-primary">
+                (검색 결과: {filteredPatients.length}명)
+              </span>
+            )}
           </CardDescription>
         </CardHeader>
         <CardContent>
+          {/* Search Bar */}
+          <div className="mb-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <Input
+                placeholder="환자명, 환자번호, 진료구분으로 검색..."
+                value={searchTerm}
+                onChange={(e) => handleSearchChange(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+          </div>
           {error ? (
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
@@ -155,14 +200,16 @@ export default function PatientsPage() {
                 <Skeleton key={i} className="h-12 w-full" />
               ))}
             </div>
-          ) : patients.length === 0 ? (
+          ) : filteredPatients.length === 0 ? (
             <div className="text-center py-12">
               <Users className="w-12 h-12 mx-auto text-muted-foreground mb-3" />
               <p className="text-muted-foreground text-lg mb-2">
-                등록된 환자가 없습니다
+                {searchTerm ? '검색 결과가 없습니다' : '등록된 환자가 없습니다'}
               </p>
               <p className="text-sm text-muted-foreground">
-                상단의 &quot;환자 등록&quot; 버튼을 클릭하여 첫 환자를 등록해보세요.
+                {searchTerm ? 
+                  '다른 검색어로 시도해보세요.' : 
+                  '상단의 "환자 등록" 버튼을 클릭하여 첫 환자를 등록해보세요.'}
               </p>
             </div>
           ) : (
@@ -222,7 +269,7 @@ export default function PatientsPage() {
           )}
           
           {/* Pagination Controls */}
-          {patients.length > 0 && (
+          {filteredPatients.length > 0 && (
             <div className="flex items-center justify-between mt-4">
               <div className="flex items-center gap-2">
                 <span className="text-sm text-muted-foreground">
@@ -240,7 +287,7 @@ export default function PatientsPage() {
                   </SelectContent>
                 </Select>
                 <span className="text-sm text-muted-foreground ml-4">
-                  총 {patients.length}명 중 {((currentPage - 1) * itemsPerPage) + 1}-{Math.min(currentPage * itemsPerPage, patients.length)}명 표시
+                  총 {filteredPatients.length}명 중 {((currentPage - 1) * itemsPerPage) + 1}-{Math.min(currentPage * itemsPerPage, filteredPatients.length)}명 표시
                 </span>
               </div>
               
