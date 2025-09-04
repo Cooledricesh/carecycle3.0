@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Menu, Bell, Search } from 'lucide-react';
+import { Menu, Bell } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { 
   Sheet, 
@@ -10,7 +10,6 @@ import {
   SheetTitle,
   SheetDescription 
 } from '@/components/ui/sheet';
-import { Input } from '@/components/ui/input';
 import { Sidebar } from './sidebar';
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
 
@@ -43,17 +42,8 @@ export function Header() {
           </SheetContent>
         </Sheet>
 
-        {/* Search bar */}
-        <div className="flex-1 flex items-center max-w-md">
-          <div className="relative w-full">
-            <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
-            <Input
-              type="search"
-              placeholder="환자 또는 스케줄 검색..."
-              className="pl-8 pr-4"
-            />
-          </div>
-        </div>
+        {/* Spacer */}
+        <div className="flex-1" />
 
         {/* Right side actions */}
         <div className="flex items-center gap-2">
