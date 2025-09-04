@@ -253,7 +253,7 @@ export function CalendarView({ className }: CalendarViewProps) {
 
           {/* 캘린더 그리드 - 모바일에서 더 촘촘하게 */}
           <div className={`grid grid-cols-7 ${isMobile ? 'gap-0.5' : 'gap-1'}`}>
-            {calendarDays.map((day, index) => {
+            {calendarDays.map((day) => {
               const dayScheduleCount = day.schedules.length;
               const hasActiveSchedules = day.schedules.some(s => s.status === 'active');
               const hasOverdueSchedules = day.schedules.some(s => {
@@ -262,19 +262,22 @@ export function CalendarView({ className }: CalendarViewProps) {
               });
               
               return (
-                <div
-                  key={index}
+                <button
+                  key={format(day.date, 'yyyy-MM-dd')}
+                  type="button"
                   className={`
                     ${isMobile ? 'min-h-[70px] p-1' : 'min-h-[90px] p-2'} 
-                    border rounded-lg cursor-pointer transition-all duration-200
+                    border rounded-lg cursor-pointer transition-all duration-200 text-left
                     ${isMobile ? 'min-w-[44px] hover:bg-gray-100' : 'hover:bg-gray-50'}
                     ${day.isCurrentMonth ? 'bg-white' : 'bg-gray-50/50 text-gray-400'}
                     ${selectedDate && isSameDay(day.date, selectedDate) ? 'ring-2 ring-blue-500 bg-blue-50' : ''}
                     ${isToday(day.date) ? 'bg-blue-100 border-blue-300' : 'border-gray-200'}
                     ${hasOverdueSchedules ? 'border-red-300 bg-red-50/30' : ''}
-                    hover:shadow-sm active:scale-95
+                    hover:shadow-sm active:scale-95 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1
                   `}
                   onClick={() => handleDateClick(day.date)}
+                  aria-pressed={selectedDate && isSameDay(day.date, selectedDate)}
+                  aria-label={`${format(day.date, 'yyyy년 M월 d일', { locale: ko })}${dayScheduleCount > 0 ? `, ${dayScheduleCount}개 스케줄` : ', 스케줄 없음'}`}
                 >
                   {/* 날짜 숫자와 스케줄 카운트 */}
                   <div className={`flex items-center justify-between ${isMobile ? 'mb-1' : 'mb-2'}`}>
@@ -330,7 +333,7 @@ export function CalendarView({ className }: CalendarViewProps) {
                       );
                     })()}
                   </div>
-                </div>
+                </button>
               );
             })}
           </div>
