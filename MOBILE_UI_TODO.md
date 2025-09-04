@@ -35,24 +35,24 @@
 ## 📝 Phase 2: 네비게이션 시스템 개선
 
 ### Dashboard Navigation 수정
-- [ ] `src/components/dashboard/dashboard-nav.tsx`
-  - [ ] Sheet 컴포넌트 import
-  - [ ] 모바일에서 Sheet으로 변환
-  - [ ] 햄버거 메뉴 버튼 추가
-  - [ ] `lg:hidden` / `lg:block` 클래스 적용
-  - [ ] Sheet 열기/닫기 상태 관리
+- [x] `src/components/dashboard/dashboard-nav.tsx`
+  - [x] Sheet 컴포넌트 import
+  - [x] 모바일에서 Sheet으로 변환
+  - [x] 햄버거 메뉴 버튼 추가
+  - [x] `lg:hidden` / `lg:block` 클래스 적용
+  - [x] Sheet 열기/닫기 상태 관리
 
 ### Admin Navigation 수정
-- [ ] `src/components/admin/admin-nav.tsx`
-  - [ ] Dashboard nav와 동일한 패턴 적용
-  - [ ] Sheet 컴포넌트로 변환
-  - [ ] 모바일 메뉴 토글 구현
+- [x] `src/components/admin/admin-nav.tsx`
+  - [x] Dashboard nav와 동일한 패턴 적용
+  - [x] Sheet 컴포넌트로 변환
+  - [x] 모바일 메뉴 토글 구현
 
 ### 메인 레이아웃 조정
-- [ ] `src/app/(app)/layout.tsx`
-  - [ ] 모바일 패딩 조정
-  - [ ] 사이드바 조건부 렌더링
-  - [ ] 모바일 헤더 영역 확보
+- [x] `src/app/(app)/layout.tsx`
+  - [x] 모바일 패딩 조정
+  - [x] 사이드바 조건부 렌더링
+  - [x] 모바일 헤더 영역 확보
 
 ---
 
