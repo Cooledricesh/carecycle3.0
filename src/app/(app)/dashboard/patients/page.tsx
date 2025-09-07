@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { PatientRegistrationModal } from '@/components/patients/patient-registration-modal'
 import { PatientDeleteDialog } from '@/components/patients/patient-delete-dialog'
 import { PatientCareTypeSelect } from '@/components/patients/patient-care-type-select'
@@ -42,7 +42,7 @@ import { touchTarget, responsiveText, responsivePadding, responsiveSpacing } fro
 
 export default function PatientsPage() {
   const { patients, isLoading, error, refetch, deletePatient, isDeleting } = usePatients()
-  const [lastUpdated, setLastUpdated] = useState(new Date())
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
@@ -50,6 +50,11 @@ export default function PatientsPage() {
   const queryClient = useQueryClient()
   const { toast } = useToast()
   const isMobile = useIsMobile()
+
+  // Initialize lastUpdated on client side only to avoid hydration mismatch
+  useEffect(() => {
+    setLastUpdated(new Date())
+  }, [])
 
   // Filter patients based on search term
   const filteredPatients = useMemo(() => {
@@ -136,9 +141,11 @@ export default function PatientsPage() {
           <h1 className={`${responsiveText.h1} font-bold tracking-tight`}>환자 관리</h1>
           <p className="text-xs sm:text-base text-muted-foreground mt-1">
             등록된 환자 목록을 관리하고 새로운 환자를 추가합니다.
-            <span className={`text-xs text-gray-400 ${isMobile ? 'block mt-1' : 'ml-2'}`}>
-              마지막 업데이트: {format(lastUpdated, 'HH:mm:ss')}
-            </span>
+            {lastUpdated && (
+              <span className={`text-xs text-gray-400 ${isMobile ? 'block mt-1' : 'ml-2'}`}>
+                마지막 업데이트: {format(lastUpdated, 'HH:mm:ss')}
+              </span>
+            )}
           </p>
         </div>
         <div className={`flex items-center gap-2 ${isMobile ? 'w-full' : ''}`}>

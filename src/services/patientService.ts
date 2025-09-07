@@ -217,57 +217,78 @@ export const patientService = {
   async update(
     id: string, 
     input: PatientUpdateInput, 
-    options?: { 
+    options?: SupabaseClient<Database> | { 
       supabase?: SupabaseClient<Database>
       signal?: AbortSignal 
     }
   ): Promise<Patient> {
-    // Support both old signature (3rd param as supabase) and new signature (options object)
-    const client = (options?.supabase || (options as any as SupabaseClient<Database>)) || createClient()
-    const signal = options?.signal
+    // Type guard to check if the third argument is a SupabaseClient
+    // Check for the 'from' method which is a key characteristic of SupabaseClient
+    const isSupabaseClient = (arg: any): arg is SupabaseClient<Database> => {
+      return arg && typeof arg === 'object' && typeof arg.from === 'function'
+    }
+    
+    // Correctly determine client and signal based on argument type
+    let client: SupabaseClient<Database>
+    let signal: AbortSignal | undefined
+    
+    if (isSupabaseClient(options)) {
+      // Old signature: third param is a SupabaseClient
+      client = options
+      signal = undefined
+    } else if (options) {
+      // New signature: third param is an options object
+      client = options.supabase || createClient()
+      signal = options.signal
+    } else {
+      // No third param provided
+      client = createClient()
+      signal = undefined
+    }
     
     try {
       // Check if request was aborted before starting
       if (signal?.aborted) {
-        throw new Error('Request was aborted')
+        const abortError = new Error('Request was aborted')
+        abortError.name = 'AbortError'
+        throw abortError
       }
       
       const validated = PatientUpdateSchema.parse(input)
       const snakeData = toSnakeCase(validated)
       
-      // Create abort handler for Supabase
-      const abortHandler = () => {
-        // Supabase doesn't directly support AbortSignal yet,
-        // but we can throw an error to stop processing
-        throw new Error('Request was aborted')
+      // Build the query with native AbortSignal support
+      let query = (client as any)
+        .from('patients')
+        .update(snakeData)
+        .eq('id', id)
+      
+      // Add AbortSignal if provided - Supabase PostgREST supports this natively
+      // Check if the query builder has abortSignal method for type safety
+      if (signal && typeof query.abortSignal === 'function') {
+        query = query.abortSignal(signal)
       }
       
-      if (signal) {
-        signal.addEventListener('abort', abortHandler)
-      }
+      // Complete the query chain after setting up abort signal
+      query = query.select().single()
       
-      try {
-        const { data, error } = await (client as any)
-          .from('patients')
-          .update(snakeData)
-          .eq('id', id)
-          .select()
-          .single()
-        
-        if (error) throw error
-        return toCamelCase(data) as Patient
-      } finally {
-        // Clean up abort handler
-        if (signal) {
-          signal.removeEventListener('abort', abortHandler)
+      const { data, error } = await query
+      
+      if (error) {
+        // Check if this was an abort error
+        if (error.name === 'AbortError' || error.message?.includes('aborted')) {
+          const abortError = new Error('Request was aborted')
+          abortError.name = 'AbortError'
+          throw abortError
         }
+        throw error
       }
+      
+      return toCamelCase(data) as Patient
     } catch (error) {
       // Check if this was an abort
-      if (error instanceof Error && error.message === 'Request was aborted') {
-        const abortError = new Error('Request was aborted')
-        abortError.name = 'AbortError'
-        throw abortError
+      if (error instanceof Error && (error.name === 'AbortError' || error.message === 'Request was aborted')) {
+        throw error // Re-throw abort errors as-is
       }
       
       console.error('Error updating patient:', error)
