@@ -48,7 +48,7 @@ export function PatientCareTypeSelect({
     if (!isLoading && patient.careType !== currentValue) {
       setCurrentValue(patient.careType ?? null)
     }
-  }, [patient.careType, patient.id]) // Include patient.id to handle patient switching
+  }, [patient.careType, patient.id, isLoading, currentValue]) // Include all dependencies
   
   // Cleanup on unmount
   useEffect(() => {
@@ -93,9 +93,15 @@ export function PatientCareTypeSelect({
     setIsLoading(true)
 
     try {
-      await patientService.update(patient.id, {
-        careType: newCareType,
-      })
+      await patientService.update(
+        patient.id, 
+        {
+          careType: newCareType,
+        },
+        {
+          signal: abortControllerRef.current.signal
+        }
+      )
       
       // Only process if this is still the latest request
       if (currentRequestId === requestIdRef.current) {

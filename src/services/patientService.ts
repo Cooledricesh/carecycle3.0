@@ -214,22 +214,62 @@ export const patientService = {
     }
   },
 
-  async update(id: string, input: PatientUpdateInput, supabase?: SupabaseClient<Database>): Promise<Patient> {
-    const client = supabase || createClient()
+  async update(
+    id: string, 
+    input: PatientUpdateInput, 
+    options?: { 
+      supabase?: SupabaseClient<Database>
+      signal?: AbortSignal 
+    }
+  ): Promise<Patient> {
+    // Support both old signature (3rd param as supabase) and new signature (options object)
+    const client = (options?.supabase || (options as any as SupabaseClient<Database>)) || createClient()
+    const signal = options?.signal
+    
     try {
+      // Check if request was aborted before starting
+      if (signal?.aborted) {
+        throw new Error('Request was aborted')
+      }
+      
       const validated = PatientUpdateSchema.parse(input)
       const snakeData = toSnakeCase(validated)
       
-      const { data, error } = await (client as any)
-        .from('patients')
-        .update(snakeData)
-        .eq('id', id)
-        .select()
-        .single()
+      // Create abort handler for Supabase
+      const abortHandler = () => {
+        // Supabase doesn't directly support AbortSignal yet,
+        // but we can throw an error to stop processing
+        throw new Error('Request was aborted')
+      }
       
-      if (error) throw error
-      return toCamelCase(data) as Patient
+      if (signal) {
+        signal.addEventListener('abort', abortHandler)
+      }
+      
+      try {
+        const { data, error } = await (client as any)
+          .from('patients')
+          .update(snakeData)
+          .eq('id', id)
+          .select()
+          .single()
+        
+        if (error) throw error
+        return toCamelCase(data) as Patient
+      } finally {
+        // Clean up abort handler
+        if (signal) {
+          signal.removeEventListener('abort', abortHandler)
+        }
+      }
     } catch (error) {
+      // Check if this was an abort
+      if (error instanceof Error && error.message === 'Request was aborted') {
+        const abortError = new Error('Request was aborted')
+        abortError.name = 'AbortError'
+        throw abortError
+      }
+      
       console.error('Error updating patient:', error)
       throw new Error('환자 정보 수정에 실패했습니다')
     }
