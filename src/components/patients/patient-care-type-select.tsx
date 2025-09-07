@@ -42,6 +42,14 @@ export function PatientCareTypeSelect({
   const requestIdRef = useRef(0)
   const abortControllerRef = useRef<AbortController | null>(null)
   
+  // Sync local state with upstream changes (e.g., real-time updates, other users' changes)
+  useEffect(() => {
+    // Only sync when not loading to avoid overwriting user's pending changes
+    if (!isLoading && patient.careType !== currentValue) {
+      setCurrentValue(patient.careType ?? null)
+    }
+  }, [patient.careType, patient.id]) // Include patient.id to handle patient switching
+  
   // Cleanup on unmount
   useEffect(() => {
     return () => {
