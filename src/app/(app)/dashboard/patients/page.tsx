@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { PatientRegistrationModal } from '@/components/patients/patient-registration-modal'
 import { PatientDeleteDialog } from '@/components/patients/patient-delete-dialog'
+import { PatientCareTypeSelect } from '@/components/patients/patient-care-type-select'
 import { ScheduleCreateModal } from '@/components/schedules/schedule-create-modal'
 import { usePatients } from '@/hooks/usePatients'
 import { useQueryClient } from '@tanstack/react-query'
@@ -37,11 +38,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { useIsMobile } from '@/hooks/useIsMobile'
-import { touchTarget, responsiveText, responsivePadding } from '@/lib/utils'
+import { touchTarget, responsiveText, responsivePadding, responsiveSpacing } from '@/lib/utils'
 
 export default function PatientsPage() {
   const { patients, isLoading, error, refetch, deletePatient, isDeleting } = usePatients()
-  const [lastUpdated, setLastUpdated] = useState(new Date())
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
@@ -49,6 +50,11 @@ export default function PatientsPage() {
   const queryClient = useQueryClient()
   const { toast } = useToast()
   const isMobile = useIsMobile()
+
+  // Initialize lastUpdated on client side only to avoid hydration mismatch
+  useEffect(() => {
+    setLastUpdated(new Date())
+  }, [])
 
   // Filter patients based on search term
   const filteredPatients = useMemo(() => {
@@ -135,9 +141,11 @@ export default function PatientsPage() {
           <h1 className={`${responsiveText.h1} font-bold tracking-tight`}>환자 관리</h1>
           <p className="text-xs sm:text-base text-muted-foreground mt-1">
             등록된 환자 목록을 관리하고 새로운 환자를 추가합니다.
-            <span className={`text-xs text-gray-400 ${isMobile ? 'block mt-1' : 'ml-2'}`}>
-              마지막 업데이트: {format(lastUpdated, 'HH:mm:ss')}
-            </span>
+            {lastUpdated && (
+              <span className={`text-xs text-gray-400 ${isMobile ? 'block mt-1' : 'ml-2'}`}>
+                마지막 업데이트: {format(lastUpdated, 'HH:mm:ss')}
+              </span>
+            )}
           </p>
         </div>
         <div className={`flex items-center gap-2 ${isMobile ? 'w-full' : ''}`}>
@@ -227,37 +235,32 @@ export default function PatientsPage() {
             <>
               {isMobile ? (
                 // Mobile: Card Layout
-                <div className="space-y-3">
+                <div className={`space-y-3 ${responsiveSpacing.gap.sm}`}>
                   {paginatedPatients.map((patient) => (
-                    <Card key={patient.id} className="p-4">
-                      <div className="space-y-3">
+                    <Card key={patient.id} className={`${responsivePadding.card} hover:shadow-md transition-shadow`}>
+                      <div className="space-y-4">
                         {/* Patient Header */}
                         <div className="flex items-start justify-between">
-                          <div className="space-y-1">
-                            <h4 className="font-medium text-base">{patient.name}</h4>
-                            <p className="text-sm text-gray-500">#{patient.patientNumber}</p>
+                          <div className="space-y-1 flex-1">
+                            <h4 className={`${responsiveText.h4} font-medium`}>{patient.name}</h4>
+                            <p className={`${responsiveText.small} text-muted-foreground`}>#{patient.patientNumber}</p>
                           </div>
-                          <Badge variant={patient.isActive ? 'default' : 'secondary'} className="shrink-0">
-                            {patient.isActive ? '활성' : '비활성'}
-                          </Badge>
                         </div>
                         
                         {/* Patient Details */}
-                        <div className="flex flex-col gap-1 text-sm text-gray-600">
-                          <div className="flex justify-between">
-                            <span>진료구분</span>
-                            <span className="font-medium">{patient.careType || '-'}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span>등록일</span>
-                            <span className="font-medium">
-                              {new Date(patient.createdAt).toLocaleDateString('ko-KR')}
-                            </span>
+                        <div className="space-y-2">
+                          <div className="flex justify-between items-center">
+                            <span className={`${responsiveText.small} text-muted-foreground`}>진료구분</span>
+                            <PatientCareTypeSelect
+                              patient={patient}
+                              onSuccess={() => refetch()}
+                              compact={true}
+                            />
                           </div>
                         </div>
                         
                         {/* Action Buttons */}
-                        <div className="flex gap-2 pt-2 border-t">
+                        <div className={`flex ${responsiveSpacing.gap.sm} pt-3 border-t border-border`}>
                           <ScheduleCreateModal
                             presetPatientId={patient.id}
                             onSuccess={handleScheduleSuccess}
@@ -288,8 +291,6 @@ export default function PatientsPage() {
                         <TableHead>환자번호</TableHead>
                         <TableHead>환자명</TableHead>
                         <TableHead>진료구분</TableHead>
-                        <TableHead>상태</TableHead>
-                        <TableHead>등록일</TableHead>
                         <TableHead className="text-right">작업</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -300,14 +301,11 @@ export default function PatientsPage() {
                             {patient.patientNumber}
                           </TableCell>
                           <TableCell>{patient.name}</TableCell>
-                          <TableCell>{patient.careType || '-'}</TableCell>
                           <TableCell>
-                            <Badge variant={patient.isActive ? 'default' : 'secondary'}>
-                              {patient.isActive ? '활성' : '비활성'}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            {new Date(patient.createdAt).toLocaleDateString('ko-KR')}
+                            <PatientCareTypeSelect
+                              patient={patient}
+                              onSuccess={() => refetch()}
+                            />
                           </TableCell>
                           <TableCell className="text-right">
                             <div className="flex items-center justify-end gap-2">
@@ -315,7 +313,7 @@ export default function PatientsPage() {
                                 presetPatientId={patient.id}
                                 onSuccess={handleScheduleSuccess}
                                 triggerButton={
-                                  <Button variant="outline" size="sm">
+                                  <Button variant="outline" size="sm" className={touchTarget.button}>
                                     <Calendar className="mr-2 h-4 w-4" />
                                     스케줄 추가
                                   </Button>

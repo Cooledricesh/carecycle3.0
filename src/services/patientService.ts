@@ -1,7 +1,8 @@
 'use client'
 
-import type { SupabaseClient } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
+import type { SupabaseClient } from '@/lib/supabase/database'
+import { executeQueryWithSignal } from '@/lib/supabase/query-helpers'
 import { 
   PatientCreateSchema, 
   PatientUpdateSchema,
@@ -10,10 +11,9 @@ import {
 } from '@/schemas/patient'
 import type { Patient } from '@/types/patient'
 import { toCamelCase, toSnakeCase } from '@/lib/database-utils'
-import type { Database } from '@/lib/database.types'
 
 export const patientService = {
-  async create(input: PatientCreateInput, supabase?: SupabaseClient<Database>): Promise<Patient> {
+  async create(input: PatientCreateInput, supabase?: SupabaseClient): Promise<Patient> {
     const client = supabase || createClient()
     try {
       console.log('[patientService.create] Input:', input)
@@ -45,7 +45,7 @@ export const patientService = {
       console.log('[patientService.create] Insert data:', insertData)
       console.log('[patientService.create] Auth user ID:', session?.user?.id)
       
-      const { data, error } = await (client as any)
+      const { data, error } = await client
         .from('patients')
         .insert(insertData)
         .select()
@@ -130,7 +130,7 @@ export const patientService = {
     }
   },
 
-  async getAll(supabase?: SupabaseClient<Database>): Promise<Patient[]> {
+  async getAll(supabase?: SupabaseClient): Promise<Patient[]> {
     const client = supabase || createClient()
     
     // Helper function to execute query with retry on auth failure
@@ -171,7 +171,7 @@ export const patientService = {
     return executeQuery()
   },
 
-  async getById(id: string, supabase?: SupabaseClient<Database>): Promise<Patient | null> {
+  async getById(id: string, supabase?: SupabaseClient): Promise<Patient | null> {
     const client = supabase || createClient()
     try {
       const { data, error } = await client
@@ -192,7 +192,7 @@ export const patientService = {
     }
   },
 
-  async getByPatientNumber(patientNumber: string, supabase?: SupabaseClient<Database>): Promise<Patient | null> {
+  async getByPatientNumber(patientNumber: string, supabase?: SupabaseClient): Promise<Patient | null> {
     const client = supabase || createClient()
     try {
       const { data, error } = await client
@@ -214,28 +214,89 @@ export const patientService = {
     }
   },
 
-  async update(id: string, input: PatientUpdateInput, supabase?: SupabaseClient<Database>): Promise<Patient> {
-    const client = supabase || createClient()
+  async update(
+    id: string, 
+    input: PatientUpdateInput, 
+    options?: SupabaseClient | { 
+      supabase?: SupabaseClient
+      signal?: AbortSignal 
+    }
+  ): Promise<Patient> {
+    // Type guard to check if the third argument is a SupabaseClient
+    // Check for the 'from' method which is a key characteristic of SupabaseClient
+    const isSupabaseClient = (arg: any): arg is SupabaseClient => {
+      return arg && typeof arg === 'object' && typeof arg.from === 'function'
+    }
+    
+    // Correctly determine client and signal based on argument type
+    let client: SupabaseClient
+    let signal: AbortSignal | undefined
+    
+    if (isSupabaseClient(options)) {
+      // Old signature: third param is a SupabaseClient
+      client = options
+      signal = undefined
+    } else if (options) {
+      // New signature: third param is an options object
+      client = options.supabase || createClient()
+      signal = options.signal
+    } else {
+      // No third param provided
+      client = createClient()
+      signal = undefined
+    }
+    
     try {
+      // Check if request was aborted before starting
+      if (signal?.aborted) {
+        const abortError = new Error('Request was aborted')
+        abortError.name = 'AbortError'
+        throw abortError
+      }
+      
       const validated = PatientUpdateSchema.parse(input)
       const snakeData = toSnakeCase(validated)
       
-      const { data, error } = await (client as any)
+      // Build the query with native AbortSignal support
+      const baseQuery = client
         .from('patients')
         .update(snakeData)
         .eq('id', id)
-        .select()
-        .single()
       
-      if (error) throw error
+      // Execute query with AbortSignal support using type-safe helper
+      const { data, error } = await executeQueryWithSignal<Patient>(
+        baseQuery,
+        signal,
+        { select: true, single: true }
+      )
+      
+      if (error) {
+        // Check if this was an abort error
+        if (error.name === 'AbortError' || error.message?.includes('aborted')) {
+          const abortError = new Error('Request was aborted')
+          abortError.name = 'AbortError'
+          throw abortError
+        }
+        throw error
+      }
+      
+      if (!data) {
+        throw new Error('환자 정보 수정에 실패했습니다: 데이터가 없습니다')
+      }
+      
       return toCamelCase(data) as Patient
     } catch (error) {
+      // Check if this was an abort
+      if (error instanceof Error && (error.name === 'AbortError' || error.message === 'Request was aborted')) {
+        throw error // Re-throw abort errors as-is
+      }
+      
       console.error('Error updating patient:', error)
       throw new Error('환자 정보 수정에 실패했습니다')
     }
   },
 
-  async delete(id: string, supabase?: SupabaseClient<Database>): Promise<void> {
+  async delete(id: string, supabase?: SupabaseClient): Promise<void> {
     const client = supabase || createClient()
     try {
       console.log('[patientService.delete] Attempting to delete patient with id:', id)
@@ -259,7 +320,7 @@ export const patientService = {
       
       // Perform the soft delete on the patient
       // The database trigger will automatically cascade delete all related schedules
-      const { error } = await (client as any)
+      const { error } = await client
         .from('patients')
         .update({ 
           is_active: false,
@@ -309,7 +370,7 @@ export const patientService = {
     }
   },
 
-  async search(query: string, supabase?: SupabaseClient<Database>): Promise<Patient[]> {
+  async search(query: string, supabase?: SupabaseClient): Promise<Patient[]> {
     const client = supabase || createClient()
     try {
       // Validate minimum query length to prevent expensive searches
