@@ -22,7 +22,7 @@ import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/providers/auth-provider-simple';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useProfile } from '@/hooks/useProfile';
 
 interface NavItem {
@@ -51,7 +51,13 @@ export function Sidebar() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isHydrated, setIsHydrated] = useState(false);
   const { data: profile, isLoading: profileLoading, error: profileError } = useProfile();
+
+  // Prevent hydration mismatch by deferring pathname-based logic until after hydration
+  useEffect(() => {
+    setIsHydrated(true);
+  }, []);
 
   const loading = authLoading || profileLoading;
 
@@ -61,12 +67,6 @@ export function Sidebar() {
     router.push('/auth/signin');
   };
 
-  // Debug log to check profile data
-  console.log('[Sidebar] Profile data:', profile);
-  console.log('[Sidebar] User role:', profile?.role);
-  console.log('[Sidebar] Profile loading:', profileLoading);
-  console.log('[Sidebar] Profile error:', profileError);
-  console.log('[Sidebar] User ID:', user?.id);
 
   // Show all basic navigation if no profile, add admin navigation if admin
   const userRole = profile?.role || 'nurse';
@@ -151,8 +151,23 @@ export function Sidebar() {
         <nav className="px-4 py-4">
           <ul className="space-y-2">
             {filteredNavigation.map((item) => {
-              const isActive = pathname === item.href || 
-                              (item.href !== '/' && pathname.startsWith(item.href));
+              // Check if current route is active - only after hydration to prevent mismatch
+              let isActive = false;
+              
+              if (isHydrated) {
+                // Define section roots that should only match exactly
+                const sectionRoots = ['/dashboard', '/admin'];
+                
+                if (sectionRoots.includes(item.href)) {
+                  // For section roots, only mark active on exact match
+                  isActive = pathname === item.href;
+                } else {
+                  // For other routes, use strict prefix matching with trailing slash
+                  // This prevents '/schedules' from matching '/schedules-old'
+                  isActive = pathname === item.href || pathname.startsWith(item.href + '/');
+                }
+              }
+              
               return (
                 <li key={item.name}>
                   <Link
