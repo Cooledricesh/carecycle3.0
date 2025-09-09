@@ -19,11 +19,18 @@ import { ChevronLeft, ChevronRight, Calendar, Clock, AlertCircle } from 'lucide-
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useSchedules } from '@/hooks/useSchedules';
+import { useScheduleCompletion } from '@/hooks/useScheduleCompletion';
 import { useIsMobile } from '@/hooks/useIsMobile';
+import { CalendarDayCard } from '@/components/calendar/calendar-day-card';
+import { ScheduleCompletionDialog } from '@/components/schedules/schedule-completion-dialog';
+import { getScheduleStatusLabel, sortSchedulesByPriority } from '@/lib/utils/schedule-status';
 import type { ScheduleWithDetails } from '@/types/schedule';
 import { safeFormatDate, safeParse } from '@/lib/utils/date';
+import { scheduleService } from '@/services/scheduleService';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useToast } from '@/hooks/use-toast';
+import { mapErrorToUserMessage } from '@/lib/error-mapper';
 
 interface CalendarViewProps {
   className?: string;
@@ -41,9 +48,25 @@ export function CalendarView({ className }: CalendarViewProps) {
   
   // 모바일 상태 확인
   const isMobile = useIsMobile();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   
   // 모든 스케줄 데이터 가져오기
-  const { schedules = [], isLoading } = useSchedules();
+  const { schedules = [], isLoading, refetch } = useSchedules();
+  
+  // 완료 처리 훅 사용
+  const {
+    selectedSchedule,
+    executionDate,
+    executionNotes,
+    isSubmitting,
+    isDialogOpen,
+    handleComplete,
+    handleSubmit,
+    setExecutionDate,
+    setExecutionNotes,
+    setDialogOpen
+  } = useScheduleCompletion();
 
   // 캘린더 날짜 계산
   const calendarDays = useMemo(() => {
@@ -75,13 +98,14 @@ export function CalendarView({ className }: CalendarViewProps) {
     return days;
   }, [currentDate, schedules]);
 
-  // 선택된 날짜의 스케줄
+  // 선택된 날짜의 스케줄 (우선순위로 정렬)
   const selectedDateSchedules = useMemo(() => {
     if (!selectedDate) return [];
-    return schedules.filter(schedule => {
+    const daySchedules = schedules.filter(schedule => {
       const scheduleDate = safeParse(schedule.nextDueDate);
       return scheduleDate && isSameDay(scheduleDate, selectedDate);
     });
+    return sortSchedulesByPriority(daySchedules);
   }, [selectedDate, schedules]);
 
   // 월별 통계
@@ -122,16 +146,64 @@ export function CalendarView({ className }: CalendarViewProps) {
   const handleDateClick = (date: Date) => {
     setSelectedDate(date);
   };
-
-  const getScheduleStatusColor = (status: string) => {
-    switch (status) {
-      case 'active': return 'bg-green-100 text-green-800';
-      case 'paused': return 'bg-yellow-100 text-yellow-800';
-      case 'completed': return 'bg-gray-100 text-gray-800';
-      case 'cancelled': return 'bg-red-100 text-red-800';
-      default: return 'bg-blue-100 text-blue-800';
+  
+  // 스케줄 액션 핸들러들
+  const statusMutation = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: 'active' | 'paused' }) => 
+      scheduleService.updateStatus(id, status),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['schedules'] });
+      toast({
+        title: "성공",
+        description: variables.status === 'paused' 
+          ? "스케줄이 일시중지되었습니다."
+          : "스케줄이 재개되었습니다.",
+      });
+    },
+    onError: (error) => {
+      const message = mapErrorToUserMessage(error);
+      toast({
+        title: "오류",
+        description: message,
+        variant: "destructive"
+      });
     }
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: scheduleService.delete,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['schedules'] });
+      toast({
+        title: "성공",
+        description: "스케줄이 삭제되었습니다.",
+      });
+    },
+    onError: (error) => {
+      const message = mapErrorToUserMessage(error);
+      toast({
+        title: "오류",
+        description: message,
+        variant: "destructive"
+      });
+    }
+  });
+
+  const handlePauseSchedule = (id: string) => {
+    statusMutation.mutate({ id, status: 'paused' });
   };
+
+  const handleResumeSchedule = (id: string) => {
+    statusMutation.mutate({ id, status: 'active' });
+  };
+
+  const handleDeleteSchedule = async (id: string) => {
+    if (!confirm('정말로 이 스케줄을 삭제하시겠습니까?')) {
+      return;
+    }
+    deleteMutation.mutate(id);
+  };
+
 
   if (isLoading) {
     return (
@@ -257,8 +329,8 @@ export function CalendarView({ className }: CalendarViewProps) {
               const dayScheduleCount = day.schedules.length;
               const hasActiveSchedules = day.schedules.some(s => s.status === 'active');
               const hasOverdueSchedules = day.schedules.some(s => {
-                const scheduleDate = safeParse(s.nextDueDate);
-                return scheduleDate && scheduleDate < new Date() && s.status === 'active';
+                const statusInfo = getScheduleStatusLabel(s);
+                return statusInfo.variant === 'overdue';
               });
               
               return (
@@ -371,104 +443,34 @@ export function CalendarView({ className }: CalendarViewProps) {
               </div>
             ) : (
               <div className={`space-y-3 ${isMobile ? 'max-h-[60vh] overflow-y-auto' : ''}`}>
-                {selectedDateSchedules
-                  .sort((a, b) => {
-                    // 우선순위별 정렬: 연체 > 활성 > 기타
-                    const getStatusPriority = (status: string) => {
-                      if (status === 'active') return 1;
-                      if (status === 'paused') return 2;
-                      if (status === 'completed') return 3;
-                      if (status === 'cancelled') return 4;
-                      return 5;
-                    };
-                    
-                    const aOverdue = safeParse(a.nextDueDate) && safeParse(a.nextDueDate)! < new Date() && a.status === 'active';
-                    const bOverdue = safeParse(b.nextDueDate) && safeParse(b.nextDueDate)! < new Date() && b.status === 'active';
-                    
-                    if (aOverdue && !bOverdue) return -1;
-                    if (!aOverdue && bOverdue) return 1;
-                    
-                    return getStatusPriority(a.status) - getStatusPriority(b.status);
-                  })
-                  .map((schedule) => {
-                    const scheduleDate = safeParse(schedule.nextDueDate);
-                    const isOverdue = scheduleDate && scheduleDate < new Date() && schedule.status === 'active';
-                    
-                    return (
-                      <div 
-                        key={schedule.id} 
-                        className={`
-                          ${isMobile ? 'p-3' : 'p-4'} border rounded-lg transition-all hover:shadow-sm
-                          ${isOverdue ? 'border-red-200 bg-red-50/30' : 'border-gray-200 hover:border-gray-300'}
-                        `}
-                      >
-                        <div className={`flex items-start justify-between ${isMobile ? 'mb-2' : 'mb-3'}`}>
-                          <div className={`space-y-1 ${isMobile ? 'flex-1' : 'space-y-2'}`}>
-                            <div className={`flex items-center gap-2 ${isMobile ? 'flex-wrap' : ''}`}>
-                              <h4 className={`font-semibold text-gray-900 ${isMobile ? 'text-sm' : ''}`}>
-                                {schedule.patient?.name}
-                              </h4>
-                              {isOverdue && (
-                                <Badge variant="destructive" className="text-xs">
-                                  <AlertCircle className={`${isMobile ? 'h-2.5 w-2.5' : 'h-3 w-3'} mr-1`} />
-                                  연체
-                                </Badge>
-                              )}
-                            </div>
-                            <div className={`flex items-center gap-2 text-gray-600 ${
-                              isMobile ? 'text-xs' : 'text-sm'
-                            }`}>
-                              <span className="font-medium">{schedule.item?.name}</span>
-                              {schedule.item?.category && (
-                                <>
-                                  <span>•</span>
-                                  <span>{schedule.item.category}</span>
-                                </>
-                              )}
-                            </div>
-                          </div>
-                          <Badge className={`${getScheduleStatusColor(schedule.status)} ${
-                            isMobile ? 'text-xs' : ''
-                          }`}>
-                            {schedule.status === 'active' ? '활성' :
-                             schedule.status === 'paused' ? '일시중지' :
-                             schedule.status === 'completed' ? '완료' :
-                             schedule.status === 'cancelled' ? '취소' : schedule.status}
-                          </Badge>
-                        </div>
-                        
-                        <div className={`grid gap-3 ${
-                          isMobile ? 'grid-cols-1 text-xs' : 'grid-cols-1 md:grid-cols-2 gap-4 text-sm'
-                        }`}>
-                          {schedule.intervalWeeks && (
-                            <div className="flex items-center gap-2 text-gray-500">
-                              <Clock className={`${isMobile ? 'h-3 w-3' : 'h-4 w-4'}`} />
-                              <span>주기: {schedule.intervalWeeks}주마다</span>
-                            </div>
-                          )}
-                          {schedule.assignedNurse && (
-                            <div className="flex items-center gap-2 text-gray-500">
-                              <span className="font-medium">담당:</span>
-                              <span>{schedule.assignedNurse.name}</span>
-                            </div>
-                          )}
-                        </div>
-                        
-                        {schedule.notes && (
-                          <div className={`${isMobile ? 'mt-2 p-2' : 'mt-3 p-3'} bg-gray-50 rounded text-gray-600 ${
-                            isMobile ? 'text-xs' : 'text-sm'
-                          }`}>
-                            <span className="font-medium text-gray-700">메모:</span> {schedule.notes}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
+                {selectedDateSchedules.map((schedule) => (
+                  <CalendarDayCard
+                    key={schedule.id}
+                    schedule={schedule}
+                    onComplete={() => handleComplete(schedule)}
+                    onPause={() => handlePauseSchedule(schedule.id)}
+                    onResume={() => handleResumeSchedule(schedule.id)}
+                    onDelete={() => handleDeleteSchedule(schedule.id)}
+                  />
+                ))}
               </div>
             )}
           </CardContent>
         </Card>
       )}
+      
+      {/* 완료 처리 다이얼로그 */}
+      <ScheduleCompletionDialog
+        schedule={selectedSchedule}
+        isOpen={isDialogOpen}
+        onClose={() => setDialogOpen(false)}
+        executionDate={executionDate}
+        executionNotes={executionNotes}
+        isSubmitting={isSubmitting}
+        onExecutionDateChange={setExecutionDate}
+        onExecutionNotesChange={setExecutionNotes}
+        onSubmit={handleSubmit}
+      />
     </div>
   );
 }

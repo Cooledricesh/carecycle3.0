@@ -61,12 +61,6 @@ export function Sidebar() {
     router.push('/auth/signin');
   };
 
-  // Debug log to check profile data
-  console.log('[Sidebar] Profile data:', profile);
-  console.log('[Sidebar] User role:', profile?.role);
-  console.log('[Sidebar] Profile loading:', profileLoading);
-  console.log('[Sidebar] Profile error:', profileError);
-  console.log('[Sidebar] User ID:', user?.id);
 
   // Show all basic navigation if no profile, add admin navigation if admin
   const userRole = profile?.role || 'nurse';
@@ -151,8 +145,17 @@ export function Sidebar() {
         <nav className="px-4 py-4">
           <ul className="space-y-2">
             {filteredNavigation.map((item) => {
-              const isActive = pathname === item.href || 
-                              (item.href !== '/' && pathname.startsWith(item.href));
+              // Check if current route is active
+              let isActive = false;
+              
+              if (item.href === '/dashboard') {
+                // For the root dashboard, only mark active if we're exactly on /dashboard
+                isActive = pathname === '/dashboard';
+              } else {
+                // For other routes, check if the current pathname starts with the item's href
+                isActive = pathname === item.href || pathname.startsWith(item.href);
+              }
+              
               return (
                 <li key={item.name}>
                   <Link

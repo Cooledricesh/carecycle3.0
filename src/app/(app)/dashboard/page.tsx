@@ -8,24 +8,17 @@ import { useAuth } from "@/providers/auth-provider-simple";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import { useTodayChecklist, useUpcomingSchedules } from "@/hooks/useSchedules";
-import { scheduleService } from "@/services/scheduleService";
+import { useScheduleCompletion } from "@/hooks/useScheduleCompletion";
+import { ScheduleCompletionDialog } from "@/components/schedules/schedule-completion-dialog";
+import { ScheduleActionButtons } from "@/components/schedules/schedule-action-buttons";
+import { getScheduleStatusLabel, getStatusBadgeClass } from "@/lib/utils/schedule-status";
 import type { ScheduleWithDetails } from "@/types/schedule";
 import { format } from "date-fns";
 import { ko } from "date-fns/locale";
-import { safeFormatDate, safeParse, getDaysDifference, addWeeks } from "@/lib/utils/date";
+import { safeFormatDate, safeParse, getDaysDifference } from "@/lib/utils/date";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { useQueryClient } from "@tanstack/react-query";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { responsiveGrid, responsiveText, touchTarget } from "@/lib/utils";
 
@@ -33,16 +26,25 @@ export default function DashboardPage() {
   const { user } = useAuth();
   const [profile, setProfile] = useState<any>(null);
   const isMobile = useIsMobile();
-  const [isCompletionDialogOpen, setIsCompletionDialogOpen] = useState(false);
-  const [selectedSchedule, setSelectedSchedule] = useState<ScheduleWithDetails | null>(null);
-  const [executionDate, setExecutionDate] = useState(format(new Date(), 'yyyy-MM-dd'));
-  const [executionNotes, setExecutionNotes] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [lastUpdated, setLastUpdated] = useState(new Date());
   const [isRefreshing, setIsRefreshing] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  
+  // 완료 처리 훅 사용
+  const {
+    selectedSchedule,
+    executionDate,
+    executionNotes,
+    isSubmitting,
+    isDialogOpen,
+    handleComplete,
+    handleSubmit,
+    setExecutionDate,
+    setExecutionNotes,
+    setDialogOpen
+  } = useScheduleCompletion();
 
   // Use React Query hooks for data fetching
   const { data: todaySchedules = [], isLoading: todayLoading, refetch: refetchToday } = useTodayChecklist();
@@ -89,61 +91,6 @@ export default function DashboardPage() {
     }, 1500);
   };
 
-  const handleCompleteClick = (schedule: ScheduleWithDetails) => {
-    setSelectedSchedule(schedule);
-    setExecutionDate(format(new Date(), 'yyyy-MM-dd'));
-    setExecutionNotes('');
-    setIsCompletionDialogOpen(true);
-  };
-
-  const handleCompleteSubmit = async () => {
-    if (!selectedSchedule || !user) return;
-
-    setIsSubmitting(true);
-    try {
-      // 완료 처리 API 호출
-      await scheduleService.markAsCompleted(selectedSchedule.id, {
-        executedDate: executionDate,
-        notes: executionNotes,
-        executedBy: user.id
-      });
-
-      toast({
-        title: "완료 처리 성공",
-        description: `${selectedSchedule.patient?.name}님의 ${selectedSchedule.item?.name} 일정이 완료 처리되었습니다.`,
-      });
-
-      // Reset state and close dialog
-      setSelectedSchedule(null);
-      setExecutionNotes('');
-      setIsCompletionDialogOpen(false);
-      
-      // Invalidate all queries for immediate update
-      await queryClient.invalidateQueries();
-      setLastUpdated(new Date());
-      
-      // Force refetch current data
-      await Promise.all([
-        refetchToday(),
-        refetchUpcoming()
-      ]);
-    } catch (error) {
-      console.error('Failed to mark schedule as completed:', error);
-      toast({
-        title: "오류",
-        description: "완료 처리 중 오류가 발생했습니다.",
-        variant: "destructive"
-      });
-      
-      // Refetch to ensure data consistency after error
-      await Promise.all([
-        refetchToday(),
-        refetchUpcoming()
-      ]);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
 
   if (!profile) {
     return null;
@@ -284,20 +231,17 @@ export default function DashboardPage() {
                       <p className="text-xs text-gray-500">{schedule.notes}</p>
                     )}
                   </div>
-                  <div className={`flex items-center ${isMobile ? 'w-full' : 'space-x-2'}`}>
-                    <Button
-                      size={isMobile ? "default" : "sm"}
-                      variant="default"
-                      onClick={() => handleCompleteClick(schedule)}
-                      className={`flex items-center gap-2 ${isMobile ? 'w-full justify-center' : ''} ${touchTarget.button}`}
-                    >
-                      <Check className="h-4 w-4" />
-                      완료 처리
-                    </Button>
+                  <div className={`flex items-center ${isMobile ? 'w-full' : 'gap-2'}`}>
+                    <ScheduleActionButtons
+                      schedule={schedule}
+                      variant={isMobile ? 'default' : 'compact'}
+                      showStatus={false}
+                      onComplete={() => handleComplete(schedule)}
+                    />
                     {!isMobile && (
-                      <span className="px-2 py-1 text-xs bg-red-100 text-red-700 rounded">
+                      <Badge className="bg-red-100 text-red-700">
                         오늘 처리 필요
-                      </span>
+                      </Badge>
                     )}
                   </div>
                 </div>
@@ -372,29 +316,21 @@ export default function DashboardPage() {
                         <p className="text-xs text-gray-500">{schedule.notes}</p>
                       )}
                     </div>
-                    <div className={`flex items-center ${isMobile ? 'w-full' : 'space-x-2'}`}>
-                      <Button
-                        size={isMobile ? "default" : "sm"}
-                        variant="outline"
-                        onClick={() => handleCompleteClick(schedule)}
-                        className={`flex items-center gap-2 ${isMobile ? 'w-full justify-center' : ''} ${touchTarget.button}`}
-                      >
-                        <Check className="h-4 w-4" />
-                        완료 처리
-                      </Button>
-                      {!isMobile && daysUntil !== null && (
-                        <span className={`px-2 py-1 text-xs rounded ${
-                          daysUntil < 0
-                            ? 'bg-blue-100 text-blue-700'
-                            : daysUntil === 0 
-                            ? 'bg-orange-100 text-orange-700'
-                            : daysUntil <= 3
-                            ? 'bg-yellow-100 text-yellow-700'
-                            : 'bg-green-100 text-green-700'
-                        }`}>
-                          {daysUntil < 0 ? `${Math.abs(daysUntil)}일 전` : daysUntil === 0 ? '오늘' : daysUntil === 1 ? '내일' : `${daysUntil}일 후`}
-                        </span>
-                      )}
+                    <div className={`flex items-center ${isMobile ? 'w-full' : 'gap-2'}`}>
+                      <ScheduleActionButtons
+                        schedule={schedule}
+                        variant={isMobile ? 'default' : 'compact'}
+                        showStatus={false}
+                        onComplete={() => handleComplete(schedule)}
+                      />
+                      {!isMobile && (() => {
+                        const statusInfo = getScheduleStatusLabel(schedule);
+                        return (
+                          <Badge className={getStatusBadgeClass(statusInfo.variant)}>
+                            {statusInfo.label}
+                          </Badge>
+                        );
+                      })()}
                     </div>
                   </div>
                 );
@@ -405,77 +341,17 @@ export default function DashboardPage() {
       </Card>
 
       {/* 완료 처리 다이얼로그 */}
-      <Dialog open={isCompletionDialogOpen} onOpenChange={setIsCompletionDialogOpen}>
-        <DialogContent className={isMobile ? "max-w-[calc(100vw-2rem)] mx-4" : "sm:max-w-[425px]"}>
-          <DialogHeader>
-            <DialogTitle className={responsiveText.h3}>일정 완료 처리</DialogTitle>
-            <DialogDescription className="text-xs sm:text-sm">
-              {selectedSchedule && (
-                <>
-                  <strong>{selectedSchedule.patient?.name}</strong>님의{' '}
-                  <strong>{selectedSchedule.item?.name}</strong> 일정을 완료 처리합니다.
-                </>
-              )}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className={`${isMobile ? 'grid gap-2' : 'grid grid-cols-4 items-center gap-4'}`}>
-              <Label htmlFor="execution-date" className={isMobile ? '' : 'text-right'}>
-                시행일
-              </Label>
-              <Input
-                id="execution-date"
-                type="date"
-                value={executionDate}
-                onChange={(e) => setExecutionDate(e.target.value)}
-                className={`${isMobile ? 'w-full' : 'col-span-3'} ${touchTarget.input}`}
-              />
-            </div>
-            <div className={`${isMobile ? 'grid gap-2' : 'grid grid-cols-4 items-center gap-4'}`}>
-              <Label htmlFor="execution-notes" className={isMobile ? '' : 'text-right'}>
-                메모
-              </Label>
-              <Textarea
-                id="execution-notes"
-                value={executionNotes}
-                onChange={(e) => setExecutionNotes(e.target.value)}
-                placeholder="시행 관련 메모를 입력하세요 (선택사항)"
-                className={`${isMobile ? 'w-full' : 'col-span-3'}`}
-                rows={3}
-              />
-            </div>
-            {selectedSchedule && selectedSchedule.intervalWeeks && (
-              <div className="text-xs sm:text-sm text-gray-600">
-                <p>다음 예정일: {
-                  (() => {
-                    const nextDate = addWeeks(executionDate, selectedSchedule.intervalWeeks);
-                    return nextDate ? safeFormatDate(nextDate, 'yyyy년 MM월 dd일') : '계산 오류';
-                  })()
-                } ({selectedSchedule.intervalWeeks}주 후, 자동 계산됨)</p>
-              </div>
-            )}
-          </div>
-          <DialogFooter className={isMobile ? 'flex-col gap-2' : ''}>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setIsCompletionDialogOpen(false)}
-              disabled={isSubmitting}
-              className={`${isMobile ? 'w-full' : ''} ${touchTarget.button}`}
-            >
-              취소
-            </Button>
-            <Button
-              type="button"
-              onClick={handleCompleteSubmit}
-              disabled={isSubmitting}
-              className={`${isMobile ? 'w-full' : ''} ${touchTarget.button}`}
-            >
-              {isSubmitting ? '처리 중...' : '완료 처리'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ScheduleCompletionDialog
+        schedule={selectedSchedule}
+        isOpen={isDialogOpen}
+        onClose={() => setDialogOpen(false)}
+        executionDate={executionDate}
+        executionNotes={executionNotes}
+        isSubmitting={isSubmitting}
+        onExecutionDateChange={setExecutionDate}
+        onExecutionNotesChange={setExecutionNotes}
+        onSubmit={handleSubmit}
+      />
     </div>
   );
 }
