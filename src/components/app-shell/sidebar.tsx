@@ -22,7 +22,7 @@ import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/providers/auth-provider-simple';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useProfile } from '@/hooks/useProfile';
 
 interface NavItem {
@@ -51,7 +51,13 @@ export function Sidebar() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isHydrated, setIsHydrated] = useState(false);
   const { data: profile, isLoading: profileLoading, error: profileError } = useProfile();
+
+  // Prevent hydration mismatch by deferring pathname-based logic until after hydration
+  useEffect(() => {
+    setIsHydrated(true);
+  }, []);
 
   const loading = authLoading || profileLoading;
 
@@ -145,15 +151,17 @@ export function Sidebar() {
         <nav className="px-4 py-4">
           <ul className="space-y-2">
             {filteredNavigation.map((item) => {
-              // Check if current route is active
+              // Check if current route is active - only after hydration to prevent mismatch
               let isActive = false;
               
-              if (item.href === '/dashboard') {
-                // For the root dashboard, only mark active if we're exactly on /dashboard
-                isActive = pathname === '/dashboard';
-              } else {
-                // For other routes, check if the current pathname starts with the item's href
-                isActive = pathname === item.href || pathname.startsWith(item.href);
+              if (isHydrated) {
+                if (item.href === '/dashboard') {
+                  // For the root dashboard, only mark active if we're exactly on /dashboard
+                  isActive = pathname === '/dashboard';
+                } else {
+                  // For other routes, check if the current pathname starts with the item's href
+                  isActive = pathname === item.href || pathname.startsWith(item.href);
+                }
               }
               
               return (
