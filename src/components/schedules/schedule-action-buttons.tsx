@@ -41,6 +41,7 @@ export function ScheduleActionButtons({
           size={buttonSize}
           variant="outline"
           onClick={onComplete}
+          aria-label="스케줄 완료 처리"
           className={`flex items-center gap-2 ${isMobile && variant === 'default' ? 'flex-1 justify-center' : ''} ${touchTarget.button}`}
         >
           <Check className="h-4 w-4" />
@@ -54,6 +55,7 @@ export function ScheduleActionButtons({
           size={buttonSize}
           variant="outline"
           onClick={onPause}
+          aria-label="스케줄 일시중지"
           className={`${variant === 'compact' ? '' : 'flex items-center gap-2'} ${touchTarget.button}`}
         >
           <Pause className="h-4 w-4" />
@@ -66,6 +68,7 @@ export function ScheduleActionButtons({
           size={buttonSize}
           variant="outline"
           onClick={onResume}
+          aria-label="스케줄 재개"
           className={`${variant === 'compact' ? '' : 'flex items-center gap-2'} ${touchTarget.button}`}
         >
           <Play className="h-4 w-4" />

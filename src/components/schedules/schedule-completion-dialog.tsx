@@ -43,7 +43,7 @@ export function ScheduleCompletionDialog({
   const isMobile = useIsMobile()
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && !isSubmitting && onClose()}>
       <DialogContent className={isMobile ? "max-w-[calc(100vw-2rem)] mx-4" : "sm:max-w-[425px]"}>
         <DialogHeader>
           <DialogTitle className={responsiveText.h3}>일정 완료 처리</DialogTitle>
