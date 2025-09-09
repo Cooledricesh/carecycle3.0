@@ -155,12 +155,16 @@ export function Sidebar() {
               let isActive = false;
               
               if (isHydrated) {
-                if (item.href === '/dashboard') {
-                  // For the root dashboard, only mark active if we're exactly on /dashboard
-                  isActive = pathname === '/dashboard';
+                // Define section roots that should only match exactly
+                const sectionRoots = ['/dashboard', '/admin'];
+                
+                if (sectionRoots.includes(item.href)) {
+                  // For section roots, only mark active on exact match
+                  isActive = pathname === item.href;
                 } else {
-                  // For other routes, check if the current pathname starts with the item's href
-                  isActive = pathname === item.href || pathname.startsWith(item.href);
+                  // For other routes, use strict prefix matching with trailing slash
+                  // This prevents '/schedules' from matching '/schedules-old'
+                  isActive = pathname === item.href || pathname.startsWith(item.href + '/');
                 }
               }
               
