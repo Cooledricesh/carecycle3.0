@@ -33,6 +33,8 @@ import { Plus } from 'lucide-react'
 import { patientService } from '@/services/patientService'
 import { useToast } from '@/hooks/use-toast'
 import { createClient } from '@/lib/supabase/client'
+import { usePatientRestoration } from '@/hooks/usePatientRestoration'
+import { PatientRestorationDialog } from './patient-restoration-dialog'
 
 const PatientRegistrationSchema = z.object({
   name: z
@@ -69,6 +71,8 @@ export function PatientRegistrationModal({
   const [open, setOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const { toast } = useToast()
+  
+  const restoration = usePatientRestoration()
 
   const form = useForm<PatientRegistrationFormData>({
     resolver: zodResolver(PatientRegistrationSchema),
@@ -79,19 +83,32 @@ export function PatientRegistrationModal({
     },
   })
 
-  const checkDuplicatePatientNumber = async (patientNumber: string): Promise<boolean> => {
+  const checkForConflictWithRestoration = async (patientNumber: string): Promise<{
+    hasConflict: boolean
+    canProceedWithRegistration: boolean
+  }> => {
     try {
-      console.log('[checkDuplicatePatientNumber] Checking for:', patientNumber)
+      console.log('[checkForConflictWithRestoration] Checking for restoration options:', patientNumber)
       
-      // Use the new getByPatientNumber function
-      const supabase = createClient()
-      const existingPatient = await patientService.getByPatientNumber(patientNumber, supabase)
-      console.log('[checkDuplicatePatientNumber] Result:', existingPatient)
+      const validationResult = await restoration.checkForConflict(patientNumber)
+      console.log('[checkForConflictWithRestoration] Validation result:', validationResult)
       
-      return existingPatient !== null
+      if (validationResult.isValid) {
+        // No conflict, can proceed with normal registration
+        return { hasConflict: false, canProceedWithRegistration: true }
+      }
+
+      // There's a conflict - check if it's restorable
+      if (validationResult.conflictDetails?.canRestore || validationResult.conflictDetails?.canCreateNew) {
+        // Show restoration dialog, don't proceed with normal registration yet
+        return { hasConflict: true, canProceedWithRegistration: false }
+      }
+
+      // There's a conflict but no restoration options (active patient exists)
+      return { hasConflict: true, canProceedWithRegistration: false }
     } catch (error) {
-      console.error('Error checking duplicate patient number:', error)
-      return false
+      console.error('[checkForConflictWithRestoration] Error:', error)
+      return { hasConflict: true, canProceedWithRegistration: false }
     }
   }
 
@@ -100,21 +117,26 @@ export function PatientRegistrationModal({
     try {
       setIsSubmitting(true)
 
-      // Check for duplicate patient number
-      console.log('Checking for duplicate patient number...')
-      const isDuplicate = await checkDuplicatePatientNumber(data.patientNumber)
-      console.log('Duplicate check result:', isDuplicate)
+      // Check for conflicts and restoration options
+      console.log('Checking for conflicts and restoration options...')
+      const { hasConflict, canProceedWithRegistration } = await checkForConflictWithRestoration(data.patientNumber)
+      console.log('Conflict check result:', { hasConflict, canProceedWithRegistration })
       
-      if (isDuplicate) {
-        form.setError('patientNumber', {
-          type: 'manual',
-          message: '이미 등록된 환자번호입니다',
-        })
-        toast({
-          title: '등록 실패',
-          description: '이미 존재하는 환자번호입니다. 다른 번호를 입력해주세요.',
-          variant: 'destructive',
-        })
+      if (hasConflict && !canProceedWithRegistration) {
+        // If there's a restoration conflict, the dialog is already shown by the hook
+        // Check if it's an active patient conflict (no restoration options)
+        if (restoration.state.conflictDetails?.type === 'active_patient_exists') {
+          form.setError('patientNumber', {
+            type: 'manual',
+            message: '이미 등록된 환자번호입니다',
+          })
+          toast({
+            title: '등록 실패',
+            description: '이미 존재하는 환자번호입니다. 다른 번호를 입력해주세요.',
+            variant: 'destructive',
+          })
+        }
+        // For restoration conflicts, the dialog handles the user interaction
         setIsSubmitting(false)
         return
       }
@@ -165,6 +187,62 @@ export function PatientRegistrationModal({
       console.log('Setting isSubmitting to false')
       setIsSubmitting(false)
     }
+  }
+
+  const handleRestorePatient = async () => {
+    try {
+      if (!restoration.state.inactivePatient) {
+        throw new Error('복원할 환자 정보가 없습니다')
+      }
+
+      const formData = form.getValues()
+      await restoration.restorePatient(restoration.state.inactivePatient.id, {
+        updateInfo: {
+          name: formData.name,
+          careType: formData.careType
+        }
+      })
+
+      // Reset form and close modal
+      form.reset()
+      setOpen(false)
+
+      // Call success callback if provided
+      if (onSuccess) {
+        onSuccess()
+      }
+    } catch (error) {
+      console.error('Error restoring patient:', error)
+      // Error handling is done by the hook
+    }
+  }
+
+  const handleCreateNewPatient = async () => {
+    try {
+      const formData = form.getValues()
+      await restoration.createWithArchive(formData.patientNumber, {
+        name: formData.name,
+        careType: formData.careType,
+        metadata: {}
+      })
+
+      // Reset form and close modal
+      form.reset()
+      setOpen(false)
+
+      // Call success callback if provided
+      if (onSuccess) {
+        onSuccess()
+      }
+    } catch (error) {
+      console.error('Error creating new patient:', error)
+      // Error handling is done by the hook
+    }
+  }
+
+  const handleCancelRestoration = () => {
+    restoration.clearConflict()
+    setIsSubmitting(false)
   }
 
   return (
@@ -271,6 +349,25 @@ export function PatientRegistrationModal({
           </form>
         </Form>
       </DialogContent>
+
+      {/* Patient Restoration Dialog */}
+      {restoration.hasConflict && restoration.state.conflictDetails && (
+        <PatientRestorationDialog
+          open={restoration.hasConflict}
+          onOpenChange={(open) => {
+            if (!open) {
+              restoration.clearConflict()
+            }
+          }}
+          conflictDetails={restoration.state.conflictDetails}
+          inactivePatient={restoration.state.inactivePatient}
+          isRestoring={restoration.state.isRestoring}
+          isCreatingWithArchive={restoration.state.isCreatingWithArchive}
+          onRestore={handleRestorePatient}
+          onCreateNew={handleCreateNewPatient}
+          onCancel={handleCancelRestoration}
+        />
+      )}
     </Dialog>
   )
 }

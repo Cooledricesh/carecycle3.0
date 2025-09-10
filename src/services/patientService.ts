@@ -11,6 +11,8 @@ import {
 } from '@/schemas/patient'
 import type { Patient } from '@/types/patient'
 import { toCamelCase, toSnakeCase } from '@/lib/database-utils'
+import { patientValidationService } from '@/lib/patient-management/patient-validation-service'
+import { patientRestoreManager } from '@/lib/patient-management/patient-restore-manager'
 
 export const patientService = {
   async create(input: PatientCreateInput, supabase?: SupabaseClient): Promise<Patient> {
@@ -393,6 +395,83 @@ export const patientService = {
     } catch (error) {
       console.error('Error searching patients:', error)
       throw new Error('환자 검색에 실패했습니다')
+    }
+  },
+
+  async checkForRestoration(patientNumber: string, supabase?: SupabaseClient): Promise<{
+    hasConflict: boolean
+    validationResult?: any
+    inactivePatient?: any
+  }> {
+    try {
+      console.log('[patientService.checkForRestoration] Checking for restoration options:', patientNumber)
+      
+      const validationResult = await patientValidationService.validatePatientNumber(
+        patientNumber,
+        {
+          checkFormat: true,
+          checkDuplicates: true,
+          allowRestoration: true,
+          suggestAlternatives: false
+        }
+      )
+
+      if (validationResult.isValid) {
+        return { hasConflict: false }
+      }
+
+      // If there's a conflict that allows restoration, get inactive patient details
+      let inactivePatient = null
+      if (validationResult.conflictDetails?.canRestore || validationResult.conflictDetails?.canCreateNew) {
+        try {
+          inactivePatient = await patientRestoreManager.checkForInactivePatient(patientNumber)
+        } catch (error) {
+          console.warn('[patientService.checkForRestoration] Could not fetch inactive patient:', error)
+        }
+      }
+
+      return {
+        hasConflict: true,
+        validationResult,
+        inactivePatient
+      }
+    } catch (error) {
+      console.error('[patientService.checkForRestoration] Error:', error)
+      throw new Error('환자 복원 확인 중 오류가 발생했습니다')
+    }
+  },
+
+  async restorePatient(patientId: string, options?: any, supabase?: SupabaseClient): Promise<Patient> {
+    try {
+      console.log('[patientService.restorePatient] Restoring patient:', patientId, options)
+      
+      const client = supabase || createClient()
+      const restoreManager = new (patientRestoreManager.constructor as any)(client)
+      
+      return await restoreManager.restorePatient(patientId, options)
+    } catch (error) {
+      console.error('[patientService.restorePatient] Error:', error)
+      if (error instanceof Error) {
+        throw error
+      }
+      throw new Error('환자 복원에 실패했습니다')
+    }
+  },
+
+  async createWithArchive(patientNumber: string, options: any, supabase?: SupabaseClient): Promise<Patient> {
+    try {
+      console.log('[patientService.createWithArchive] Creating with archive:', patientNumber, options)
+      
+      const client = supabase || createClient()
+      const restoreManager = new (patientRestoreManager.constructor as any)(client)
+      
+      return await restoreManager.createWithArchive(patientNumber, options)
+    } catch (error) {
+      console.error('[patientService.createWithArchive] Error:', error)
+      if (error instanceof Error) {
+        throw error
+      }
+      throw new Error('환자 생성 중 오류가 발생했습니다')
     }
   }
 }
