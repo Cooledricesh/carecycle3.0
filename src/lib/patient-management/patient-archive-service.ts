@@ -52,8 +52,9 @@ export class PatientArchiveService {
         throw new Error('환자 정보를 찾을 수 없습니다')
       }
 
-      if (!originalPatient.is_active) {
-        throw new Error('이미 비활성화된 환자입니다')
+      if (!originalPatient.is_active || originalPatient.archived) {
+        const reason = !originalPatient.is_active ? '비활성화' : '아카이빙'
+        throw new Error(`이미 ${reason}된 환자입니다`)
       }
 
       // Archive the patient using the database function
@@ -201,15 +202,47 @@ export class PatientArchiveService {
       const errors: string[] = []
       let processedCount = 0
 
-      for (const patient of inactivePatients || []) {
-        try {
-          await this.archivePatient(patient.id, { reason: 'Bulk archive - inactive for over ' + olderThanDays + ' days' })
-          processedCount++
+      if (!inactivePatients || inactivePatients.length === 0) {
+        console.log('[PatientArchiveService.bulkArchiveInactivePatients] No patients to archive')
+        return { processedCount: 0, errors: [] }
+      }
+
+      // Perform bulk archive in a single database transaction
+      const reasonText = `일괄 아카이브 - ${olderThanDays}일 동안 비활성`
+
+      try {
+        // Use database transaction for atomic bulk operation
+        const { data: result, error: bulkError } = await this.supabase.rpc('bulk_archive_patients', {
+          patient_ids: inactivePatients.map(p => p.id),
+          archive_reason: reasonText
+        })
+
+        if (bulkError) {
+          console.error('[PatientArchiveService.bulkArchiveInactivePatients] Bulk archive failed:', bulkError)
+          throw new Error(`일괄 아카이브 실패: ${bulkError.message}`)
+        }
+
+        processedCount = result?.processed_count || 0
+        
+        // Log successful archiving for each patient
+        inactivePatients.slice(0, processedCount).forEach(patient => {
           console.log(`[PatientArchiveService.bulkArchiveInactivePatients] Archived patient ${patient.patient_number}`)
-        } catch (error) {
-          const errorMsg = `Failed to archive patient ${patient.patient_number}: ${error instanceof Error ? error.message : 'Unknown error'}`
-          errors.push(errorMsg)
-          console.error('[PatientArchiveService.bulkArchiveInactivePatients]', errorMsg)
+        })
+
+      } catch (bulkArchiveError) {
+        // If bulk archive fails, fall back to individual processing for better error reporting
+        console.warn('[PatientArchiveService.bulkArchiveInactivePatients] Bulk operation failed, falling back to individual processing:', bulkArchiveError)
+        
+        for (const patient of inactivePatients) {
+          try {
+            await this.archivePatient(patient.id, { reason: reasonText })
+            processedCount++
+            console.log(`[PatientArchiveService.bulkArchiveInactivePatients] Archived patient ${patient.patient_number}`)
+          } catch (error) {
+            const errorMsg = `환자 ${patient.patient_number} 아카이브 실패: ${error instanceof Error ? error.message : '알 수 없는 오류'}`
+            errors.push(errorMsg)
+            console.error('[PatientArchiveService.bulkArchiveInactivePatients]', errorMsg)
+          }
         }
       }
 

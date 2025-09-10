@@ -195,6 +195,14 @@ export function PatientRegistrationModal({
         throw new Error('복원할 환자 정보가 없습니다')
       }
 
+      // Validate form before proceeding with restoration
+      const isFormValid = await form.trigger()
+      if (!isFormValid) {
+        console.log('Form validation failed, aborting restoration')
+        return
+      }
+
+      // Get validated form data only after successful validation
       const formData = form.getValues()
       await restoration.restorePatient(restoration.state.inactivePatient.id, {
         updateInfo: {
@@ -203,7 +211,7 @@ export function PatientRegistrationModal({
         }
       })
 
-      // Reset form and close modal
+      // Reset form and close modal only after successful restore
       form.reset()
       setOpen(false)
 
@@ -213,12 +221,29 @@ export function PatientRegistrationModal({
       }
     } catch (error) {
       console.error('Error restoring patient:', error)
-      // Error handling is done by the hook
+      // Let form validation errors surface through form state
+      // Only show generic error toast for non-validation errors
+      if (error instanceof Error && !error.message.includes('validation')) {
+        toast({
+          title: '환자 복원 실패',
+          description: error.message || '환자 복원 중 오류가 발생했습니다. 다시 시도해주세요.',
+          variant: 'destructive',
+        })
+      }
     }
   }
 
   const handleCreateNewPatient = async () => {
     try {
+      // Trigger form validation before proceeding with creation
+      const isFormValid = await form.trigger()
+      if (!isFormValid) {
+        console.log('Form validation failed, aborting patient creation')
+        // Let form validation errors show in the form, don't proceed
+        return
+      }
+
+      // Only proceed with form.getValues() and creation if validation passes
       const formData = form.getValues()
       await restoration.createWithArchive(formData.patientNumber, {
         name: formData.name,
@@ -226,17 +251,24 @@ export function PatientRegistrationModal({
         metadata: {}
       })
 
-      // Reset form and close modal
+      // Success branch: reset form, close modal, and call success callback
       form.reset()
       setOpen(false)
-
-      // Call success callback if provided
+      
       if (onSuccess) {
         onSuccess()
       }
     } catch (error) {
       console.error('Error creating new patient:', error)
-      // Error handling is done by the hook
+      // Let form validation errors surface through form state
+      // Only show generic error toast for non-validation errors
+      if (error instanceof Error && !error.message.includes('validation')) {
+        toast({
+          title: '환자 생성 실패',
+          description: error.message || '환자 생성 중 오류가 발생했습니다. 다시 시도해주세요.',
+          variant: 'destructive',
+        })
+      }
     }
   }
 

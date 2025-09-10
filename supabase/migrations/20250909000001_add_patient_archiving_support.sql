@@ -20,13 +20,13 @@ ALTER TABLE patients DROP CONSTRAINT IF EXISTS unique_patient_number;
 -- 1. An active patient exists with patient_number 'P001'
 -- 2. An archived patient exists with patient_number 'P001_archived_20250909123456'
 -- 3. A new patient can be created with patient_number 'P001'
-CREATE UNIQUE INDEX unique_active_patient_number 
+CREATE UNIQUE INDEX IF NOT EXISTS unique_active_patient_number 
 ON patients (patient_number) 
 WHERE (is_active = true AND archived = false);
 
 -- Create index for archived patients lookup
-CREATE INDEX idx_patients_archived ON patients(archived, archived_at);
-CREATE INDEX idx_patients_original_number ON patients(original_patient_number);
+CREATE INDEX IF NOT EXISTS idx_patients_archived ON patients(archived, archived_at);
+CREATE INDEX IF NOT EXISTS idx_patients_original_number ON patients(original_patient_number);
 
 -- Create a function to archive patient with timestamp suffix
 CREATE OR REPLACE FUNCTION archive_patient_with_timestamp(patient_id uuid)
@@ -76,17 +76,30 @@ $$ LANGUAGE plpgsql;
 
 -- Update RLS policies to handle archived patients
 -- Allow viewing archived patients for restoration purposes
+DROP POLICY IF EXISTS "Authenticated users can view archived patients for restoration" ON patients;
 CREATE POLICY "Authenticated users can view archived patients for restoration" ON patients
     FOR SELECT
     TO authenticated
     USING (archived = true);
 
--- Allow updating archived status
-CREATE POLICY "Authenticated users can archive patients" ON patients
+-- Restrict patient updates to archiving operations only
+-- This policy prevents unauthorized modification of core patient data while allowing archiving functions
+DROP POLICY IF EXISTS "patients_allow_all_update" ON patients;
+
+CREATE POLICY "Allow archiving operations only" ON patients
     FOR UPDATE
     TO authenticated
     USING (true)
-    WITH CHECK (true);
+    WITH CHECK (
+        -- Only allow changes if this is part of an archiving/restoration operation
+        -- Core patient data cannot be modified, only archiving-related fields
+        name = (SELECT name FROM patients p WHERE p.id = patients.id) AND
+        care_type = (SELECT care_type FROM patients p WHERE p.id = patients.id) AND
+        metadata = (SELECT metadata FROM patients p WHERE p.id = patients.id) AND
+        created_by = (SELECT created_by FROM patients p WHERE p.id = patients.id) AND
+        created_at = (SELECT created_at FROM patients p WHERE p.id = patients.id)
+        -- Allow changes to: patient_number, is_active, archived, archived_at, original_patient_number, updated_at
+    );
 
 -- Grant permissions on new functions
 GRANT EXECUTE ON FUNCTION archive_patient_with_timestamp(uuid) TO authenticated;

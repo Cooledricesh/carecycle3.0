@@ -3,7 +3,7 @@
 import { createClient } from '@/lib/supabase/client'
 import type { SupabaseClient } from '@/lib/supabase/database'
 import type { Patient } from '@/types/patient'
-import { toCamelCase, toSnakeCase } from '@/lib/database-utils'
+import { toCamelCase } from '@/lib/database-utils'
 
 export interface InactivePatient {
   id: string
@@ -109,78 +109,37 @@ export class PatientRestoreManager {
     try {
       console.log('[PatientRestoreManager.restorePatient] Restoring patient:', patientId, options)
 
-      // Get current patient info
-      const { data: currentPatient, error: fetchError } = await this.supabase
-        .from('patients')
-        .select('*')
-        .eq('id', patientId)
-        .single()
+      // Prepare parameters for atomic restore function
+      const updateName = options.updateInfo?.name || null
+      const updateCareType = options.updateInfo?.careType || null
 
-      if (fetchError) {
-        console.error('[PatientRestoreManager.restorePatient] Error fetching patient:', fetchError)
-        throw new Error('환자 정보를 찾을 수 없습니다')
-      }
+      // Call atomic restore function that handles both restoration and updates
+      const { data: restoredPatient, error: restoreError } = await this.supabase
+        .rpc('restore_patient_atomic', {
+          patient_id: patientId,
+          update_name: updateName,
+          update_care_type: updateCareType
+        })
 
-      // Prepare update data
-      const updateData: any = {
-        is_active: true,
-        updated_at: new Date().toISOString()
-      }
-
-      // If patient is archived, restore using the function
-      if (currentPatient.archived) {
-        const { error: restoreError } = await this.supabase
-          .rpc('restore_archived_patient', { patient_id: patientId })
-
-        if (restoreError) {
-          console.error('[PatientRestoreManager.restorePatient] Error restoring archived patient:', restoreError)
-          throw new Error('환자 복원에 실패했습니다')
+      if (restoreError) {
+        console.error('[PatientRestoreManager.restorePatient] Error in atomic restore:', restoreError)
+        
+        // Handle specific error cases
+        if (restoreError.message?.includes('not found')) {
+          throw new Error('환자 정보를 찾을 수 없습니다')
         }
-      } else {
-        // Just reactivate soft-deleted patient
-        const { error: updateError } = await this.supabase
-          .from('patients')
-          .update(updateData)
-          .eq('id', patientId)
-
-        if (updateError) {
-          console.error('[PatientRestoreManager.restorePatient] Error reactivating patient:', updateError)
-          throw new Error('환자 복원에 실패했습니다')
-        }
+        throw new Error('환자 복원에 실패했습니다')
       }
 
-      // Apply any additional updates if provided
-      if (options.updateInfo && Object.keys(options.updateInfo).length > 0) {
-        const additionalUpdates = toSnakeCase(options.updateInfo)
-        const { error: updateInfoError } = await this.supabase
-          .from('patients')
-          .update({
-            ...additionalUpdates,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', patientId)
-
-        if (updateInfoError) {
-          console.error('[PatientRestoreManager.restorePatient] Error updating patient info:', updateInfoError)
-          // Don't throw here - patient is already restored, just log the warning
-          console.warn('환자 복원은 완료되었지만 정보 업데이트에 실패했습니다')
-        }
-      }
-
-      // Fetch and return updated patient
-      const { data: restoredPatient, error: finalFetchError } = await this.supabase
-        .from('patients')
-        .select('*')
-        .eq('id', patientId)
-        .single()
-
-      if (finalFetchError) {
-        console.error('[PatientRestoreManager.restorePatient] Error fetching restored patient:', finalFetchError)
+      if (!restoredPatient || restoredPatient.length === 0) {
         throw new Error('복원된 환자 정보를 불러오는데 실패했습니다')
       }
 
-      console.log('[PatientRestoreManager.restorePatient] Successfully restored patient:', restoredPatient)
-      return toCamelCase(restoredPatient) as Patient
+      // The function returns an array with one record, get the first element
+      const patientData = restoredPatient[0]
+      console.log('[PatientRestoreManager.restorePatient] Successfully restored patient:', patientData)
+      
+      return toCamelCase(patientData) as Patient
     } catch (error) {
       console.error('[PatientRestoreManager.restorePatient] Unexpected error:', error)
       if (error instanceof Error) {

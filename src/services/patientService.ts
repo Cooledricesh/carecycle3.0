@@ -12,7 +12,7 @@ import {
 import type { Patient } from '@/types/patient'
 import { toCamelCase, toSnakeCase } from '@/lib/database-utils'
 import { patientValidationService } from '@/lib/patient-management/patient-validation-service'
-import { patientRestoreManager } from '@/lib/patient-management/patient-restore-manager'
+import { PatientRestoreManager } from '@/lib/patient-management/patient-restore-manager'
 
 export const patientService = {
   async create(input: PatientCreateInput, supabase?: SupabaseClient): Promise<Patient> {
@@ -424,7 +424,9 @@ export const patientService = {
       let inactivePatient = null
       if (validationResult.conflictDetails?.canRestore || validationResult.conflictDetails?.canCreateNew) {
         try {
-          inactivePatient = await patientRestoreManager.checkForInactivePatient(patientNumber)
+          const client = supabase || createClient()
+          const restoreManager = new PatientRestoreManager(client)
+          inactivePatient = await restoreManager.checkForInactivePatient(patientNumber)
         } catch (error) {
           console.warn('[patientService.checkForRestoration] Could not fetch inactive patient:', error)
         }
@@ -446,7 +448,7 @@ export const patientService = {
       console.log('[patientService.restorePatient] Restoring patient:', patientId, options)
       
       const client = supabase || createClient()
-      const restoreManager = new (patientRestoreManager.constructor as any)(client)
+      const restoreManager = new PatientRestoreManager(client)
       
       return await restoreManager.restorePatient(patientId, options)
     } catch (error) {
@@ -463,7 +465,7 @@ export const patientService = {
       console.log('[patientService.createWithArchive] Creating with archive:', patientNumber, options)
       
       const client = supabase || createClient()
-      const restoreManager = new (patientRestoreManager.constructor as any)(client)
+      const restoreManager = new PatientRestoreManager(client)
       
       return await restoreManager.createWithArchive(patientNumber, options)
     } catch (error) {
