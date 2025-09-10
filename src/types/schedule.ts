@@ -1,6 +1,6 @@
 'use client'
 
-import { Database, ScheduleStatus } from './database.types'
+import { Database, ScheduleStatus } from '@/lib/database.types'
 import { Patient } from './patient'
 import { Item } from './item'
 

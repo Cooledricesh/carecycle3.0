@@ -13,9 +13,17 @@ export type UserRole = 'nurse' | 'admin'
 
 export type ApprovalStatus = 'pending' | 'approved' | 'rejected'
 
-export type ScheduleStatus = 'scheduled' | 'in_progress' | 'completed' | 'cancelled' | 'no_show'
+export type ScheduleStatus = 'active' | 'paused' | 'completed' | 'cancelled'
+
+export type ExecutionStatus = 'planned' | 'completed' | 'skipped' | 'overdue'
+
+export type ItemCategory = 'injection' | 'test' | 'treatment' | 'medication' | 'other'
 
 export type AppointmentType = 'consultation' | 'treatment' | 'follow_up' | 'emergency' | 'routine_check'
+
+export type NotificationChannel = 'dashboard' | 'push' | 'email'
+
+export type NotificationState = 'pending' | 'ready' | 'sent' | 'failed'
 
 export interface Database {
   public: {
@@ -217,6 +225,215 @@ export interface Database {
           updated_at?: string | null
         }
       }
+      patients: {
+        Row: {
+          id: string
+          hospital_id: string | null
+          patient_number: string
+          name: string
+          department: string | null
+          care_type: string | null
+          is_active: boolean
+          archived: boolean
+          archived_at: string | null
+          original_patient_number: string | null
+          metadata: Json
+          created_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          hospital_id?: string | null
+          patient_number: string
+          name: string
+          department?: string | null
+          care_type?: string | null
+          is_active?: boolean
+          archived?: boolean
+          archived_at?: string | null
+          original_patient_number?: string | null
+          metadata?: Json
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          hospital_id?: string | null
+          patient_number?: string
+          name?: string
+          department?: string | null
+          care_type?: string | null
+          is_active?: boolean
+          archived?: boolean
+          archived_at?: string | null
+          original_patient_number?: string | null
+          metadata?: Json
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      schedules: {
+        Row: {
+          id: string
+          patient_id: string
+          item_id: string
+          interval_weeks: number
+          start_date: string
+          end_date: string | null
+          last_executed_date: string | null
+          next_due_date: string
+          status: ScheduleStatus
+          assigned_nurse_id: string | null
+          notes: string | null
+          priority: number
+          requires_notification: boolean
+          notification_days_before: number
+          created_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          patient_id: string
+          item_id: string
+          interval_weeks: number
+          start_date: string
+          end_date?: string | null
+          last_executed_date?: string | null
+          next_due_date: string
+          status?: ScheduleStatus
+          assigned_nurse_id?: string | null
+          notes?: string | null
+          priority?: number
+          requires_notification?: boolean
+          notification_days_before?: number
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          patient_id?: string
+          item_id?: string
+          interval_weeks?: number
+          start_date?: string
+          end_date?: string | null
+          last_executed_date?: string | null
+          next_due_date?: string
+          status?: ScheduleStatus
+          assigned_nurse_id?: string | null
+          notes?: string | null
+          priority?: number
+          requires_notification?: boolean
+          notification_days_before?: number
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      schedule_executions: {
+        Row: {
+          id: string
+          schedule_id: string
+          planned_date: string
+          executed_date: string | null
+          executed_time: string | null
+          status: ExecutionStatus
+          executed_by: string | null
+          notes: string | null
+          skipped_reason: string | null
+          is_rescheduled: boolean
+          original_date: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          schedule_id: string
+          planned_date: string
+          executed_date?: string | null
+          executed_time?: string | null
+          status?: ExecutionStatus
+          executed_by?: string | null
+          notes?: string | null
+          skipped_reason?: string | null
+          is_rescheduled?: boolean
+          original_date?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          schedule_id?: string
+          planned_date?: string
+          executed_date?: string | null
+          executed_time?: string | null
+          status?: ExecutionStatus
+          executed_by?: string | null
+          notes?: string | null
+          skipped_reason?: string | null
+          is_rescheduled?: boolean
+          original_date?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      notifications: {
+        Row: {
+          id: string
+          schedule_id: string | null
+          execution_id: string | null
+          recipient_id: string
+          channel: NotificationChannel
+          notify_date: string
+          notify_time: string
+          state: NotificationState
+          title: string
+          message: string
+          metadata: Json
+          sent_at: string | null
+          error_message: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          schedule_id?: string | null
+          execution_id?: string | null
+          recipient_id: string
+          channel: NotificationChannel
+          notify_date: string
+          notify_time?: string
+          state?: NotificationState
+          title: string
+          message: string
+          metadata?: Json
+          sent_at?: string | null
+          error_message?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          schedule_id?: string | null
+          execution_id?: string | null
+          recipient_id?: string
+          channel?: NotificationChannel
+          notify_date?: string
+          notify_time?: string
+          state?: NotificationState
+          title?: string
+          message?: string
+          metadata?: Json
+          sent_at?: string | null
+          error_message?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
     }
     Views: {
       database_health: {
@@ -299,3 +516,19 @@ export type AuditLog = Database['public']['Tables']['audit_logs']['Row']
 export type Item = Database['public']['Tables']['items']['Row']
 export type ItemInsert = Database['public']['Tables']['items']['Insert']
 export type ItemUpdate = Database['public']['Tables']['items']['Update']
+
+export type Patient = Database['public']['Tables']['patients']['Row']
+export type PatientInsert = Database['public']['Tables']['patients']['Insert']
+export type PatientUpdate = Database['public']['Tables']['patients']['Update']
+
+export type Schedule = Database['public']['Tables']['schedules']['Row']
+export type ScheduleInsert = Database['public']['Tables']['schedules']['Insert']
+export type ScheduleUpdate = Database['public']['Tables']['schedules']['Update']
+
+export type ScheduleExecution = Database['public']['Tables']['schedule_executions']['Row']
+export type ScheduleExecutionInsert = Database['public']['Tables']['schedule_executions']['Insert']
+export type ScheduleExecutionUpdate = Database['public']['Tables']['schedule_executions']['Update']
+
+export type Notification = Database['public']['Tables']['notifications']['Row']
+export type NotificationInsert = Database['public']['Tables']['notifications']['Insert']
+export type NotificationUpdate = Database['public']['Tables']['notifications']['Update']

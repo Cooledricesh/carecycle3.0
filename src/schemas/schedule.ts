@@ -1,7 +1,7 @@
 'use client'
 
 import { z } from 'zod'
-import { ScheduleStatus } from '@/types/database.types'
+import { ScheduleStatus } from '@/lib/database.types'
 
 // Schedule status
 export const ScheduleStatusSchema = z.enum(['active', 'paused', 'completed', 'cancelled'])

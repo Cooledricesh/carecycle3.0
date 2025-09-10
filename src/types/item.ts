@@ -1,6 +1,6 @@
 'use client'
 
-import { Database, ItemCategory } from './database.types'
+import { Database, ItemCategory } from '@/lib/database.types'
 
 // Base types from database
 export type ItemRow = Database['public']['Tables']['items']['Row']

@@ -1,10 +1,10 @@
 'use client'
 
 import { z } from 'zod'
-import { ItemCategory } from '@/types/database.types'
+import { ItemCategory } from '@/lib/database.types'
 
 // Item categories
-export const ItemCategorySchema = z.enum(['검사', '주사', '처치', '기타'])
+export const ItemCategorySchema = z.enum(['injection', 'test', 'treatment', 'medication', 'other'])
 
 // Base validation schemas
 export const ItemCreateSchema = z.object({
