@@ -1,8 +1,5 @@
 'use client'
 
-// Database types
-export * from './database.types'
-
 // Domain types
 export * from './patient'
 export * from './item'

@@ -1,6 +1,6 @@
 'use client'
 
-import { Database } from './database.types'
+import { Database } from '@/lib/database.types'
 
 // Base types from database
 export type PatientRow = Database['public']['Tables']['patients']['Row']

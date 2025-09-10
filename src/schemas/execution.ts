@@ -1,7 +1,7 @@
 'use client'
 
 import { z } from 'zod'
-import { ExecutionStatus } from '@/types/database.types'
+import { ExecutionStatus } from '@/lib/database.types'
 
 // Execution status
 export const ExecutionStatusSchema = z.enum(['planned', 'completed', 'skipped', 'overdue'])
