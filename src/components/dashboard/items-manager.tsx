@@ -273,7 +273,9 @@ export function ItemsManager() {
             <SelectItem value="all">전체</SelectItem>
             <SelectItem value="injection">주사</SelectItem>
             <SelectItem value="test">검사</SelectItem>
+            <SelectItem value="treatment">처치</SelectItem>
             <SelectItem value="medication">약물</SelectItem>
+            <SelectItem value="other">기타</SelectItem>
           </SelectContent>
         </Select>
         <Button onClick={() => setIsAddDialogOpen(true)}>
@@ -423,7 +425,9 @@ export function ItemsManager() {
                     <SelectContent>
                       <SelectItem value="injection">주사</SelectItem>
                       <SelectItem value="test">검사</SelectItem>
+                      <SelectItem value="treatment">처치</SelectItem>
                       <SelectItem value="medication">약물</SelectItem>
+                      <SelectItem value="other">기타</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

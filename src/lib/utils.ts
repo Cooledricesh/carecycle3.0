@@ -120,3 +120,40 @@ export const responsiveGrid = {
   // 카드 그리드 (모바일 최적화)
   cards: "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
 };
+
+/**
+ * Item category mapping utilities
+ */
+export const categoryMapping = {
+  // Korean to English mapping
+  koreanToEnglish: {
+    '주사': 'injection',
+    '검사': 'test', 
+    '처치': 'treatment',
+    '약물': 'medication',
+    '기타': 'other'
+  } as const,
+  
+  // English to Korean mapping (for display purposes)
+  englishToKorean: {
+    'injection': '주사',
+    'test': '검사',
+    'treatment': '처치',
+    'medication': '약물',
+    'other': '기타'
+  } as const
+};
+
+/**
+ * Convert Korean category to English
+ */
+export function mapKoreanCategoryToEnglish(koreanCategory: string): string {
+  return categoryMapping.koreanToEnglish[koreanCategory as keyof typeof categoryMapping.koreanToEnglish] || koreanCategory;
+}
+
+/**
+ * Convert English category to Korean (for display)
+ */
+export function mapEnglishCategoryToKorean(englishCategory: string): string {
+  return categoryMapping.englishToKorean[englishCategory as keyof typeof categoryMapping.englishToKorean] || englishCategory;
+}

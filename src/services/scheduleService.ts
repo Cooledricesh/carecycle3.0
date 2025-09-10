@@ -74,7 +74,7 @@ export const scheduleService = {
           .insert({
             code: itemCode,
             name: input.itemName,
-            category: '기타',
+            category: 'other', // Use English category value
             description: `${input.intervalWeeks}주 주기`,
             default_interval_weeks: input.intervalWeeks,
             preparation_notes: null
