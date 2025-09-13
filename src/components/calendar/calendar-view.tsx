@@ -15,6 +15,8 @@ import {
   isToday
 } from 'date-fns';
 import { ko } from 'date-fns/locale';
+import { differenceInWeeks } from 'date-fns';
+import { ScheduleResumeDialog } from '@/components/schedules/schedule-resume-dialog';
 import { ChevronLeft, ChevronRight, Calendar, Clock, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -194,8 +196,33 @@ export function CalendarView({ className }: CalendarViewProps) {
     statusMutation.mutate({ id, status: 'paused' });
   };
 
-  const handleResumeSchedule = (id: string) => {
-    statusMutation.mutate({ id, status: 'active' });
+  const [resumeDialogOpen, setResumeDialogOpen] = useState(false);
+  const [selectedScheduleForResume, setSelectedScheduleForResume] = useState<ScheduleWithDetails | null>(null);
+
+  const handleResumeSchedule = (schedule: ScheduleWithDetails) => {
+    setSelectedScheduleForResume(schedule);
+    setResumeDialogOpen(true);
+  };
+
+  const handleConfirmResume = async (options: any) => {
+    if (!selectedScheduleForResume) return;
+
+    try {
+      await scheduleService.resumeSchedule(selectedScheduleForResume.id, options);
+      queryClient.invalidateQueries({ queryKey: ['schedules'] });
+      toast({
+        title: "성공",
+        description: "스케줄이 재개되었습니다.",
+      });
+      setResumeDialogOpen(false);
+      setSelectedScheduleForResume(null);
+    } catch (error) {
+      toast({
+        title: "오류",
+        description: "스케줄 재개에 실패했습니다.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleDeleteSchedule = async (id: string) => {
@@ -354,7 +381,7 @@ export function CalendarView({ className }: CalendarViewProps) {
                     hover:shadow-sm active:scale-95 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1
                   `}
                   onClick={() => handleDateClick(day.date)}
-                  aria-pressed={selectedDate && isSameDay(day.date, selectedDate)}
+                  aria-pressed={selectedDate && isSameDay(day.date, selectedDate) ? true : undefined}
                   aria-label={`${format(day.date, 'yyyy년 M월 d일', { locale: ko })}${dayScheduleCount > 0 ? `, ${dayScheduleCount}개 스케줄` : ', 스케줄 없음'}`}
                 >
                   {/* 날짜 숫자와 스케줄 카운트 */}
@@ -455,7 +482,7 @@ export function CalendarView({ className }: CalendarViewProps) {
                     schedule={schedule}
                     onComplete={() => handleComplete(schedule)}
                     onPause={() => handlePauseSchedule(schedule.id)}
-                    onResume={() => handleResumeSchedule(schedule.id)}
+                    onResume={() => handleResumeSchedule(schedule)}
                     onDelete={() => handleDeleteSchedule(schedule.id)}
                     onRefresh={refreshData}
                   />
@@ -478,6 +505,19 @@ export function CalendarView({ className }: CalendarViewProps) {
         onExecutionNotesChange={setExecutionNotes}
         onSubmit={handleSubmit}
       />
+
+      {/* 재개 다이얼로그 */}
+      {selectedScheduleForResume && (
+        <ScheduleResumeDialog
+          open={resumeDialogOpen}
+          onClose={() => {
+            setResumeDialogOpen(false);
+            setSelectedScheduleForResume(null);
+          }}
+          onConfirm={handleConfirmResume}
+          schedule={selectedScheduleForResume}
+        />
+      )}
     </div>
   );
 }

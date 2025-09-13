@@ -83,7 +83,11 @@ export function mapErrorToUserMessage(error: unknown): string {
         return '데이터를 찾을 수 없습니다.'
       case 'PGRST301': // RLS violation
         return '접근 권한이 없습니다.'
-      
+      case '22P02': // invalid_text_representation
+        return '데이터 형식이 올바르지 않습니다. 입력값을 확인해주세요.'
+      case '22003': // numeric_value_out_of_range
+        return '숫자 값이 허용 범위를 벗어났습니다.'
+
       default:
         // If code exists but not mapped, include it for debugging
         if (process.env.NODE_ENV === 'development') {

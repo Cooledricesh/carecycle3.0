@@ -34,7 +34,7 @@ export function CalendarDayCard({
   const statusInfo = getScheduleStatusLabel(schedule)
   const isOverdue = statusInfo.variant === 'overdue'
   const isToday = statusInfo.variant === 'today'
-  
+
   useEffect(() => {
     if (editModalOpen && triggerRef.current) {
       triggerRef.current.click()
@@ -126,9 +126,9 @@ export function CalendarDayCard({
             schedule={schedule}
             onSuccess={onRefresh}
             triggerButton={
-              <button 
+              <button
                 ref={triggerRef}
-                style={{ display: 'none' }} 
+                style={{ display: 'none' }}
                 aria-hidden="true"
               />
             }
