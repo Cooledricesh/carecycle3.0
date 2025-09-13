@@ -87,6 +87,8 @@ export function mapErrorToUserMessage(error: unknown): string {
         return '데이터 형식이 올바르지 않습니다. 입력값을 확인해주세요.'
       case '22003': // numeric_value_out_of_range
         return '숫자 값이 허용 범위를 벗어났습니다.'
+      case '42P10': // prepared_statement_already_exists
+        return '일시적인 데이터베이스 오류가 발생했습니다. 다시 시도해주세요.'
 
       default:
         // If code exists but not mapped, include it for debugging
