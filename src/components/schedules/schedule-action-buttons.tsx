@@ -1,6 +1,6 @@
 'use client'
 
-import { Check, Pause, Play, Trash2 } from "lucide-react"
+import { Check, Pause, Play, Trash2, Edit } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { useIsMobile } from "@/hooks/useIsMobile"
@@ -15,6 +15,7 @@ interface ScheduleActionButtonsProps {
   onComplete?: () => void
   onPause?: () => void
   onResume?: () => void
+  onEdit?: () => void
   onDelete?: () => void
   className?: string
 }
@@ -27,6 +28,7 @@ interface ScheduleActionButtonsProps {
  * @param onComplete - Callback when marking schedule as completed
  * @param onPause - Callback when pausing an active schedule
  * @param onResume - Callback when resuming a paused schedule
+ * @param onEdit - Callback when editing the schedule
  * @param onDelete - Callback when deleting the schedule
  * @returns Action buttons appropriate for the schedule's current state
  */
@@ -37,6 +39,7 @@ export function ScheduleActionButtons({
   onComplete,
   onPause,
   onResume,
+  onEdit,
   onDelete,
   className = ''
 }: ScheduleActionButtonsProps) {
@@ -87,6 +90,20 @@ export function ScheduleActionButtons({
         >
           <Play className="h-4 w-4" aria-hidden="true" />
           {variant === 'default' && '재개'}
+        </Button>
+      )}
+      
+      {/* 수정 버튼 */}
+      {onEdit && (
+        <Button
+          type="button"
+          size={buttonSize}
+          variant="outline"
+          onClick={onEdit}
+          className={touchTarget.iconButton}
+          aria-label="스케줄 수정"
+        >
+          <Edit className="h-4 w-4" aria-hidden="true" />
         </Button>
       )}
       

@@ -209,3 +209,31 @@ export const validateBulkScheduleCreate = (data: unknown) => {
 export const validateScheduleFilter = (data: unknown) => {
   return ScheduleFilterSchema.safeParse(data)
 }
+
+// Schedule Edit Schema - Simple 3-field validation
+export const ScheduleEditSchema = z.object({
+  itemName: z
+    .string()
+    .min(1, '검사/주사명을 입력하세요')
+    .max(100, '검사/주사명은 100자 이내로 입력하세요'),
+  
+  intervalWeeks: z
+    .number()
+    .int('정수를 입력해주세요')
+    .min(1, '최소 1주 이상 입력해주세요')
+    .max(52, '최대 52주까지 입력 가능합니다'),
+  
+  notes: z
+    .string()
+    .max(500, '메모는 500자 이내로 입력해주세요')
+    .nullable()
+    .optional()
+})
+
+// Schedule Edit type
+export type ScheduleEditInput = z.infer<typeof ScheduleEditSchema>
+
+// Schedule Edit validation helper
+export const validateScheduleEdit = (data: unknown) => {
+  return ScheduleEditSchema.safeParse(data)
+}

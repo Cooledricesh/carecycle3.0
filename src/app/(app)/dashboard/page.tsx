@@ -11,6 +11,7 @@ import { useTodayChecklist, useUpcomingSchedules } from "@/hooks/useSchedules";
 import { useScheduleCompletion } from "@/hooks/useScheduleCompletion";
 import { ScheduleCompletionDialog } from "@/components/schedules/schedule-completion-dialog";
 import { ScheduleActionButtons } from "@/components/schedules/schedule-action-buttons";
+import { ScheduleEditModal } from "@/components/schedules/schedule-edit-modal";
 import { getScheduleStatusLabel, getStatusBadgeClass } from "@/lib/utils/schedule-status";
 import type { ScheduleWithDetails } from "@/types/schedule";
 import { format } from "date-fns";
@@ -51,6 +52,12 @@ export default function DashboardPage() {
   const { data: upcomingSchedules = [], isLoading: upcomingLoading, refetch: refetchUpcoming } = useUpcomingSchedules(7);
   
   const loading = todayLoading || upcomingLoading;
+
+  // Refresh data function
+  const refreshData = () => {
+    refetchToday();
+    refetchUpcoming();
+  };
 
   // Manual refresh function
   const handleRefresh = async () => {
@@ -238,6 +245,10 @@ export default function DashboardPage() {
                       showStatus={false}
                       onComplete={() => handleComplete(schedule)}
                     />
+                    <ScheduleEditModal
+                      schedule={schedule}
+                      onSuccess={refreshData}
+                    />
                     {!isMobile && (
                       <Badge className="bg-red-100 text-red-700">
                         오늘 처리 필요
@@ -322,6 +333,10 @@ export default function DashboardPage() {
                         variant={isMobile ? 'default' : 'compact'}
                         showStatus={false}
                         onComplete={() => handleComplete(schedule)}
+                      />
+                      <ScheduleEditModal
+                        schedule={schedule}
+                        onSuccess={refreshData}
                       />
                       {!isMobile && (() => {
                         const statusInfo = getScheduleStatusLabel(schedule);

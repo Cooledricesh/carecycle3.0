@@ -111,15 +111,16 @@ export class PatientArchiveService {
       console.log('[PatientArchiveService.handleRelatedSchedules] Handling schedules:', patientId, action)
 
       if (action === 'deactivate') {
-        // Soft delete all related schedules
+        // Soft delete all related schedules by changing status to 'cancelled'
+        // Note: schedules table uses 'status' enum field, not 'is_active' boolean
         const { error: schedulesError } = await this.supabase
           .from('schedules')
           .update({ 
-            is_active: false,
+            status: 'cancelled',
             updated_at: new Date().toISOString()
           })
           .eq('patient_id', patientId)
-          .eq('is_active', true)
+          .in('status', ['active', 'paused'])
 
         if (schedulesError) {
           console.error('[PatientArchiveService.handleRelatedSchedules] Error deactivating schedules:', schedulesError)

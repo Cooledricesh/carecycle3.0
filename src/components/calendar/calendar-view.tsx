@@ -24,6 +24,7 @@ import { useScheduleCompletion } from '@/hooks/useScheduleCompletion';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { CalendarDayCard } from '@/components/calendar/calendar-day-card';
 import { ScheduleCompletionDialog } from '@/components/schedules/schedule-completion-dialog';
+import { ScheduleEditModal } from '@/components/schedules/schedule-edit-modal';
 import { getScheduleStatusLabel, sortSchedulesByPriority } from '@/lib/utils/schedule-status';
 import type { ScheduleWithDetails } from '@/types/schedule';
 import { safeFormatDate, safeParse } from '@/lib/utils/date';
@@ -202,6 +203,11 @@ export function CalendarView({ className }: CalendarViewProps) {
       return;
     }
     deleteMutation.mutate(id);
+  };
+
+  // Refresh data function
+  const refreshData = () => {
+    refetch();
   };
 
 
@@ -451,6 +457,7 @@ export function CalendarView({ className }: CalendarViewProps) {
                     onPause={() => handlePauseSchedule(schedule.id)}
                     onResume={() => handleResumeSchedule(schedule.id)}
                     onDelete={() => handleDeleteSchedule(schedule.id)}
+                    onRefresh={refreshData}
                   />
                 ))}
               </div>
