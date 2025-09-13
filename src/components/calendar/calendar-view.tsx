@@ -17,6 +17,8 @@ import {
 import { ko } from 'date-fns/locale';
 import { differenceInWeeks } from 'date-fns';
 import { ScheduleResumeDialog } from '@/components/schedules/schedule-resume-dialog';
+import type { ResumeOptions } from '@/lib/schedule-management/schedule-state-manager';
+import { ScheduleDateCalculator } from '@/lib/schedule-management/schedule-date-calculator';
 import { ChevronLeft, ChevronRight, Calendar, Clock, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -204,7 +206,7 @@ export function CalendarView({ className }: CalendarViewProps) {
     setResumeDialogOpen(true);
   };
 
-  const handleConfirmResume = async (options: any) => {
+  const handleConfirmResume = async (options: ResumeOptions) => {
     if (!selectedScheduleForResume) return;
 
     try {
@@ -219,7 +221,7 @@ export function CalendarView({ className }: CalendarViewProps) {
     } catch (error) {
       toast({
         title: "오류",
-        description: "스케줄 재개에 실패했습니다.",
+        description: mapErrorToUserMessage(error),
         variant: "destructive",
       });
     }
@@ -507,17 +509,32 @@ export function CalendarView({ className }: CalendarViewProps) {
       />
 
       {/* 재개 다이얼로그 */}
-      {selectedScheduleForResume && (
-        <ScheduleResumeDialog
-          open={resumeDialogOpen}
-          onClose={() => {
-            setResumeDialogOpen(false);
-            setSelectedScheduleForResume(null);
-          }}
-          onConfirm={handleConfirmResume}
-          schedule={selectedScheduleForResume}
-        />
-      )}
+      {selectedScheduleForResume && (() => {
+        // Calculate missed executions and pause duration
+        const calculator = new ScheduleDateCalculator();
+        const pausedDate = selectedScheduleForResume.pausedAt ? new Date(selectedScheduleForResume.pausedAt) : new Date();
+        const resumeDate = new Date();
+        const missedExecutions = selectedScheduleForResume.pausedAt
+          ? calculator.getMissedExecutions(selectedScheduleForResume, pausedDate, resumeDate).length
+          : 0;
+        const pauseDuration = selectedScheduleForResume.pausedAt
+          ? Math.max(1, differenceInWeeks(resumeDate, pausedDate))
+          : 1;
+
+        return (
+          <ScheduleResumeDialog
+            open={resumeDialogOpen}
+            onCancel={() => {
+              setResumeDialogOpen(false);
+              setSelectedScheduleForResume(null);
+            }}
+            onConfirm={handleConfirmResume}
+            schedule={selectedScheduleForResume}
+            missedExecutions={missedExecutions}
+            pauseDuration={pauseDuration}
+          />
+        );
+      })()}
     </div>
   );
 }

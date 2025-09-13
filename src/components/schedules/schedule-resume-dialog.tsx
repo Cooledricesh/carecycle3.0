@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { format, addWeeks } from 'date-fns'
+import { format, addWeeks, startOfDay, isBefore, isAfter } from 'date-fns'
 import { ko } from 'date-fns/locale'
 import { Calendar, Clock, AlertCircle, Info } from 'lucide-react'
 import {
@@ -112,11 +112,11 @@ export function ScheduleResumeDialog({
             <Label>재개 전략</Label>
             <RadioGroup value={strategy} onValueChange={(value) => setStrategy(value as ResumeOptions['strategy'])}>
               <div className="space-y-3">
-                <label className={cn(
+                <label htmlFor="resume-immediate" className={cn(
                   "flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors",
                   strategy === 'immediate' && "border-primary bg-primary/5"
                 )}>
-                  <RadioGroupItem value="immediate" className="mt-1" />
+                  <RadioGroupItem value="immediate" id="resume-immediate" className="mt-1" />
                   <div className="space-y-1">
                     <div className="font-medium">즉시 실행</div>
                     <div className="text-sm text-muted-foreground">
@@ -129,11 +129,11 @@ export function ScheduleResumeDialog({
                   </div>
                 </label>
 
-                <label className={cn(
+                <label htmlFor="resume-next-cycle" className={cn(
                   "flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors",
                   strategy === 'next_cycle' && "border-primary bg-primary/5"
                 )}>
-                  <RadioGroupItem value="next_cycle" className="mt-1" />
+                  <RadioGroupItem value="next_cycle" id="resume-next-cycle" className="mt-1" />
                   <div className="space-y-1">
                     <div className="font-medium">다음 주기부터</div>
                     <div className="text-sm text-muted-foreground">
@@ -146,11 +146,11 @@ export function ScheduleResumeDialog({
                   </div>
                 </label>
 
-                <label className={cn(
+                <label htmlFor="resume-custom" className={cn(
                   "flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors",
                   strategy === 'custom' && "border-primary bg-primary/5"
                 )}>
-                  <RadioGroupItem value="custom" className="mt-1" />
+                  <RadioGroupItem value="custom" id="resume-custom" className="mt-1" />
                   <div className="space-y-2 flex-1">
                     <div className="font-medium">날짜 지정</div>
                     <div className="text-sm text-muted-foreground">
@@ -179,10 +179,18 @@ export function ScheduleResumeDialog({
                             mode="single"
                             selected={customDate}
                             onSelect={setCustomDate}
-                            disabled={(date) =>
-                              date < new Date() ||
-                              (schedule.endDate ? date > new Date(schedule.endDate) : false)
-                            }
+                            disabled={(date) => {
+                              const today = startOfDay(new Date())
+                              const candidateDate = startOfDay(date)
+                              // Disable past dates (before today)
+                              if (isBefore(candidateDate, today)) return true
+                              // If there's an end date, disable dates after it
+                              if (schedule.endDate) {
+                                const endDate = startOfDay(new Date(schedule.endDate))
+                                if (isAfter(candidateDate, endDate)) return true
+                              }
+                              return false
+                            }}
                             initialFocus
                           />
                         </PopoverContent>
@@ -200,16 +208,16 @@ export function ScheduleResumeDialog({
               <Label>놓친 실행 처리</Label>
               <RadioGroup value={handleMissed} onValueChange={(value) => setHandleMissed(value as ResumeOptions['handleMissed'])}>
                 <div className="space-y-2">
-                  <label className="flex items-center gap-2">
-                    <RadioGroupItem value="skip" />
+                  <label htmlFor="missed-skip" className="flex items-center gap-2">
+                    <RadioGroupItem value="skip" id="missed-skip" />
                     <span>건너뛰기 (과거 실행 무시)</span>
                   </label>
-                  <label className="flex items-center gap-2">
-                    <RadioGroupItem value="catch_up" />
+                  <label htmlFor="missed-catch-up" className="flex items-center gap-2">
+                    <RadioGroupItem value="catch_up" id="missed-catch-up" />
                     <span>따라잡기 (압축된 일정으로 실행)</span>
                   </label>
-                  <label className="flex items-center gap-2">
-                    <RadioGroupItem value="mark_overdue" />
+                  <label htmlFor="missed-mark-overdue" className="flex items-center gap-2">
+                    <RadioGroupItem value="mark_overdue" id="missed-mark-overdue" />
                     <span>연체 표시 (검토 후 수동 처리)</span>
                   </label>
                 </div>
@@ -231,7 +239,7 @@ export function ScheduleResumeDialog({
           </Alert>
 
           {/* Warning for end date */}
-          {schedule.endDate && previewDate > new Date(schedule.endDate) && (
+          {schedule.endDate && isAfter(startOfDay(previewDate), startOfDay(new Date(schedule.endDate))) && (
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>
@@ -249,7 +257,7 @@ export function ScheduleResumeDialog({
             onClick={handleConfirm}
             disabled={
               (strategy === 'custom' && !customDate) ||
-              (schedule.endDate && previewDate > new Date(schedule.endDate))
+              (schedule.endDate && isAfter(startOfDay(previewDate), startOfDay(new Date(schedule.endDate))))
             }
           >
             재개
