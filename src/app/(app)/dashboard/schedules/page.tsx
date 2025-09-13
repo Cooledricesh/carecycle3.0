@@ -12,10 +12,11 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScheduleCreateModal } from "@/components/schedules/schedule-create-modal";
 import { ScheduleEditModal } from "@/components/schedules/schedule-edit-modal";
+import { ScheduleResumeDialog } from '@/components/schedules/schedule-resume-dialog';
 import { useSchedules, useOverdueSchedules } from "@/hooks/useSchedules";
 import { scheduleService } from "@/services/scheduleService";
 import type { ScheduleWithDetails } from "@/types/schedule";
-import { format } from "date-fns";
+import { format, differenceInWeeks } from "date-fns";
 import { ko } from "date-fns/locale";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { mapErrorToUserMessage } from "@/lib/error-mapper";
@@ -108,8 +109,34 @@ export default function SchedulesPage() {
     statusMutation.mutate({ id, status: 'paused' });
   };
 
-  const handleResumeSchedule = (id: string) => {
-    statusMutation.mutate({ id, status: 'active' });
+  const [resumeDialogOpen, setResumeDialogOpen] = useState(false);
+  const [selectedScheduleForResume, setSelectedScheduleForResume] = useState<any>(null);
+
+  const handleResumeSchedule = (schedule: any) => {
+    setSelectedScheduleForResume(schedule);
+    setResumeDialogOpen(true);
+  };
+
+  const handleConfirmResume = async (options: any) => {
+    if (!selectedScheduleForResume) return;
+
+    try {
+      await scheduleService.resumeSchedule(selectedScheduleForResume.id, options);
+      queryClient.invalidateQueries({ queryKey: ['schedules'] });
+      queryClient.invalidateQueries({ queryKey: ['overdueSchedules'] });
+      toast({
+        title: "성공",
+        description: "스케줄이 재개되었습니다.",
+      });
+      setResumeDialogOpen(false);
+      setSelectedScheduleForResume(null);
+    } catch (error) {
+      toast({
+        title: "오류",
+        description: "스케줄 재개에 실패했습니다.",
+        variant: "destructive",
+      });
+    }
   };
 
   const filteredSchedules = schedules.filter((schedule) => {
@@ -283,7 +310,7 @@ export default function SchedulesPage() {
                                 <Button
                                   size="default"
                                   variant="outline"
-                                  onClick={() => handleResumeSchedule(schedule.id)}
+                                  onClick={() => handleResumeSchedule(schedule)}
                                   className={`flex-1 ${touchTarget.button}`}
                                 >
                                   <Play className="h-4 w-4 mr-2" />
@@ -368,7 +395,7 @@ export default function SchedulesPage() {
                                   <Button
                                     size="sm"
                                     variant="outline"
-                                    onClick={() => handleResumeSchedule(schedule.id)}
+                                    onClick={() => handleResumeSchedule(schedule)}
                                   >
                                     재개
                                   </Button>
@@ -407,6 +434,25 @@ export default function SchedulesPage() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Resume Dialog */}
+      {selectedScheduleForResume && (
+        <ScheduleResumeDialog
+          schedule={selectedScheduleForResume}
+          missedExecutions={0} // Calculate based on pause duration
+          pauseDuration={
+            selectedScheduleForResume.updatedAt
+              ? differenceInWeeks(new Date(), new Date(selectedScheduleForResume.updatedAt))
+              : 0
+          }
+          open={resumeDialogOpen}
+          onConfirm={handleConfirmResume}
+          onCancel={() => {
+            setResumeDialogOpen(false);
+            setSelectedScheduleForResume(null);
+          }}
+        />
+      )}
     </div>
   );
 }
