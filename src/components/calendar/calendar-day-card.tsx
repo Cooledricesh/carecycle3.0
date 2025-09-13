@@ -1,9 +1,11 @@
 'use client'
 
+import { useState, useEffect, useRef } from "react"
 import { Clock, AlertCircle } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { useIsMobile } from "@/hooks/useIsMobile"
 import { ScheduleActionButtons } from "@/components/schedules/schedule-action-buttons"
+import { ScheduleEditModal } from "@/components/schedules/schedule-edit-modal"
 import { getScheduleStatusLabel, getStatusBadgeClass } from "@/lib/utils/schedule-status"
 import type { ScheduleWithDetails } from "@/types/schedule"
 
@@ -12,7 +14,9 @@ interface CalendarDayCardProps {
   onComplete?: () => void
   onPause?: () => void
   onResume?: () => void
+  onEdit?: () => void
   onDelete?: () => void
+  onRefresh?: () => void
 }
 
 export function CalendarDayCard({
@@ -20,12 +24,23 @@ export function CalendarDayCard({
   onComplete,
   onPause,
   onResume,
-  onDelete
+  onEdit,
+  onDelete,
+  onRefresh
 }: CalendarDayCardProps) {
+  const [editModalOpen, setEditModalOpen] = useState(false)
+  const triggerRef = useRef<HTMLButtonElement>(null)
   const isMobile = useIsMobile()
   const statusInfo = getScheduleStatusLabel(schedule)
   const isOverdue = statusInfo.variant === 'overdue'
   const isToday = statusInfo.variant === 'today'
+  
+  useEffect(() => {
+    if (editModalOpen && triggerRef.current) {
+      triggerRef.current.click()
+      setEditModalOpen(false)
+    }
+  }, [editModalOpen])
   
   return (
     <div 
@@ -104,7 +119,19 @@ export function CalendarDayCard({
             onComplete={onComplete}
             onPause={onPause}
             onResume={onResume}
+            onEdit={() => setEditModalOpen(true)}
             onDelete={onDelete}
+          />
+          <ScheduleEditModal
+            schedule={schedule}
+            onSuccess={onRefresh}
+            triggerButton={
+              <button 
+                ref={triggerRef}
+                style={{ display: 'none' }} 
+                aria-hidden="true"
+              />
+            }
           />
         </div>
       </div>

@@ -5,8 +5,10 @@ import { createClient } from '@/lib/supabase/client'
 import { 
   ScheduleCreateSchema, 
   ScheduleUpdateSchema,
+  ScheduleEditSchema,
   type ScheduleCreateInput,
-  type ScheduleUpdateInput 
+  type ScheduleUpdateInput,
+  type ScheduleEditInput
 } from '@/schemas/schedule'
 import type { Schedule, ScheduleWithDetails } from '@/types/schedule'
 import { toCamelCase as snakeToCamel, toSnakeCase as camelToSnake } from '@/lib/database-utils'
@@ -453,6 +455,66 @@ export const scheduleService = {
     }
     
     return executeQuery()
+  },
+
+  async editSchedule(id: string, input: ScheduleEditInput, supabase?: SupabaseClient<Database>): Promise<Schedule> {
+    const client = supabase || createClient()
+    try {
+      const validated = ScheduleEditSchema.parse(input)
+      
+      // First, create or find the item with the new name
+      let itemId: string
+      
+      // Check if item with this name already exists
+      const { data: existingItem } = await client
+        .from('items')
+        .select('id')
+        .eq('name', validated.itemName)
+        .maybeSingle()
+      
+      if (existingItem) {
+        itemId = (existingItem as any).id
+      } else {
+        // Create new item
+        const itemCode = `CUSTOM_${Date.now()}`
+        const { data: newItem, error: itemError } = await (client as any)
+          .from('items')
+          .insert({
+            code: itemCode,
+            name: validated.itemName,
+            category: 'other',
+            description: `${validated.intervalWeeks}주 주기`,
+            default_interval_weeks: validated.intervalWeeks,
+            preparation_notes: null
+          })
+          .select()
+          .single()
+        
+        if (itemError) {
+          console.error('Error creating item:', itemError)
+          throw itemError
+        }
+        itemId = newItem.id
+      }
+      
+      // Update the schedule with new values
+      const { data, error } = await client
+        .from('schedules')
+        .update({
+          item_id: itemId,
+          interval_weeks: validated.intervalWeeks,
+          notes: validated.notes
+        })
+        .eq('id', id)
+        .select()
+        .single()
+      
+      if (error) throw error
+      return snakeToCamel(data) as Schedule
+    } catch (error) {
+      console.error('Error editing schedule:', error)
+      throw new Error('스케줄 수정에 실패했습니다')
+    }
   },
 
   async markAsCompleted(scheduleId: string, input: {

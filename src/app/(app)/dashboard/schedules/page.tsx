@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScheduleCreateModal } from "@/components/schedules/schedule-create-modal";
+import { ScheduleEditModal } from "@/components/schedules/schedule-edit-modal";
 import { useSchedules, useOverdueSchedules } from "@/hooks/useSchedules";
 import { scheduleService } from "@/services/scheduleService";
 import type { ScheduleWithDetails } from "@/types/schedule";
@@ -289,6 +290,20 @@ export default function SchedulesPage() {
                                   재개
                                 </Button>
                               ) : null}
+                              <ScheduleEditModal
+                                schedule={schedule}
+                                onSuccess={refetchAll}
+                                triggerButton={
+                                  <Button
+                                    size="default"
+                                    variant="outline"
+                                    aria-label="스케줄 수정"
+                                    className={touchTarget.iconButton}
+                                  >
+                                    <Edit className="h-4 w-4" />
+                                  </Button>
+                                }
+                              />
                               <Button
                                 size="default"
                                 variant="destructive"
@@ -358,6 +373,19 @@ export default function SchedulesPage() {
                                     재개
                                   </Button>
                                 ) : null}
+                                <ScheduleEditModal
+                                  schedule={schedule}
+                                  onSuccess={refetchAll}
+                                  triggerButton={
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      aria-label="스케줄 수정"
+                                    >
+                                      <Edit className="h-4 w-4" />
+                                    </Button>
+                                  }
+                                />
                                 <Button
                                   size="sm"
                                   variant="destructive"
