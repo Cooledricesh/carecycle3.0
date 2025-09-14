@@ -31,12 +31,22 @@ export class ScheduleDateCalculator {
 
     switch (options.strategy) {
       case 'immediate':
-        // 즉시 실행 - 오늘을 다음 예정일로 설정
+        // 즉시 실행 - 오늘을 다음 예정일로 설정 (단, start_date 이후여야 함)
+        if (schedule.startDate) {
+          const startDate = startOfDay(new Date(schedule.startDate))
+          return isAfter(today, startDate) ? today : startDate
+        }
         return today
 
       case 'next_cycle':
         // 다음 주기부터 시작 - 오늘부터 interval_weeks 후
-        return addWeeks(today, intervalWeeks)
+        const nextCycleDate = addWeeks(today, intervalWeeks)
+        // start_date 체크
+        if (schedule.startDate) {
+          const startDate = startOfDay(new Date(schedule.startDate))
+          return isAfter(nextCycleDate, startDate) ? nextCycleDate : addWeeks(startDate, intervalWeeks)
+        }
+        return nextCycleDate
 
       case 'custom':
         // 사용자 지정 날짜
@@ -162,6 +172,17 @@ export class ScheduleDateCalculator {
       return {
         isValid: false,
         reason: '다음 예정일은 과거 날짜가 될 수 없습니다.'
+      }
+    }
+
+    // Check if date is before start date (DB constraint)
+    if (schedule.startDate) {
+      const startDate = startOfDay(new Date(schedule.startDate))
+      if (isBefore(proposed, startDate)) {
+        return {
+          isValid: false,
+          reason: '다음 예정일은 시작일보다 이전일 수 없습니다.'
+        }
       }
     }
 

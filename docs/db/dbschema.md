@@ -1,8 +1,8 @@
 # Comprehensive Database Schema Documentation
 
-**Last Updated**: September 10, 2025  
-**Schema Version**: 2.3.0 (Current Production State)  
-**Migration Count**: 16 migrations applied  
+**Last Updated**: September 14, 2025
+**Schema Version**: 2.4.0 (Current Production State)
+**Migration Count**: 24 migrations applied  
 
 ## Overview
 
@@ -13,6 +13,9 @@ This document provides a complete and accurate description of the medical schedu
 - **Patient Archiving**: Full patient archiving and restoration system
 - **Security Hardening**: All "allow all" RLS policies replaced with secure policies
 - **Performance Optimization**: Materialized views and optimized query functions
+- **Schedule Pause/Resume System**: Complete pause/resume workflow with data integrity
+- **Notification State Enhancement**: Added 'cancelled' state to notification_state enum
+- **Conflict Resolution**: Unique constraints and conflict handling for notifications
 
 ---
 
@@ -187,10 +190,14 @@ This document provides a complete and accurate description of the medical schedu
 
 **Enums**:
 - `notification_channel`: 'dashboard', 'push', 'email'
-- `notification_state`: 'pending', 'ready', 'sent', 'failed'
+- `notification_state`: 'pending', 'ready', 'sent', 'failed', 'cancelled'
 
 **Constraints**:
 - Must reference either schedule_id OR execution_id
+
+**Unique Indexes** (Added September 14, 2025):
+- `idx_notifications_unique_schedule_date`: UNIQUE (schedule_id, notify_date) WHERE schedule_id IS NOT NULL
+- `idx_notifications_unique_execution_date`: UNIQUE (execution_id, notify_date) WHERE execution_id IS NOT NULL
 
 ---
 
@@ -305,9 +312,23 @@ This document provides a complete and accurate description of the medical schedu
 **Logic**: Appends '_archived_YYYYMMDDHH24MISS' to patient_number
 
 #### restore_archived_patient(patient_id)
-**Purpose**: Restore archived patient  
-**Created**: 2025-09-09  
+**Purpose**: Restore archived patient
+**Created**: 2025-09-09
 **Logic**: Reverts to original_patient_number
+
+### Schedule Management Functions
+
+#### validate_schedule_resume(schedule_id, new_next_due_date)
+**Purpose**: Validates schedule resume with new due date
+**Created**: 2025-09-13
+**Returns**: TABLE (is_valid boolean, error_message text, warnings text[])
+**Logic**: Validates pause state, date constraints, and calculates missed executions
+
+#### get_schedule_pause_statistics(schedule_id)
+**Purpose**: Returns pause/resume analytics for schedules
+**Created**: 2025-09-13
+**Returns**: TABLE with pause counts, durations, and missed execution stats
+**Usage**: Performance analysis and schedule management insights
 
 ### Core Functions
 
@@ -450,9 +471,16 @@ Applied to all major tables for automatic timestamp updates:
 ### Business Logic Triggers
 
 #### trigger_calculate_next_due
-**Table**: schedule_executions  
-**Purpose**: Automatically calculate next due date when execution is completed  
+**Table**: schedule_executions
+**Purpose**: Automatically calculate next due date when execution is completed
 **Enhanced**: 2025-09-02 - Uses interval_weeks
+
+#### trigger_schedule_state_change
+**Table**: schedules
+**Purpose**: Handle schedule state transitions (pause/resume/cancel)
+**Created**: 2025-09-13
+**Current Implementation**: Simplified log-only trigger to prevent conflicts (2025-09-14)
+**Note**: Application layer handles notifications/executions to avoid 409/23505 errors
 
 #### on_auth_user_created
 **Table**: auth.users  
@@ -504,7 +532,7 @@ CREATE TYPE execution_status AS ENUM ('planned', 'completed', 'skipped', 'overdu
 
 -- Notification settings
 CREATE TYPE notification_channel AS ENUM ('dashboard', 'push', 'email');
-CREATE TYPE notification_state AS ENUM ('pending', 'ready', 'sent', 'failed');
+CREATE TYPE notification_state AS ENUM ('pending', 'ready', 'sent', 'failed', 'cancelled');
 
 -- Legacy appointment types (patient_schedules table)
 CREATE TYPE appointment_type AS ENUM ('consultation', 'treatment', 'follow_up', 'emergency', 'routine_check');
@@ -577,8 +605,16 @@ CREATE TYPE appointment_type AS ENUM ('consultation', 'treatment', 'follow_up', 
 - Enhanced constraint strategies
 - Data integrity improvements
 
-**Total Migrations**: 16 applied migrations
-**Current Status**: Production-ready with complete user approval workflow
+### Phase 4: Schedule Management & Conflict Resolution (September 13-14, 2025)
+- **Schedule Pause/Resume System**: Complete workflow with state validation
+- **Notification State Enhancement**: Added 'cancelled' state for proper lifecycle management
+- **Unique Constraints**: Prevented duplicate notifications with partial unique indexes
+- **Conflict Resolution**: Application-layer handling to avoid database conflicts
+- **Analytics Functions**: Added pause statistics and resume validation functions
+- **Trigger Simplification**: Moved complex logic to application layer for reliability
+
+**Total Migrations**: 24 applied migrations
+**Current Status**: Production-ready with complete schedule management and conflict resolution
 
 ---
 
@@ -638,8 +674,8 @@ CREATE TYPE appointment_type AS ENUM ('consultation', 'treatment', 'follow_up', 
 
 ---
 
-**Document Version**: 1.1.0  
-**Schema Accuracy**: Verified against actual database state  
-**Last Verified**: September 10, 2025  
+**Document Version**: 1.2.0
+**Schema Accuracy**: Verified against actual database state
+**Last Verified**: September 14, 2025
 
-*This document reflects the actual production database state based on 16 applied migrations. Documentation has been corrected to match current database implementation.*
+*This document reflects the actual production database state based on 24 applied migrations through Phase 4 (September 14, 2025). Recent updates include schedule pause/resume system, notification state enhancements, and conflict resolution improvements.*

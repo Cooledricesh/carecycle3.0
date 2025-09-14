@@ -254,7 +254,13 @@ export class ScheduleStateManager {
       })
 
     } catch (error) {
-      console.error('Error resuming schedule:', error)
+      console.error('Error resuming schedule:', {
+        error,
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+        scheduleId,
+        options
+      })
       throw error
     }
   }
