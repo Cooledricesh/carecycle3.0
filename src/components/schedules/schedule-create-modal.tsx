@@ -25,13 +25,6 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import {
   Popover,
   PopoverContent,
   PopoverTrigger,
@@ -50,13 +43,14 @@ import {
 import { cn } from '@/lib/utils'
 import { useToast } from '@/hooks/use-toast'
 import { createClient } from '@/lib/supabase/client'
-import { 
-  ScheduleCreateWithIntervalSchema, 
-  type ScheduleCreateWithIntervalInput 
+import {
+  ScheduleCreateWithIntervalSchema,
+  type ScheduleCreateWithIntervalInput
 } from '@/schemas/schedule-create'
 import { calculateNextDueDate, formatDateForDB } from '@/lib/date-utils'
 import { scheduleService } from '@/services/scheduleService'
 import { patientService } from '@/services/patientService'
+import { PatientSearchField } from '@/components/patients/patient-search-field'
 import type { Patient } from '@/types/patient'
 
 interface ScheduleCreateModalProps {
@@ -82,8 +76,6 @@ export function ScheduleCreateModal({
 }: ScheduleCreateModalProps) {
   const [open, setOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [patients, setPatients] = useState<Patient[]>([])
-  const [loadingPatients, setLoadingPatients] = useState(false)
   const [items, setItems] = useState<ItemOption[]>([])
   const [itemComboOpen, setItemComboOpen] = useState(false)
   const [itemSearchValue, setItemSearchValue] = useState('')
@@ -102,15 +94,12 @@ export function ScheduleCreateModal({
     }
   })
 
-  // Load patients list if not preset and load items
+  // Load items when modal opens
   useEffect(() => {
     if (open) {
-      if (!presetPatientId) {
-        loadPatients()
-      }
       loadItems()
     }
-  }, [presetPatientId, open])
+  }, [open])
 
   // Set preset patient ID when modal opens
   useEffect(() => {
@@ -118,23 +107,6 @@ export function ScheduleCreateModal({
       form.setValue('patientId', presetPatientId)
     }
   }, [presetPatientId, open, form])
-
-  const loadPatients = async () => {
-    try {
-      setLoadingPatients(true)
-      const data = await patientService.getAll()
-      setPatients(data)
-    } catch (error) {
-      console.error('Failed to load patients:', error)
-      toast({
-        title: '오류',
-        description: '환자 목록을 불러오는데 실패했습니다.',
-        variant: 'destructive'
-      })
-    } finally {
-      setLoadingPatients(false)
-    }
-  }
 
   const loadItems = async () => {
     try {
@@ -261,26 +233,18 @@ export function ScheduleCreateModal({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>환자 선택 *</FormLabel>
-                    <Select 
-                      onValueChange={field.onChange} 
-                      value={field.value}
-                      disabled={loadingPatients}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder={
-                            loadingPatients ? "환자 목록 불러오는 중..." : "환자를 선택하세요"
-                          } />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {patients.map((patient) => (
-                          <SelectItem key={patient.id} value={patient.id}>
-                            {patient.name} ({patient.patientNumber})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <FormControl>
+                      <PatientSearchField
+                        value={field.value}
+                        onChange={field.onChange}
+                        placeholder="환자 이름을 입력하여 검색하세요"
+                        required
+                        showPatientNumber
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      환자 이름을 입력하여 검색할 수 있습니다. (2글자 이상)
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
