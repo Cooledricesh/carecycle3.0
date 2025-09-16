@@ -142,3 +142,15 @@ test-helpers.*
 
 claude.md
 *.png
+
+# Development documentation (내부 개발 문서 - GitHub 제외)
+CLAUDE.md
+emergency-security-measures.md
+SUPABASE_NEW_API_KEYS_REFERENCE.md
+MOBILE_UI_TODO.md
+
+# Claude Desktop local settings (로컬 개발 환경)
+.claude/
+
+# Playwright MCP test artifacts (테스트 아티팩트)
+.playwright-mcp/
