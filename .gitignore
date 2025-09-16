@@ -140,5 +140,22 @@ kill-*.sh
 **/debug-*.*
 test-helpers.*
 
+# Test artifacts and screenshots only (not all PNGs)
+.playwright-mcp/**/*.png
+tests/**/screenshots/*.png
+test-output/**/*.png
+ci/artifacts/**/*.png
+**/test-results/**/*.png
+
+# Development documentation (내부 개발 문서 - GitHub 제외)
+CLAUDE.md
 claude.md
-*.png
+emergency-security-measures.md
+SUPABASE_NEW_API_KEYS_REFERENCE.md
+MOBILE_UI_TODO.md
+
+# Claude Desktop local settings (로컬 개발 환경)
+.claude/
+
+# Playwright MCP test artifacts (테스트 아티팩트)
+.playwright-mcp/
