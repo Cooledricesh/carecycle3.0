@@ -1,7 +1,7 @@
 'use client'
 
 import { createClient } from '@/lib/supabase/client'
-import type { SupabaseClient } from '@supabase/supabase-js'
+import type { SupabaseClient } from '@/lib/supabase/database'
 import { ScheduleStateValidator } from './schedule-state-validator'
 import { ScheduleDateCalculator, type RecalculationOptions } from './schedule-date-calculator'
 import { ScheduleDataSynchronizer } from './schedule-data-synchronizer'

@@ -233,15 +233,15 @@ BEGIN
             updated_at = NOW()
         WHERE schedule_id = NEW.id
         AND state = 'cancelled'
-        AND scheduled_date >= NEW.next_due_date;
+        AND notify_date >= NEW.next_due_date;
     END IF;
 
     -- Log the state change
     INSERT INTO schedule_logs (
         schedule_id,
         action,
-        old_value,
-        new_value,
+        old_values,
+        new_values,
         changed_at,
         changed_by
     )

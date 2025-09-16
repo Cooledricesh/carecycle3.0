@@ -1,10 +1,12 @@
 -- Fix 409 Conflict error when resuming schedules
 -- The trigger was causing conflicts by trying to modify data during the update
+-- Also fixes potential duplicate trigger execution by removing both possible trigger names
 
 BEGIN;
 
--- Drop the existing trigger that's causing conflicts
+-- Drop any existing triggers with both possible names to prevent duplicates
 DROP TRIGGER IF EXISTS on_schedule_state_change ON schedules;
+DROP TRIGGER IF EXISTS trigger_schedule_state_change ON schedules;
 
 -- Create a simpler version that doesn't cause conflicts
 CREATE OR REPLACE FUNCTION handle_schedule_state_change()

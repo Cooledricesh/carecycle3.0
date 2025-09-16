@@ -32,11 +32,35 @@ export function useScheduleState(schedule: Schedule | null): UseScheduleStateRet
   const stateManager = new ScheduleStateManager()
   const validator = new ScheduleStateValidator()
 
+  // Normalize schedule from camelCase to snake_case for ScheduleStateManager
+  // The manager expects database field names (snake_case) but our types use camelCase
+  const normalizeScheduleForManager = (schedule: Schedule): any => {
+    return {
+      ...schedule,
+      // Map camelCase to snake_case for fields the manager needs
+      updated_at: schedule.updatedAt,
+      created_at: schedule.createdAt,
+      patient_id: schedule.patientId,
+      item_id: schedule.itemId,
+      interval_weeks: schedule.intervalWeeks,
+      start_date: schedule.startDate,
+      end_date: schedule.endDate,
+      last_executed_date: schedule.lastExecutedDate,
+      next_due_date: schedule.nextDueDate,
+      assigned_nurse_id: schedule.assignedNurseId,
+      requires_notification: schedule.requiresNotification,
+      notification_days_before: schedule.notificationDaysBefore,
+      created_by: schedule.createdBy,
+    }
+  }
+
   // Calculate states
   const canPause = schedule ? validator.canPause(schedule) : false
   const canResume = schedule ? validator.canResume(schedule) : false
-  const pauseDuration = schedule ? stateManager.getPauseDuration(schedule) : null
-  const suggestedStrategy = schedule ? stateManager.suggestResumeStrategy(schedule) : 'next_cycle'
+
+  // Use normalized schedule for methods that need snake_case fields
+  const pauseDuration = schedule ? stateManager.getPauseDuration(normalizeScheduleForManager(schedule)) : null
+  const suggestedStrategy = schedule ? stateManager.suggestResumeStrategy(normalizeScheduleForManager(schedule)) : 'next_cycle'
 
   // Pause mutation
   const pauseMutation = useMutation({

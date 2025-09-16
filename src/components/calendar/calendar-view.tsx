@@ -19,6 +19,7 @@ import { differenceInWeeks } from 'date-fns';
 import { ScheduleResumeDialog } from '@/components/schedules/schedule-resume-dialog';
 import type { ResumeOptions } from '@/lib/schedule-management/schedule-state-manager';
 import { ScheduleDateCalculator } from '@/lib/schedule-management/schedule-date-calculator';
+import { getSchedulePausedDate, getSchedulePausedDateSync } from '@/lib/schedule-management/schedule-pause-utils';
 import { ChevronLeft, ChevronRight, Calendar, Clock, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -512,12 +513,15 @@ export function CalendarView({ className }: CalendarViewProps) {
       {selectedScheduleForResume && (() => {
         // Calculate missed executions and pause duration
         const calculator = new ScheduleDateCalculator();
-        const pausedDate = selectedScheduleForResume.updated_at ? new Date(selectedScheduleForResume.updated_at) : new Date();
+        // Use updatedAt (camelCase) to match TypeScript interface
+        // TODO: For better accuracy, consider using getSchedulePausedDate() from schedule-pause-utils
+        // to fetch the actual pause date from schedule_logs
+        const pausedDate = selectedScheduleForResume.updatedAt ? new Date(selectedScheduleForResume.updatedAt) : new Date();
         const resumeDate = new Date();
-        const missedExecutions = selectedScheduleForResume.updated_at
+        const missedExecutions = selectedScheduleForResume.updatedAt
           ? calculator.getMissedExecutions(selectedScheduleForResume, pausedDate, resumeDate).length
           : 0;
-        const pauseDuration = selectedScheduleForResume.updated_at
+        const pauseDuration = selectedScheduleForResume.updatedAt
           ? Math.max(1, differenceInWeeks(resumeDate, pausedDate))
           : 1;
 
