@@ -21,10 +21,36 @@ export const scheduleService = {
     try {
       const validated = ScheduleCreateSchema.parse(input)
       const snakeData = camelToSnake(validated)
-      
+
+      // Check if there's already an active schedule for this patient-item combination
+      const { data: existingSchedule } = await client
+        .from('schedules')
+        .select('id')
+        .eq('patient_id', validated.patientId)
+        .eq('item_id', validated.itemId)
+        .eq('status', 'active')
+        .maybeSingle()
+
+      if (existingSchedule) {
+        // Get item name for better error message
+        const { data: itemData } = await client
+          .from('items')
+          .select('name')
+          .eq('id', validated.itemId)
+          .single()
+
+        const itemName = itemData?.name || '해당 항목'
+
+        console.error('Duplicate active schedule attempted:', {
+          patientId: validated.patientId,
+          itemId: validated.itemId
+        })
+        throw new Error(`이미 해당 환자의 "${itemName}" 스케줄이 활성 상태로 존재합니다. 기존 스케줄을 수정하거나 중지한 후 다시 시도해주세요.`)
+      }
+
       // Calculate next_due_date from start_date
       const nextDueDate = validated.startDate
-      
+
       const { data, error } = await (client as any)
         .from('schedules')
         .insert({
@@ -34,11 +60,22 @@ export const scheduleService = {
         })
         .select()
         .single()
-      
-      if (error) throw error
+
+      if (error) {
+        // Handle duplicate key error specifically
+        if (error.code === '23505' || error.message?.includes('duplicate key')) {
+          console.error('Duplicate key error:', error)
+          throw new Error('이미 동일한 스케줄이 존재합니다. 기존 스케줄을 확인해주세요.')
+        }
+        throw error
+      }
       return snakeToCamel(data) as Schedule
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating schedule:', error)
+      // Re-throw if it's already our custom error message
+      if (error.message?.includes('이미')) {
+        throw error
+      }
       throw new Error('일정 등록에 실패했습니다')
     }
   },
@@ -95,10 +132,28 @@ export const scheduleService = {
         itemId = newItem.id
       }
       
+      // Check if there's already an active schedule for this patient-item combination
+      const { data: existingSchedule } = await client
+        .from('schedules')
+        .select('id')
+        .eq('patient_id', input.patientId)
+        .eq('item_id', itemId)
+        .eq('status', 'active')
+        .maybeSingle()
+
+      if (existingSchedule) {
+        console.error('Duplicate active schedule attempted:', {
+          patientId: input.patientId,
+          itemId: itemId,
+          itemName: input.itemName
+        })
+        throw new Error(`이미 해당 환자의 "${input.itemName}" 스케줄이 활성 상태로 존재합니다. 기존 스케줄을 수정하거나 중지한 후 다시 시도해주세요.`)
+      }
+
       // Create the schedule with current user as creator
       const { data: userData } = await client.auth.getUser()
       const userId = userData?.user?.id
-      
+
       const { data, error } = await (client as any)
         .from('schedules')
         .insert({
@@ -117,8 +172,14 @@ export const scheduleService = {
         })
         .select()
         .single()
-      
+
       if (error) {
+        // Handle duplicate key error specifically
+        if (error.code === '23505' || error.message?.includes('duplicate key')) {
+          console.error('Duplicate key error:', error)
+          throw new Error('이미 동일한 스케줄이 존재합니다. 기존 스케줄을 확인해주세요.')
+        }
+
         console.error('Database error creating schedule:', {
           code: error.code,
           message: error.message,
@@ -334,17 +395,77 @@ export const scheduleService = {
 
   async updateStatus(id: string, status: 'active' | 'paused' | 'completed' | 'cancelled', supabase?: SupabaseClient): Promise<void> {
     const client = supabase || createClient()
+
+    // Use the new ScheduleStateManager for pause/resume transitions
+    if (status === 'paused' || status === 'active') {
+      const { ScheduleStateManager } = await import('@/lib/schedule-management/schedule-state-manager')
+      const stateManager = new ScheduleStateManager(client)
+
+      // Get current schedule to check its status
+      const { data: schedule, error: fetchError } = await client
+        .from('schedules')
+        .select('*')
+        .eq('id', id)
+        .single()
+
+      if (fetchError || !schedule) {
+        throw new Error('스케줄을 찾을 수 없습니다')
+      }
+
+      // Handle pause
+      if (status === 'paused' && schedule.status === 'active') {
+        await stateManager.pauseSchedule(id)
+        return
+      }
+
+      // Handle resume - requires additional options
+      if (status === 'active' && schedule.status === 'paused') {
+        // For backward compatibility, use default resume strategy
+        await stateManager.resumeSchedule(id, {
+          strategy: 'next_cycle',
+          handleMissed: 'skip'
+        })
+        return
+      }
+    }
+
+    // For other status changes, use the original logic
     try {
       const { error } = await client
         .from('schedules')
         .update({ status })
         .eq('id', id)
-      
+
       if (error) throw error
     } catch (error) {
       console.error('Error updating schedule status:', error)
       throw new Error('일정 상태 변경에 실패했습니다')
     }
+  },
+
+  // New method for advanced pause/resume with options
+  async pauseSchedule(id: string, options?: { reason?: string; notifyAssignedNurse?: boolean }, supabase?: SupabaseClient): Promise<void> {
+    const client = supabase || createClient()
+    const { ScheduleStateManager } = await import('@/lib/schedule-management/schedule-state-manager')
+    const stateManager = new ScheduleStateManager(client)
+
+    await stateManager.pauseSchedule(id, options)
+  },
+
+  async resumeSchedule(
+    id: string,
+    options: {
+      strategy: 'immediate' | 'next_cycle' | 'custom'
+      customDate?: Date
+      handleMissed?: 'skip' | 'catch_up' | 'mark_overdue'
+    },
+    supabase?: SupabaseClient
+  ): Promise<void> {
+    const client = supabase || createClient()
+    const { ScheduleStateManager } = await import('@/lib/schedule-management/schedule-state-manager')
+    const stateManager = new ScheduleStateManager(client)
+
+    await stateManager.resumeSchedule(id, options)
   },
 
   async delete(id: string, supabase?: SupabaseClient): Promise<void> {
