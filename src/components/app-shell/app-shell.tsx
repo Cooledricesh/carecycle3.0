@@ -6,17 +6,26 @@ import { Header } from './header';
 import { Footer } from './footer';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { responsivePadding } from '@/lib/utils';
+import { useSidebar } from '@/providers/sidebar-provider';
+import { cn } from '@/lib/utils';
 
 interface AppShellProps {
   children: ReactNode;
 }
 
 export function AppShell({ children }: AppShellProps) {
+  const { isCollapsed } = useSidebar();
+
   return (
     <div className="min-h-screen flex flex-col">
       <div className="flex flex-1">
         {/* Desktop Sidebar */}
-        <aside className="hidden lg:block w-64 xl:w-72 border-r bg-background">
+        <aside
+          className={cn(
+            "hidden lg:block border-r bg-background transition-all duration-300 ease-in-out",
+            isCollapsed ? "w-16" : "w-64 xl:w-72"
+          )}
+        >
           <Sidebar />
         </aside>
         

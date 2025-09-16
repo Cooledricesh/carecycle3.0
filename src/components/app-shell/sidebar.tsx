@@ -22,8 +22,15 @@ import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/providers/auth-provider-simple';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useProfile } from '@/hooks/useProfile';
+import { useSidebar } from '@/providers/sidebar-provider';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 interface NavItem {
   name: string;
@@ -50,9 +57,9 @@ export function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
-  const [isCollapsed, setIsCollapsed] = useState(false);
   const [isHydrated, setIsHydrated] = useState(false);
   const { data: profile, isLoading: profileLoading, error: profileError } = useProfile();
+  const { isCollapsed, toggleCollapse } = useSidebar();
 
   // Prevent hydration mismatch by deferring pathname-based logic until after hydration
   useEffect(() => {
@@ -98,7 +105,7 @@ export function Sidebar() {
           variant="ghost"
           size="sm"
           className="hidden xl:flex"
-          onClick={() => setIsCollapsed(!isCollapsed)}
+          onClick={toggleCollapse}
         >
           {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
         </Button>
@@ -168,23 +175,39 @@ export function Sidebar() {
                 }
               }
               
+              const linkContent = (
+                <Link
+                  href={item.href}
+                  className={`
+                    flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors
+                    ${isActive
+                      ? 'bg-blue-100 text-blue-700'
+                      : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
+                    }
+                    ${isCollapsed ? 'justify-center' : ''}
+                  `}
+                >
+                  <item.icon className={`h-5 w-5 ${isCollapsed ? '' : 'mr-3'}`} />
+                  {!isCollapsed && item.name}
+                </Link>
+              );
+
               return (
                 <li key={item.name}>
-                  <Link
-                    href={item.href}
-                    className={`
-                      flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors
-                      ${isActive
-                        ? 'bg-blue-100 text-blue-700'
-                        : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
-                      }
-                      ${isCollapsed ? 'justify-center' : ''}
-                    `}
-                    title={isCollapsed ? item.name : undefined}
-                  >
-                    <item.icon className={`h-5 w-5 ${isCollapsed ? '' : 'mr-3'}`} />
-                    {!isCollapsed && item.name}
-                  </Link>
+                  {isCollapsed ? (
+                    <TooltipProvider delayDuration={0}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          {linkContent}
+                        </TooltipTrigger>
+                        <TooltipContent side="right">
+                          <p>{item.name}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  ) : (
+                    linkContent
+                  )}
                 </li>
               );
             })}
@@ -196,17 +219,33 @@ export function Sidebar() {
 
       {/* Logout */}
       <div className="px-4 py-4">
-        <Button
-          variant="ghost"
-          className={`w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50 ${
-            isCollapsed ? 'justify-center px-0' : ''
-          }`}
-          onClick={handleSignOut}
-          title={isCollapsed ? '로그아웃' : undefined}
-        >
-          <LogOut className={`h-5 w-5 ${isCollapsed ? '' : 'mr-3'}`} />
-          {!isCollapsed && '로그아웃'}
-        </Button>
+        {isCollapsed ? (
+          <TooltipProvider delayDuration={0}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  className="w-full justify-center px-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                  onClick={handleSignOut}
+                >
+                  <LogOut className="h-5 w-5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="right">
+                <p>로그아웃</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        ) : (
+          <Button
+            variant="ghost"
+            className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50"
+            onClick={handleSignOut}
+          >
+            <LogOut className="h-5 w-5 mr-3" />
+            로그아웃
+          </Button>
+        )}
       </div>
     </div>
   );

@@ -9,6 +9,7 @@ import {
 } from '@tanstack/react-query';
 import { ThemeProvider } from 'next-themes';
 import { AuthProvider } from '@/providers/auth-provider-simple';
+import { SidebarProvider } from '@/providers/sidebar-provider';
 import { Toaster } from '@/components/ui/toaster';
 
 function makeQueryClient() {
@@ -67,8 +68,10 @@ export default function Providers({ children }: { children: React.ReactNode }) {
     >
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
-          {children}
-          <Toaster />
+          <SidebarProvider>
+            {children}
+            <Toaster />
+          </SidebarProvider>
         </AuthProvider>
       </QueryClientProvider>
     </ThemeProvider>
