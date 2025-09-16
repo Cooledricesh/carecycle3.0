@@ -140,11 +140,16 @@ kill-*.sh
 **/debug-*.*
 test-helpers.*
 
-claude.md
-*.png
+# Test artifacts and screenshots only (not all PNGs)
+.playwright-mcp/**/*.png
+tests/**/screenshots/*.png
+test-output/**/*.png
+ci/artifacts/**/*.png
+**/test-results/**/*.png
 
 # Development documentation (내부 개발 문서 - GitHub 제외)
 CLAUDE.md
+claude.md
 emergency-security-measures.md
 SUPABASE_NEW_API_KEYS_REFERENCE.md
 MOBILE_UI_TODO.md
