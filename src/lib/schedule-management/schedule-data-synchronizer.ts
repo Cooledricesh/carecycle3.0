@@ -2,7 +2,6 @@
 
 import { createClient } from '@/lib/supabase/client'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { format } from 'date-fns'
 
 export interface SyncResult {
   executionsUpdated: number
@@ -141,7 +140,7 @@ export class ScheduleDataSynchronizer {
   }
 
   /**
-   * 새로운 실행을 생성합니다.
+   * 새로운 실행을 생성합니다 (UPSERT 패턴 사용).
    * @param scheduleId 스케줄 ID
    * @param plannedDate 계획된 날짜
    * @returns 생성 성공 여부
@@ -150,45 +149,42 @@ export class ScheduleDataSynchronizer {
     scheduleId: string,
     plannedDate: Date
   ): Promise<boolean> {
-    const formattedDate = format(plannedDate, 'yyyy-MM-dd')
+    // Convert to UTC date (YYYY-MM-DD) to avoid timezone day shifts
+    // This ensures consistent date boundaries regardless of local timezone
+    const utcDate = new Date(Date.UTC(
+      plannedDate.getFullYear(),
+      plannedDate.getMonth(),
+      plannedDate.getDate()
+    ))
+    const formattedDate = utcDate.toISOString().slice(0, 10)
 
-    // Check if execution already exists for this date
-    const { data: existing } = await this.supabase
+    // Idempotent UPSERT - uses unique constraint on (schedule_id, planned_date)
+    // This prevents race conditions where concurrent requests could create duplicates
+    const { error } = await this.supabase
       .from('schedule_executions')
-      .select('id')
-      .eq('schedule_id', scheduleId)
-      .eq('planned_date', formattedDate)
-      .single()
-
-    if (existing) {
-      // Execution already exists, update it if needed
-      const { error } = await this.supabase
-        .from('schedule_executions')
-        .update({
+      .upsert(
+        {
+          schedule_id: scheduleId,
+          planned_date: formattedDate,
           status: 'planned',
           skipped_reason: null,
           updated_at: new Date().toISOString()
-        })
-        .eq('id', existing.id)
+        },
+        {
+          onConflict: 'schedule_id,planned_date',
+          ignoreDuplicates: false  // Update existing if found
+        }
+      )
 
-      return !error
+    if (error) {
+      console.error('Error creating/updating execution:', error)
     }
-
-    // Create new execution
-    const { error } = await this.supabase
-      .from('schedule_executions')
-      .insert({
-        schedule_id: scheduleId,
-        planned_date: formattedDate,
-        status: 'planned',
-        created_at: new Date().toISOString()
-      })
 
     return !error
   }
 
   /**
-   * 필요한 경우 알림을 생성합니다.
+   * 필요한 경우 알림을 생성합니다 (UPSERT 패턴 사용).
    * @param scheduleId 스케줄 ID
    * @param nextDueDate 다음 예정일
    * @returns 생성 성공 여부
@@ -212,37 +208,38 @@ export class ScheduleDataSynchronizer {
     const notifyDate = new Date(nextDueDate)
     notifyDate.setDate(notifyDate.getDate() - notificationDaysBefore)
 
-    // Don't create notification if it's already past the notification date
+    // 과거 알림일이면 생성하지 않음
     if (notifyDate < new Date()) {
       return false
     }
 
-    // Check if notification already exists
-    const formattedNotifyDate = format(notifyDate, 'yyyy-MM-dd')
-    const { data: existing } = await this.supabase
-      .from('notifications')
-      .select('id')
-      .eq('schedule_id', scheduleId)
-      .eq('notify_date', formattedNotifyDate)
-      .single()
+    // YYYY-MM-DD (UTC)로 안전 변환
+    const formattedNotifyDate = new Date(Date.UTC(
+      notifyDate.getFullYear(),
+      notifyDate.getMonth(),
+      notifyDate.getDate()
+    )).toISOString().slice(0, 10)
 
-    if (existing) {
-      return false // Notification already exists
-    }
-
-    // Create new notification
+    // Idempotent UPSERT - uses unique index on (schedule_id, notify_date)
+    // This prevents duplicate notifications for same schedule on same date
     const { error } = await this.supabase
       .from('notifications')
-      .insert({
-        schedule_id: scheduleId,
-        recipient_id: schedule.assigned_nurse_id || schedule.created_by,
-        channel: 'dashboard',
-        notify_date: formattedNotifyDate,
-        state: 'pending',
-        title: '일정 알림',
-        message: `예정된 일정이 ${notificationDaysBefore}일 후 도래합니다.`,
-        created_at: new Date().toISOString()
-      })
+      .upsert(
+        {
+          schedule_id: scheduleId,
+          recipient_id: schedule.assigned_nurse_id || schedule.created_by,
+          channel: 'dashboard',
+          notify_date: formattedNotifyDate,
+          state: 'pending',
+          title: '일정 알림',
+          message: `예정된 일정이 ${notificationDaysBefore}일 후 도래합니다.`,
+          updated_at: new Date().toISOString()
+        },
+        {
+          onConflict: 'schedule_id,notify_date',
+          ignoreDuplicates: false  // Update existing if found
+        }
+      )
 
     return !error
   }
@@ -292,7 +289,14 @@ export class ScheduleDataSynchronizer {
       result.executionsUpdated = outdatedExecutions?.length || 0
 
       // Clean up notifications for past dates
-      const today = format(new Date(), 'yyyy-MM-dd')
+      // Use UTC date to ensure consistent date boundaries
+      const now = new Date()
+      const todayUTC = new Date(Date.UTC(
+        now.getFullYear(),
+        now.getMonth(),
+        now.getDate()
+      )).toISOString().slice(0, 10)
+
       const { data: outdatedNotifications } = await this.supabase
         .from('notifications')
         .update({
@@ -302,7 +306,7 @@ export class ScheduleDataSynchronizer {
         })
         .eq('schedule_id', scheduleId)
         .in('state', ['pending', 'ready'])
-        .lt('notify_date', today)
+        .lt('notify_date', todayUTC)
         .select('id')
 
       result.notificationsCancelled = outdatedNotifications?.length || 0
