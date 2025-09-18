@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react"
 import { Clock, AlertCircle } from "lucide-react"
+import { getScheduleCategoryIcon, getScheduleCategoryColor, getScheduleCategoryBgColor, getScheduleCategoryLabel, getScheduleCardBgColor } from '@/lib/utils/schedule-category'
 import { Badge } from "@/components/ui/badge"
 import { useIsMobile } from "@/hooks/useIsMobile"
 import { ScheduleActionButtons } from "@/components/schedules/schedule-action-buttons"
@@ -43,12 +44,12 @@ export function CalendarDayCard({
   }, [editModalOpen])
   
   return (
-    <div 
+    <div
       className={`
         ${isMobile ? 'p-3' : 'p-4'} border rounded-lg transition-all hover:shadow-sm
-        ${isOverdue ? 'border-red-200 bg-red-50/30' : 
-          isToday ? 'border-orange-200 bg-orange-50/30' : 
-          'border-gray-200 hover:border-gray-300'}
+        ${isOverdue ? 'border-red-200 bg-red-50/30' :
+          isToday ? 'border-orange-200 bg-orange-50/30' :
+          getScheduleCardBgColor(schedule.item?.category) || 'border-gray-200 hover:border-gray-300'}
       `}
     >
       <div className={`flex flex-col gap-3`}>
@@ -72,12 +73,17 @@ export function CalendarDayCard({
             <div className={`flex items-center gap-2 text-gray-600 ${
               isMobile ? 'text-xs' : 'text-sm'
             }`}>
+              {(() => {
+                const IconComponent = getScheduleCategoryIcon(schedule.item?.category);
+                return IconComponent ? (
+                  <IconComponent className={`h-4 w-4 ${getScheduleCategoryColor(schedule.item?.category)}`} />
+                ) : null;
+              })()}
               <span className="font-medium">{schedule.item?.name}</span>
               {schedule.item?.category && (
-                <>
-                  <span>•</span>
-                  <span>{schedule.item.category}</span>
-                </>
+                <span className={`px-2 py-0.5 rounded-full text-xs ${getScheduleCategoryBgColor(schedule.item?.category)} ${getScheduleCategoryColor(schedule.item?.category)}`}>
+                  {getScheduleCategoryLabel(schedule.item.category)}
+                </span>
               )}
             </div>
           </div>

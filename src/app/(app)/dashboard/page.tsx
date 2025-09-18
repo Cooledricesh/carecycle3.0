@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar, Clock, CheckCircle, AlertCircle, Check, RefreshCw } from "lucide-react";
+import { getScheduleCategoryIcon, getScheduleCategoryColor, getScheduleCategoryBgColor, getScheduleCategoryLabel, getScheduleCardBgColor } from '@/lib/utils/schedule-category';
 import { PatientRegistrationModal } from "@/components/patients/patient-registration-modal";
 import { useAuth } from "@/providers/auth-provider-simple";
 import { useRouter } from "next/navigation";
@@ -205,8 +206,8 @@ export default function DashboardPage() {
           <CardContent className={isMobile ? 'p-4 pt-0' : ''}>
             <div className="space-y-3 sm:space-y-4">
               {todaySchedules.map((schedule) => (
-                <div 
-                  key={schedule.id} 
+                <div
+                  key={schedule.id}
                   className={`
                     ${isMobile ? 'flex-col space-y-3' : 'flex items-center justify-between'}
                     p-3 sm:p-4 border rounded-lg bg-red-50 border-red-200
@@ -223,9 +224,18 @@ export default function DashboardPage() {
                         </span>
                       )}
                     </div>
-                    <p className="text-xs sm:text-sm text-gray-600">
-                      {schedule.item?.name || '항목 정보 없음'} • {schedule.item?.category}
-                    </p>
+                    <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-600">
+                      {(() => {
+                        const IconComponent = getScheduleCategoryIcon(schedule.item?.category);
+                        return IconComponent ? (
+                          <IconComponent className={`h-4 w-4 ${getScheduleCategoryColor(schedule.item?.category)}`} />
+                        ) : null;
+                      })()}
+                      <span>{schedule.item?.name || '항목 정보 없음'}</span>
+                      <span className={`px-2 py-0.5 rounded-full text-xs ${getScheduleCategoryBgColor(schedule.item?.category)} ${getScheduleCategoryColor(schedule.item?.category)}`}>
+                        {getScheduleCategoryLabel(schedule.item?.category)}
+                      </span>
+                    </div>
                     <p className="text-xs text-red-600">
                       예정일: {safeFormatDate(schedule.nextDueDate, 'yyyy년 MM월 dd일')}
                       {schedule.intervalWeeks && (
@@ -286,11 +296,11 @@ export default function DashboardPage() {
                 const daysUntil = dueDate ? getDaysDifference(dueDate, new Date()) : null;
                 
                 return (
-                  <div 
-                    key={schedule.id} 
+                  <div
+                    key={schedule.id}
                     className={`
                       ${isMobile ? 'flex-col space-y-3' : 'flex items-center justify-between'}
-                      p-3 sm:p-4 border rounded-lg
+                      p-3 sm:p-4 border rounded-lg ${getScheduleCardBgColor(schedule.item?.category)}
                     `}
                   >
                     <div className={isMobile ? 'space-y-2' : ''}>
@@ -312,9 +322,18 @@ export default function DashboardPage() {
                           </span>
                         )}
                       </div>
-                      <p className="text-xs sm:text-sm text-gray-600">
-                        {schedule.item?.name || '항목 정보 없음'} • {schedule.item?.category}
-                      </p>
+                      <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-600">
+                        {(() => {
+                          const IconComponent = getScheduleCategoryIcon(schedule.item?.category);
+                          return IconComponent ? (
+                            <IconComponent className={`h-4 w-4 ${getScheduleCategoryColor(schedule.item?.category)}`} />
+                          ) : null;
+                        })()}
+                        <span>{schedule.item?.name || '항목 정보 없음'}</span>
+                        <span className={`px-2 py-0.5 rounded-full text-xs ${getScheduleCategoryBgColor(schedule.item?.category)} ${getScheduleCategoryColor(schedule.item?.category)}`}>
+                          {getScheduleCategoryLabel(schedule.item?.category)}
+                        </span>
+                      </div>
                       <p className="text-xs text-gray-500">
                         예정일: {safeFormatDate(schedule.nextDueDate, 'yyyy년 MM월 dd일')}
                         {schedule.intervalWeeks && (
