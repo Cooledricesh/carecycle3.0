@@ -423,16 +423,16 @@ export function CalendarView({ className }: CalendarViewProps) {
                         <>
                           {injectionCount > 0 && (
                             <div className={`
-                              ${isMobile ? 'text-xs px-1 py-0.5' : 'text-xs px-2 py-1'} 
-                              rounded-full bg-blue-500 text-white font-medium
+                              ${isMobile ? 'text-xs px-1 py-0.5' : 'text-xs px-2 py-1'}
+                              rounded-full bg-blue-100 text-blue-700 font-medium border border-blue-200
                             `}>
                               {isMobile ? `주${injectionCount}` : `주사 ${injectionCount}`}
                             </div>
                           )}
                           {testCount > 0 && (
                             <div className={`
-                              ${isMobile ? 'text-xs px-1 py-0.5' : 'text-xs px-2 py-1'} 
-                              rounded-full bg-green-500 text-white font-medium
+                              ${isMobile ? 'text-xs px-1 py-0.5' : 'text-xs px-2 py-1'}
+                              rounded-full bg-emerald-100 text-emerald-700 font-medium border border-emerald-200
                             `}>
                               {isMobile ? `검${testCount}` : `검사 ${testCount}`}
                             </div>

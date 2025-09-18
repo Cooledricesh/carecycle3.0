@@ -14,6 +14,7 @@ import { ScheduleCreateModal } from "@/components/schedules/schedule-create-moda
 import { ScheduleEditModal } from "@/components/schedules/schedule-edit-modal";
 import { ScheduleResumeDialog } from '@/components/schedules/schedule-resume-dialog';
 import { useSchedules, useOverdueSchedules } from "@/hooks/useSchedules";
+import { getScheduleCategoryIcon, getScheduleCategoryColor, getScheduleCategoryBgColor, getScheduleCategoryLabel, getScheduleCardBgColor } from '@/lib/utils/schedule-category';
 import { scheduleService } from "@/services/scheduleService";
 import type { ScheduleWithDetails } from "@/types/schedule";
 import { format, differenceInWeeks } from "date-fns";
@@ -262,7 +263,7 @@ export default function SchedulesPage() {
                     // Mobile: Card Layout
                     <div className="space-y-3">
                       {displaySchedules.map((schedule) => (
-                        <Card key={schedule.id} className="p-4">
+                        <Card key={schedule.id} className={`p-4 ${getScheduleCardBgColor(schedule.item?.category)}`}>
                           <div className="space-y-3">
                             {/* Schedule Header */}
                             <div className="flex items-start justify-between">
@@ -270,12 +271,20 @@ export default function SchedulesPage() {
                                 <h4 className="font-medium text-base">
                                   {schedule.patient?.name || '환자 정보 없음'}
                                 </h4>
-                                <p className="text-sm text-gray-600">
-                                  {schedule.item?.name || '항목 정보 없음'}
-                                </p>
-                                <p className="text-xs text-gray-500">
-                                  {schedule.item?.category}
-                                </p>
+                                <div className="flex items-center gap-2 text-sm text-gray-600">
+                                  {(() => {
+                                    const IconComponent = getScheduleCategoryIcon(schedule.item?.category);
+                                    return IconComponent ? (
+                                      <IconComponent className={`h-4 w-4 ${getScheduleCategoryColor(schedule.item?.category)}`} />
+                                    ) : null;
+                                  })()}
+                                  <span>{schedule.item?.name || '항목 정보 없음'}</span>
+                                  {schedule.item?.category && (
+                                    <span className={`px-2 py-0.5 rounded-full text-xs ${getScheduleCategoryBgColor(schedule.item?.category)} ${getScheduleCategoryColor(schedule.item?.category)}`}>
+                                      {getScheduleCategoryLabel(schedule.item.category)}
+                                    </span>
+                                  )}
+                                </div>
                               </div>
                               {getStatusBadge(schedule)}
                             </div>
@@ -360,15 +369,25 @@ export default function SchedulesPage() {
                       </TableHeader>
                       <TableBody>
                         {displaySchedules.map((schedule) => (
-                          <TableRow key={schedule.id}>
+                          <TableRow key={schedule.id} className={getScheduleCardBgColor(schedule.item?.category)}>
                             <TableCell className="font-medium">
                               {schedule.patient?.name || '환자 정보 없음'}
                             </TableCell>
                             <TableCell>
-                              <div>
-                                <div>{schedule.item?.name || '항목 정보 없음'}</div>
-                                <div className="text-xs text-gray-500">
-                                  {schedule.item?.category}
+                              <div className="flex items-center gap-2">
+                                {(() => {
+                                  const IconComponent = getScheduleCategoryIcon(schedule.item?.category);
+                                  return IconComponent ? (
+                                    <IconComponent className={`h-4 w-4 ${getScheduleCategoryColor(schedule.item?.category)}`} />
+                                  ) : null;
+                                })()}
+                                <div>
+                                  <div>{schedule.item?.name || '항목 정보 없음'}</div>
+                                  {schedule.item?.category && (
+                                    <span className={`inline-block mt-1 px-2 py-0.5 rounded-full text-xs ${getScheduleCategoryBgColor(schedule.item?.category)} ${getScheduleCategoryColor(schedule.item?.category)}`}>
+                                      {getScheduleCategoryLabel(schedule.item.category)}
+                                    </span>
+                                  )}
                                 </div>
                               </div>
                             </TableCell>
