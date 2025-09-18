@@ -3,7 +3,9 @@
 import { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Check, ChevronsUpDown, Edit } from 'lucide-react'
+import { Check, ChevronsUpDown, Edit, CalendarIcon } from 'lucide-react'
+import { format, parse } from 'date-fns'
+import { ko } from 'date-fns/locale'
 import {
   Dialog,
   DialogContent,
@@ -30,6 +32,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
+import { Calendar } from '@/components/ui/calendar'
 import {
   Command,
   CommandEmpty,
@@ -81,6 +84,7 @@ export function ScheduleEditModal({
     defaultValues: {
       itemName: schedule.item?.name || '',
       intervalWeeks: schedule.intervalWeeks || 1,
+      nextDueDate: schedule.nextDueDate ? format(new Date(schedule.nextDueDate), 'yyyy-MM-dd') : undefined,
       notes: schedule.notes || ''
     }
   })
@@ -93,6 +97,7 @@ export function ScheduleEditModal({
       form.reset({
         itemName: schedule.item?.name || '',
         intervalWeeks: schedule.intervalWeeks || 1,
+        nextDueDate: schedule.nextDueDate ? format(new Date(schedule.nextDueDate), 'yyyy-MM-dd') : undefined,
         notes: schedule.notes || ''
       })
     }
@@ -284,6 +289,49 @@ export function ScheduleEditModal({
                   </FormControl>
                   <FormDescription>
                     몇 주마다 반복할지 입력하세요 (1-52주)
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Next Due Date */}
+            <FormField
+              control={form.control}
+              name="nextDueDate"
+              render={({ field }) => (
+                <FormItem className="flex flex-col">
+                  <FormLabel>다음 시행 예정일</FormLabel>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <FormControl>
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            "w-full pl-3 text-left font-normal",
+                            !field.value && "text-muted-foreground"
+                          )}
+                        >
+                          {field.value ? (
+                            format(parse(field.value, 'yyyy-MM-dd', new Date()), "PPP", { locale: ko })
+                          ) : (
+                            <span>날짜를 선택하세요</span>
+                          )}
+                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                        </Button>
+                      </FormControl>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={field.value ? parse(field.value, 'yyyy-MM-dd', new Date()) : undefined}
+                        onSelect={(date) => field.onChange(date ? format(date, 'yyyy-MM-dd') : undefined)}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                  <FormDescription>
+                    다음 검사/주사 시행 예정일을 변경할 수 있습니다.
                   </FormDescription>
                   <FormMessage />
                 </FormItem>

@@ -222,7 +222,13 @@ export const ScheduleEditSchema = z.object({
     .int('정수를 입력해주세요')
     .min(1, '최소 1주 이상 입력해주세요')
     .max(52, '최대 52주까지 입력 가능합니다'),
-  
+
+  nextDueDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, '유효한 날짜 형식이 아닙니다 (YYYY-MM-DD)')
+    .optional()
+    .nullable(),
+
   notes: z
     .string()
     .max(500, '메모는 500자 이내로 입력해주세요')

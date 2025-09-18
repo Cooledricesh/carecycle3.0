@@ -165,17 +165,11 @@ export class ScheduleDateCalculator {
     proposedDate: Date
   ): { isValid: boolean; reason?: string } {
     const proposed = startOfDay(proposedDate)
-    const today = startOfDay(new Date())
 
-    // Check if date is in the past
-    if (isBefore(proposed, today)) {
-      return {
-        isValid: false,
-        reason: '다음 예정일은 과거 날짜가 될 수 없습니다.'
-      }
-    }
+    // Allow past dates for historical data, data migration, and testing
+    // Past dates are now supported as per business requirements
 
-    // Check if date is before start date (DB constraint)
+    // Check if date is before start date (logical constraint)
     if (schedule.startDate) {
       const startDate = startOfDay(new Date(schedule.startDate))
       if (isBefore(proposed, startDate)) {
@@ -197,12 +191,13 @@ export class ScheduleDateCalculator {
       }
     }
 
-    // Check if date respects minimum interval
+    // Check if date respects minimum interval (only for future scheduling)
     if (schedule.lastExecutedDate) {
       const lastExecuted = new Date(schedule.lastExecutedDate)
-      const weeksSinceLastExecution = differenceInWeeks(proposed, lastExecuted)
+      const weeksSinceLastExecution = Math.abs(differenceInWeeks(proposed, lastExecuted))
 
-      if (weeksSinceLastExecution < 1) {
+      // Allow any interval for past dates, but still warn about very short intervals
+      if (weeksSinceLastExecution < 1 && isAfter(proposed, new Date())) {
         return {
           isValid: false,
           reason: '최소 1주 간격이 필요합니다.'

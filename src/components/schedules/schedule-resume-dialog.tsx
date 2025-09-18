@@ -180,10 +180,8 @@ export function ScheduleResumeDialog({
                             selected={customDate}
                             onSelect={setCustomDate}
                             disabled={(date) => {
-                              const today = startOfDay(new Date())
                               const candidateDate = startOfDay(date)
-                              // Disable past dates (before today)
-                              if (isBefore(candidateDate, today)) return true
+                              // Allow past dates for historical data and testing
                               // If there's an end date, disable dates after it
                               if (schedule.endDate) {
                                 const endDate = startOfDay(new Date(schedule.endDate))
