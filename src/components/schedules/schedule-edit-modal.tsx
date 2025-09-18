@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Check, ChevronsUpDown, Edit, CalendarIcon } from 'lucide-react'
-import { format } from 'date-fns'
+import { format, parse } from 'date-fns'
 import { ko } from 'date-fns/locale'
 import {
   Dialog,
@@ -313,7 +313,7 @@ export function ScheduleEditModal({
                           )}
                         >
                           {field.value ? (
-                            format(new Date(field.value), "PPP", { locale: ko })
+                            format(parse(field.value, 'yyyy-MM-dd', new Date()), "PPP", { locale: ko })
                           ) : (
                             <span>날짜를 선택하세요</span>
                           )}
@@ -324,7 +324,7 @@ export function ScheduleEditModal({
                     <PopoverContent className="w-auto p-0" align="start">
                       <Calendar
                         mode="single"
-                        selected={field.value ? new Date(field.value) : undefined}
+                        selected={field.value ? parse(field.value, 'yyyy-MM-dd', new Date()) : undefined}
                         onSelect={(date) => field.onChange(date ? format(date, 'yyyy-MM-dd') : undefined)}
                         initialFocus
                       />

@@ -5,6 +5,7 @@ import { Search, X, Check, Loader2 } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
 import { usePatientSearch } from '@/hooks/usePatientSearch'
+import { patientService } from '@/services/patientService'
 import type { Patient } from '@/types/patient'
 
 interface PatientSearchFieldProps {
@@ -27,6 +28,7 @@ export function PatientSearchField({
   showPatientNumber = true,
 }: PatientSearchFieldProps) {
   const [isFocused, setIsFocused] = useState(false)
+  const [isLoadingPatient, setIsLoadingPatient] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -46,6 +48,29 @@ export function PatientSearchField({
       setIsFocused(false)
     }
   })
+
+  // Sync with external value prop
+  useEffect(() => {
+    if (value && value !== selectedPatient?.id) {
+      // Load patient data when value changes
+      setIsLoadingPatient(true)
+      patientService.getById(value)
+        .then((patient) => {
+          if (patient) {
+            handleSelectPatient(patient)
+          }
+        })
+        .catch((error) => {
+          console.error('Failed to load patient:', error)
+        })
+        .finally(() => {
+          setIsLoadingPatient(false)
+        })
+    } else if (!value && selectedPatient) {
+      // Clear selection when value is empty
+      clearSelection()
+    }
+  }, [value])
 
   // Handle clear button
   const handleClear = (e: React.MouseEvent) => {
@@ -87,9 +112,6 @@ export function PatientSearchField({
           }}
           onFocus={() => {
             setIsFocused(true)
-            if (selectedPatient) {
-              clearSelection()
-            }
           }}
           placeholder={placeholder}
           disabled={disabled}
@@ -114,7 +136,7 @@ export function PatientSearchField({
       {showDropdown && (
         <div className="absolute z-50 mt-1 w-full rounded-md border bg-popover shadow-md">
           <div className="max-h-[300px] overflow-y-auto py-1">
-            {isLoading && isSearchActive && (
+            {(isLoading || isLoadingPatient) && isSearchActive && (
               <div className="flex items-center justify-center px-4 py-3">
                 <Loader2 className="h-4 w-4 animate-spin mr-2" />
                 <span className="text-sm text-muted-foreground">검색 중...</span>
