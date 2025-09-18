@@ -13,7 +13,7 @@ export default function CalendarPage() {
           캘린더 보기
         </h1>
         <p className="text-sm sm:text-base text-gray-600 mt-1">
-          월별 스케줄을 캘린더 형태로 확인하세요.
+          날짜를 클릭하면 해당일의 상세 스케줄을 확인할 수 있습니다.
         </p>
       </div>
       

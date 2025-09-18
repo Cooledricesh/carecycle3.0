@@ -618,13 +618,20 @@ export const scheduleService = {
       }
       
       // Update the schedule with new values
+      const updateData: any = {
+        item_id: itemId,
+        interval_weeks: validated.intervalWeeks,
+        notes: validated.notes
+      }
+
+      // Add next_due_date if provided
+      if (validated.nextDueDate) {
+        updateData.next_due_date = validated.nextDueDate
+      }
+
       const { data, error } = await client
         .from('schedules')
-        .update({
-          item_id: itemId,
-          interval_weeks: validated.intervalWeeks,
-          notes: validated.notes
-        })
+        .update(updateData)
         .eq('id', id)
         .select()
         .single()
