@@ -20,6 +20,12 @@ const isFutureOrToday = (dateString: string) => {
   return date >= today
 }
 
+// Allow any valid date including past dates
+const isAnyValidDate = (dateString: string) => {
+  const date = new Date(dateString)
+  return !isNaN(date.getTime())
+}
+
 // Base validation schemas
 export const ScheduleCreateSchema = z.object({
   patientId: z
@@ -38,8 +44,7 @@ export const ScheduleCreateSchema = z.object({
   
   startDate: z
     .string()
-    .refine(isValidDate, '유효한 날짜 형식이 아닙니다')
-    .refine(isFutureOrToday, '시작일은 오늘 이후로 설정해주세요'),
+    .refine(isValidDate, '유효한 날짜 형식이 아닙니다'),
   
   endDate: z
     .string()
@@ -160,8 +165,7 @@ export const BulkScheduleCreateSchema = z.object({
   
   startDate: z
     .string()
-    .refine(isValidDate, '유효한 날짜 형식이 아닙니다')
-    .refine(isFutureOrToday, '시작일은 오늘 이후로 설정해주세요'),
+    .refine(isValidDate, '유효한 날짜 형식이 아닙니다'),
   
   assignedNurseId: z
     .string()
@@ -216,13 +220,18 @@ export const ScheduleEditSchema = z.object({
     .string()
     .min(1, '검사/주사명을 입력하세요')
     .max(100, '검사/주사명은 100자 이내로 입력하세요'),
-  
+
   intervalWeeks: z
     .number()
     .int('정수를 입력해주세요')
     .min(1, '최소 1주 이상 입력해주세요')
     .max(52, '최대 52주까지 입력 가능합니다'),
-  
+
+  nextDueDate: z
+    .string()
+    .refine(isValidDate, '유효한 날짜 형식이 아닙니다')
+    .optional(),
+
   notes: z
     .string()
     .max(500, '메모는 500자 이내로 입력해주세요')
