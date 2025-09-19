@@ -25,12 +25,14 @@ export function Header() {
             <Button
               variant="outline"
               className="lg:hidden h-11 w-11 p-0 border-border/60 hover:bg-accent hover:border-border"
+              aria-expanded={isOpen}
+              aria-controls="mobile-nav"
             >
               <Menu className="h-6 w-6" />
               <span className="sr-only">메뉴 열기</span>
             </Button>
           </SheetTrigger>
-          <SheetContent side="left" className="p-0 w-64">
+          <SheetContent side="left" className="p-0 w-64" id="mobile-nav">
             <VisuallyHidden>
               <SheetTitle>Navigation Menu</SheetTitle>
               <SheetDescription>

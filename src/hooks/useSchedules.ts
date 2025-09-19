@@ -16,7 +16,7 @@ export function useSchedules() {
   const supabase = createClient()
 
   const query = useQuery({
-    queryKey: ['schedules'],
+    queryKey: ['schedules', user?.id],
     queryFn: async () => {
       try {
         return await scheduleService.getAllSchedules(supabase)
@@ -31,7 +31,7 @@ export function useSchedules() {
         throw error
       }
     },
-    enabled: true
+    enabled: !!user && !loading
   })
 
   const createMutation = useMutation({
@@ -39,8 +39,8 @@ export function useSchedules() {
       return await scheduleService.createWithCustomItem(input, supabase)
     },
     onSuccess: () => {
-      // Invalidate ALL queries to ensure consistency
-      queryClient.invalidateQueries()
+      // Invalidate only schedules-related queries
+      queryClient.invalidateQueries({ queryKey: ['schedules'] })
       toast({
         title: '성공',
         description: '일정이 성공적으로 등록되었습니다.'
@@ -69,8 +69,8 @@ export function useSchedules() {
       })
     },
     onSuccess: () => {
-      // Invalidate ALL queries to ensure consistency
-      queryClient.invalidateQueries()
+      // Invalidate only schedules-related queries
+      queryClient.invalidateQueries({ queryKey: ['schedules'] })
       toast({
         title: '성공',
         description: '일정이 완료 처리되었습니다.'
@@ -79,8 +79,8 @@ export function useSchedules() {
   })
 
   const refetch = () => {
-    // Invalidate all queries to ensure fresh data
-    queryClient.invalidateQueries()
+    // Refresh only schedules-related queries
+    queryClient.invalidateQueries({ queryKey: ['schedules'] })
   }
 
   return {
@@ -101,7 +101,7 @@ export function useTodayChecklist() {
   const supabase = createClient()
   
   return useQuery({
-    queryKey: ['schedules', 'today'],
+    queryKey: ['schedules', 'today', user?.id],
     queryFn: async () => {
       try {
         return await scheduleService.getTodayChecklist(supabase)
@@ -115,7 +115,7 @@ export function useTodayChecklist() {
         throw error
       }
     },
-    enabled: true
+    enabled: !!user && !loading
   })
 }
 
@@ -125,7 +125,7 @@ export function useUpcomingSchedules(daysAhead: number = 7) {
   const supabase = createClient()
   
   return useQuery({
-    queryKey: ['schedules', 'upcoming', daysAhead],
+    queryKey: ['schedules', 'upcoming', daysAhead, user?.id],
     queryFn: async () => {
       try {
         return await scheduleService.getUpcomingSchedules(daysAhead, supabase)
@@ -139,7 +139,7 @@ export function useUpcomingSchedules(daysAhead: number = 7) {
         throw error
       }
     },
-    enabled: true
+    enabled: !!user && !loading
   })
 }
 
@@ -149,7 +149,7 @@ export function usePatientSchedules(patientId: string) {
   const supabase = createClient()
   
   return useQuery({
-    queryKey: ['schedules', 'patient', patientId],
+    queryKey: ['schedules', 'patient', patientId, user?.id],
     queryFn: async () => {
       try {
         return await scheduleService.getByPatientId(patientId, supabase)
@@ -163,7 +163,7 @@ export function usePatientSchedules(patientId: string) {
         throw error
       }
     },
-    enabled: !!patientId
+    enabled: !!patientId && !!user && !loading
   })
 }
 
@@ -173,7 +173,7 @@ export function useOverdueSchedules() {
   const supabase = createClient()
 
   return useQuery({
-    queryKey: ['schedules', 'overdue'],
+    queryKey: ['schedules', 'overdue', user?.id],
     queryFn: async () => {
       try {
         return await scheduleService.getOverdueSchedules(supabase)
@@ -187,6 +187,6 @@ export function useOverdueSchedules() {
         throw error
       }
     },
-    enabled: true
+    enabled: !!user && !loading
   })
 }

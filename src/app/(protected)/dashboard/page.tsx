@@ -53,15 +53,13 @@ export default function DashboardPage() {
   const { data: upcomingSchedules = [], isLoading: upcomingLoading, refetch: refetchUpcoming } = useUpcomingSchedules(7);
 
   // Get all schedules for additional calculations
-  const { schedules: allSchedules = [], refetch: refetchAll } = useSchedules();
+  const { schedules: allSchedules = [], isLoading: allLoading, refetch: refetchAll } = useSchedules();
 
-  const loading = todayLoading || upcomingLoading;
+  const loading = todayLoading || upcomingLoading || allLoading;
 
   // Refresh data function
   const refreshData = () => {
-    refetchToday();
-    refetchUpcoming();
-    refetchAll();
+    queryClient.invalidateQueries({ queryKey: ['schedules'] });
   };
 
   // Manual refresh function
@@ -110,6 +108,7 @@ export default function DashboardPage() {
 
   // 통계 계산
   const today = startOfDay(new Date());
+  const todayStr = format(today, 'yyyy-MM-dd');
 
   // 1. 오늘 체크리스트
   const todayCount = todaySchedules.length;
@@ -119,7 +118,7 @@ export default function DashboardPage() {
     if (schedule.status !== 'active') return false;
     const dueDate = safeParse(schedule.nextDueDate);
     if (!dueDate) return false;
-    return dueDate < today;
+    return format(dueDate, 'yyyy-MM-dd') < todayStr;
   }).length;
 
 
@@ -162,7 +161,7 @@ export default function DashboardPage() {
             <Calendar className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent className={isMobile ? 'p-3 pt-0' : ''}>
-            <div className="text-xl sm:text-2xl font-bold">{todayCount}</div>
+            <div className="text-xl sm:text-2xl font-bold">{todayLoading ? '—' : todayCount}</div>
             <p className="text-xs text-muted-foreground">
               오늘 처리 필요
             </p>
@@ -176,7 +175,7 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent className={isMobile ? 'p-3 pt-0' : ''}>
             <div className={`text-xl sm:text-2xl font-bold ${overdueCount > 0 ? 'text-red-600' : ''}`}>
-              {overdueCount}
+              {allLoading ? '—' : overdueCount}
             </div>
             <p className="text-xs text-muted-foreground">
               긴급 처리 필요

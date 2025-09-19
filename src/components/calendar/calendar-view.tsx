@@ -137,22 +137,25 @@ export function CalendarView({ className }: CalendarViewProps) {
     const totalCount = monthSchedules.length;
     const daysWithSchedules = calendarDays.filter(day => day.isCurrentMonth && day.schedules.some(s => s.status === 'active')).length;
 
-    // 연체된 스케줄 (오늘 이전의 활성 스케줄)
-    const overdueCount = schedules.filter(s => {
-      const scheduleDate = safeParse(s.nextDueDate);
-      return s.status === 'active' && scheduleDate && scheduleDate < today;
+    // 연체된 스케줄 (오늘 이전의 활성 스케줄) - 월별 통계이므로 monthSchedules 사용
+    const overdueCount = monthSchedules.filter(s => {
+      // 타임존 안전한 문자열 비교 사용
+      const todayString = format(today, 'yyyy-MM-dd');
+      return s.status === 'active' && s.nextDueDate && s.nextDueDate < todayString;
     }).length;
 
-    // 오늘 예정 스케줄
-    const todayCount = schedules.filter(s => {
-      const scheduleDate = safeParse(s.nextDueDate);
-      return s.status === 'active' && scheduleDate && isSameDay(scheduleDate, today);
+    // 오늘 예정 스케줄 - 월별 통계에 포함
+    const todayCount = monthSchedules.filter(s => {
+      const todayString = format(today, 'yyyy-MM-dd');
+      return s.status === 'active' && s.nextDueDate === todayString;
     }).length;
 
-    // 이번주 예정 스케줄
-    const weekCount = schedules.filter(s => {
-      const scheduleDate = safeParse(s.nextDueDate);
-      return s.status === 'active' && scheduleDate && isWithinInterval(scheduleDate, { start: weekStart, end: weekEnd });
+    // 이번주 예정 스케줄 - 월별 통계에 포함
+    const weekStartString = format(weekStart, 'yyyy-MM-dd');
+    const weekEndString = format(weekEnd, 'yyyy-MM-dd');
+    const weekCount = monthSchedules.filter(s => {
+      return s.status === 'active' && s.nextDueDate &&
+             s.nextDueDate >= weekStartString && s.nextDueDate <= weekEndString;
     }).length;
 
     return {
@@ -277,9 +280,9 @@ export function CalendarView({ className }: CalendarViewProps) {
     deleteMutation.mutate(id);
   };
 
-  // Refresh data function
+  // Refresh data function - 스케줄 관련 쿼리만 무효화
   const refreshData = () => {
-    refetch();
+    queryClient.invalidateQueries({ queryKey: ['schedules'] });
   };
 
 
