@@ -171,7 +171,7 @@ export function useOverdueSchedules() {
   const { toast } = useToast()
   const { user, loading } = useAuth()
   const supabase = createClient()
-  
+
   return useQuery({
     queryKey: ['schedules', 'overdue'],
     queryFn: async () => {

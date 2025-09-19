@@ -15,7 +15,7 @@ import { ScheduleActionButtons } from "@/components/schedules/schedule-action-bu
 import { ScheduleEditModal } from "@/components/schedules/schedule-edit-modal";
 import { getScheduleStatusLabel, getStatusBadgeClass } from "@/lib/utils/schedule-status";
 import type { ScheduleWithDetails } from "@/types/schedule";
-import { format, startOfWeek, endOfWeek, isWithinInterval, addDays, startOfDay, isSameDay } from "date-fns";
+import { format, startOfDay, isSameDay } from "date-fns";
 import { ko } from "date-fns/locale";
 import { safeFormatDate, safeParse, getDaysDifference } from "@/lib/utils/date";
 import { Button } from "@/components/ui/button";
@@ -53,14 +53,15 @@ export default function DashboardPage() {
   const { data: upcomingSchedules = [], isLoading: upcomingLoading, refetch: refetchUpcoming } = useUpcomingSchedules(7);
 
   // Get all schedules for additional calculations
-  const { schedules: allSchedules = [] } = useSchedules();
-  
+  const { schedules: allSchedules = [], refetch: refetchAll } = useSchedules();
+
   const loading = todayLoading || upcomingLoading;
 
   // Refresh data function
   const refreshData = () => {
     refetchToday();
     refetchUpcoming();
+    refetchAll();
   };
 
   // Manual refresh function
@@ -109,11 +110,8 @@ export default function DashboardPage() {
 
   // 통계 계산
   const today = startOfDay(new Date());
-  const tomorrow = addDays(today, 1);
-  const weekStart = startOfWeek(today, { locale: ko });
-  const weekEnd = endOfWeek(today, { locale: ko });
 
-  // 1. 오늘 체크리스트 (유지)
+  // 1. 오늘 체크리스트
   const todayCount = todaySchedules.length;
 
   // 2. 미완료 누적 (오늘 이전의 미완료 항목)
@@ -121,34 +119,9 @@ export default function DashboardPage() {
     if (schedule.status !== 'active') return false;
     const dueDate = safeParse(schedule.nextDueDate);
     if (!dueDate) return false;
-    return dueDate < today; // 오늘보다 이전
+    return dueDate < today;
   }).length;
 
-  // 3. 내일 예정 (내일 처리 가능한 항목)
-  const tomorrowCount = allSchedules.filter(schedule => {
-    if (schedule.status !== 'active') return false;
-    const dueDate = safeParse(schedule.nextDueDate);
-    if (!dueDate) return false;
-
-    // 내일이거나, 7일 전부터 실행 가능한 항목 중 내일 처리 예정
-    const daysDiff = getDaysDifference(dueDate, tomorrow);
-    return daysDiff === 0 || (daysDiff <= -6 && daysDiff >= -7);
-  }).length;
-
-  // 4. 이번 주 완료율 계산
-  const weeklySchedules = allSchedules.filter(schedule => {
-    const dueDate = safeParse(schedule.nextDueDate);
-    if (!dueDate) return false;
-    return isWithinInterval(dueDate, { start: weekStart, end: weekEnd });
-  });
-
-  // 실제 완료된 항목은 schedule_executions 테이블에서 가져와야 하지만,
-  // 현재는 간단히 active가 아닌 completed 상태로 계산
-  const completedThisWeek = weeklySchedules.filter(s => s.status === 'completed').length;
-  const totalThisWeek = weeklySchedules.length;
-  const weeklyCompletionRate = totalThisWeek > 0
-    ? Math.round((completedThisWeek / totalThisWeek) * 100)
-    : 0;
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -211,33 +184,6 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className={`flex flex-row items-center justify-between space-y-0 ${isMobile ? 'p-3 pb-2' : 'pb-2'}`}>
-            <CardTitle className="text-xs sm:text-sm font-medium">내일 예정</CardTitle>
-            <Clock className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent className={isMobile ? 'p-3 pt-0' : ''}>
-            <div className="text-xl sm:text-2xl font-bold">{tomorrowCount}</div>
-            <p className="text-xs text-muted-foreground">
-              내일 준비 필요
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className={`flex flex-row items-center justify-between space-y-0 ${isMobile ? 'p-3 pb-2' : 'pb-2'}`}>
-            <CardTitle className="text-xs sm:text-sm font-medium">이번 주 완료율</CardTitle>
-            <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent className={isMobile ? 'p-3 pt-0' : ''}>
-            <div className="text-xl sm:text-2xl font-bold">
-              {weeklyCompletionRate}%
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {completedThisWeek}/{totalThisWeek} 완료
-            </p>
-          </CardContent>
-        </Card>
       </div>
 
       {/* 오늘 체크리스트 */}
