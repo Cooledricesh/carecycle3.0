@@ -36,6 +36,7 @@ export default function ProfilePage() {
           if (data) setProfile(data);
         });
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
   
   const [isLoading, setIsLoading] = useState(false);

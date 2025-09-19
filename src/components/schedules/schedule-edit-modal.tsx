@@ -102,6 +102,7 @@ export function ScheduleEditModal({
         notes: schedule.notes || ''
       })
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, schedule, form])
 
   const loadItems = async () => {

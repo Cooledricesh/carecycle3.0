@@ -70,7 +70,7 @@ export function PatientSearchField({
       // Clear selection when value is empty
       clearSelection()
     }
-  }, [value])
+  }, [value, selectedPatient, handleSelectPatient, clearSelection])
 
   // Handle clear button
   const handleClear = (e: React.MouseEvent) => {
@@ -145,7 +145,7 @@ export function PatientSearchField({
 
             {!isLoading && isSearchActive && !hasResults && (
               <div className="px-4 py-3 text-sm text-muted-foreground text-center">
-                "{searchQuery}"에 대한 검색 결과가 없습니다.
+                {`"${searchQuery}"`}에 대한 검색 결과가 없습니다.
               </div>
             )}
 

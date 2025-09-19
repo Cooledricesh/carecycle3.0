@@ -100,6 +100,7 @@ export function ScheduleCreateModal({
     if (open) {
       loadItems()
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
 
   // Set preset patient ID when modal opens

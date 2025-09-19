@@ -27,6 +27,7 @@ export default function DebugProfilePage() {
           if (data) setProfile(data);
         });
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
   const createProfile = async () => {

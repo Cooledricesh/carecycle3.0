@@ -52,7 +52,7 @@ export function usePatientSearch(options: UsePatientSearchOptions = {}) {
     if (value.length > 0) {
       setIsOpen(true)
     }
-  }, [minQueryLength])
+  }, [])
 
   // Clear selection
   const clearSelection = useCallback(() => {

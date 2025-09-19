@@ -42,29 +42,30 @@ export default function AdminUsersPage() {
   const { toast } = useToast();
 
   useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        setUsers(data || []);
+      } catch (error) {
+        console.error('Error fetching users:', error);
+        toast({
+          title: '오류',
+          description: '사용자 목록을 불러오는데 실패했습니다.',
+          variant: 'destructive',
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
     fetchUsers();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  const fetchUsers = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      setUsers(data || []);
-    } catch (error) {
-      console.error('Error fetching users:', error);
-      toast({
-        title: '오류',
-        description: '사용자 목록을 불러오는데 실패했습니다.',
-        variant: 'destructive',
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleUserAction = async () => {
     if (!actionDialog) return;
