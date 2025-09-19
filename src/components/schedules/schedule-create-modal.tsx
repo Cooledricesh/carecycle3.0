@@ -79,6 +79,7 @@ export function ScheduleCreateModal({
   const [items, setItems] = useState<ItemOption[]>([])
   const [itemComboOpen, setItemComboOpen] = useState(false)
   const [itemSearchValue, setItemSearchValue] = useState('')
+  const [datePopoverOpen, setDatePopoverOpen] = useState(false)
   const { toast } = useToast()
   const supabase = createClient()
 
@@ -361,7 +362,7 @@ export function ScheduleCreateModal({
               render={({ field }) => (
                 <FormItem className="flex flex-col">
                   <FormLabel>최초 시행일 *</FormLabel>
-                  <Popover>
+                  <Popover open={datePopoverOpen} onOpenChange={setDatePopoverOpen}>
                     <PopoverTrigger asChild>
                       <FormControl>
                         <Button
@@ -384,7 +385,10 @@ export function ScheduleCreateModal({
                       <Calendar
                         mode="single"
                         selected={field.value}
-                        onSelect={field.onChange}
+                        onSelect={(date) => {
+                          field.onChange(date)
+                          setDatePopoverOpen(false)
+                        }}
                         initialFocus
                       />
                     </PopoverContent>

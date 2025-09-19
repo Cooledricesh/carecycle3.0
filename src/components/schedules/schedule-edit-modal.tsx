@@ -75,6 +75,7 @@ export function ScheduleEditModal({
   const [items, setItems] = useState<ItemOption[]>([])
   const [itemComboOpen, setItemComboOpen] = useState(false)
   const [itemSearchValue, setItemSearchValue] = useState('')
+  const [datePopoverOpen, setDatePopoverOpen] = useState(false)
   const { toast } = useToast()
   const queryClient = useQueryClient()
   const supabase = createClient()
@@ -302,7 +303,7 @@ export function ScheduleEditModal({
               render={({ field }) => (
                 <FormItem className="flex flex-col">
                   <FormLabel>다음 시행 예정일</FormLabel>
-                  <Popover>
+                  <Popover open={datePopoverOpen} onOpenChange={setDatePopoverOpen}>
                     <PopoverTrigger asChild>
                       <FormControl>
                         <Button
@@ -325,7 +326,10 @@ export function ScheduleEditModal({
                       <Calendar
                         mode="single"
                         selected={field.value ? parse(field.value, 'yyyy-MM-dd', new Date()) : undefined}
-                        onSelect={(date) => field.onChange(date ? format(date, 'yyyy-MM-dd') : undefined)}
+                        onSelect={(date) => {
+                          field.onChange(date ? format(date, 'yyyy-MM-dd') : undefined)
+                          setDatePopoverOpen(false)
+                        }}
                         initialFocus
                       />
                     </PopoverContent>

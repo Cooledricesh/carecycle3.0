@@ -36,7 +36,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useIsMobile } from "@/hooks/useIsMobile";
-import { touchTarget, responsiveText, responsivePadding } from "@/lib/utils";
+import { touchTarget, responsiveText, responsivePadding, cn } from "@/lib/utils";
 
 export default function SchedulesPage() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -202,22 +202,57 @@ export default function SchedulesPage() {
 
       {/* Tabs */}
       <Tabs value={selectedTab} onValueChange={setSelectedTab}>
-        <TabsList className={`grid w-full ${isMobile ? 'grid-cols-2' : 'grid-cols-4'}`}>
-          <TabsTrigger value="all" className="text-xs sm:text-sm">
-            전체 ({schedules.length})
-          </TabsTrigger>
-          <TabsTrigger value="active" className="text-xs sm:text-sm">
-            활성 ({schedules.filter(s => s.status === 'active').length})
-          </TabsTrigger>
-          <TabsTrigger value="paused" className="text-xs sm:text-sm">
-            일시중지 ({schedules.filter(s => s.status === 'paused').length})
-          </TabsTrigger>
-          <TabsTrigger value="overdue" className="text-xs sm:text-sm">
-            지연 ({overdueSchedules.length})
-          </TabsTrigger>
-        </TabsList>
+        <div className={cn(
+          "w-full",
+          isMobile && "bg-gray-50 p-3 rounded-lg border border-gray-200 mb-4"
+        )}>
+          <TabsList className={cn(
+            "grid w-full",
+            isMobile ? "grid-cols-2 gap-2 h-auto bg-transparent p-0" : "grid-cols-4"
+          )}>
+            <TabsTrigger
+              value="all"
+              className={cn(
+                "text-xs sm:text-sm",
+                isMobile && "h-12 bg-white border border-gray-200 data-[state=active]:bg-blue-50 data-[state=active]:border-blue-300 data-[state=active]:text-blue-700"
+              )}
+            >
+              전체 ({schedules.length})
+            </TabsTrigger>
+            <TabsTrigger
+              value="active"
+              className={cn(
+                "text-xs sm:text-sm",
+                isMobile && "h-12 bg-white border border-gray-200 data-[state=active]:bg-blue-50 data-[state=active]:border-blue-300 data-[state=active]:text-blue-700"
+              )}
+            >
+              활성 ({schedules.filter(s => s.status === 'active').length})
+            </TabsTrigger>
+            <TabsTrigger
+              value="paused"
+              className={cn(
+                "text-xs sm:text-sm",
+                isMobile && "h-12 bg-white border border-gray-200 data-[state=active]:bg-blue-50 data-[state=active]:border-blue-300 data-[state=active]:text-blue-700"
+              )}
+            >
+              일시중지 ({schedules.filter(s => s.status === 'paused').length})
+            </TabsTrigger>
+            <TabsTrigger
+              value="overdue"
+              className={cn(
+                "text-xs sm:text-sm",
+                isMobile && "h-12 bg-white border border-gray-200 data-[state=active]:bg-orange-50 data-[state=active]:border-orange-300 data-[state=active]:text-orange-700"
+              )}
+            >
+              지연 ({overdueSchedules.length})
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
-        <TabsContent value={selectedTab} className="space-y-4">
+        <TabsContent value={selectedTab} className={cn(
+          "space-y-4",
+          isMobile ? "mt-0" : "mt-2"
+        )}>
           <Card>
             <CardHeader className={isMobile ? 'p-4' : ''}>
               <CardTitle className={responsiveText.h3}>스케줄 목록</CardTitle>
