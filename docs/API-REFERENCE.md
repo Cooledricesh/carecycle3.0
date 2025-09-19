@@ -13,7 +13,12 @@ Production: https://api.medical-scheduler.com
 
 ## Authentication
 
-All API endpoints (except login) require authentication via JWT Bearer token.
+All API endpoints require authentication using Supabase's new API key system with client and service-level access.
+
+### Key Types
+
+- **Publishable Key**: Used for client-side operations, browser-safe
+- **Secret Key**: Used for server-side admin operations, never exposed to the client
 
 ### Obtaining Access Token
 
@@ -27,24 +32,33 @@ Content-Type: application/json
 }
 ```
 
-### Using the Token
+### Authentication Flow
 
-Include the token in the Authorization header for all subsequent requests:
+1. Client creates Supabase client using publishable key
+2. Server creates authenticated client using user's session
+3. Admin operations use service client with secret key
 
-```http
-Authorization: Bearer YOUR_ACCESS_TOKEN
+### Server-Side Authentication Helpers
+
+```typescript
+// User-level operations
+const supabase = await createClient()
+
+// Admin-only operations
+const adminSupabase = await createServiceClient()
+
+// Check current user
+const user = await getCurrentUser()
+
+// Require admin access
+await requireAdmin()
 ```
 
-### Token Refresh
+### Session Management
 
-```http
-POST /auth/refresh
-Content-Type: application/json
-
-{
-  "refreshToken": "YOUR_REFRESH_TOKEN"
-}
-```
+- Sessions managed via secure, HTTP-only cookies
+- Automatic session refresh using Supabase SSR
+- Explicit session invalidation on logout
 
 ## Error Handling
 
@@ -425,17 +439,133 @@ Authorization: Bearer YOUR_ACCESS_TOKEN
 ]
 ```
 
-## WebSocket Real-time Updates
+## Server Actions
+
+Server Actions provide a secure, type-safe method for performing sensitive server-side mutations directly from client components.
+
+### Key Features
+
+- Type-safe server mutations
+- Built-in authentication and authorization
+- Direct integration with client components
+- Automatic error handling
+
+### Delete Item Action Example
+
+```typescript
+// src/app/actions/items.ts
+export async function deleteItemAction(id: string) {
+  // Server-side validation and deletion logic
+  // Checks for execution history
+  // Ensures admin-only access
+  const result = await deleteItem(id);
+  return result;
+}
+
+// Client-side usage
+const handleDelete = async () => {
+  try {
+    const result = await deleteItemAction(itemId);
+    if (result.success) {
+      // Handle successful deletion
+    } else {
+      // Handle deletion errors
+      alert(result.error || "삭제할 수 없습니다");
+    }
+  } catch (error) {
+    // Handle server action errors
+  }
+}
+```
+
+### Constraints and Validation
+
+- Deletion blocked if item has medical execution history
+- Admin role required
+- Cascading deletion of related schedules and notifications
+
+## Real-time Architecture
+
+### Event Manager (`/src/lib/realtime/event-manager.ts`)
+
+- Centralized event bus for all system updates
+- Table-specific subscriptions
+- Connection state monitoring
+
+#### Event Subscription Example
+
+```typescript
+// Subscribe to patient updates
+eventManager.subscribeToTable('patients', (event) => {
+  switch (event.type) {
+    case 'INSERT': handlePatientCreated(event.data); break;
+    case 'UPDATE': handlePatientUpdated(event.data); break;
+    case 'DELETE': handlePatientDeleted(event.data); break;
+  }
+});
+```
+
+### Connection Manager (`/src/lib/realtime/connection-manager.ts`)
+
+- Single WebSocket connection point
+- Automatic reconnection with exponential backoff
+- Connection health monitoring
+
+#### Optimistic Updates Pattern
+
+```typescript
+const onMutate = async (newData) => {
+  await queryClient.cancelQueries({ queryKey });
+  const previousData = queryClient.getQueryData(queryKey);
+  queryClient.setQueryData(queryKey, (oldData) => {
+    // Optimistically update UI
+    return { ...oldData, ...newData };
+  });
+  return { previousData };
+};
+
+const onError = (error, variables, context) => {
+  // Rollback to previous state if mutation fails
+  queryClient.setQueryData(queryKey, context.previousData);
+};
+```
+
+### Fallback Polling Strategy
+
+- Connected state: 30-60 second polling interval
+- Disconnected state: 3-5 second polling for critical data updates
+
+## Performance Monitoring
+
+### Dashboard Metrics
+
+- **Cache Hit Rate**: Target > 70%
+- **Query Time**: Target < 500ms
+- **Connection Uptime**: Target > 90%
+- **Error Rate**: Target < 5%
+
+### Custom Metrics Recording
+
+```typescript
+// Performance tracking utility
+performanceMonitor.recordMetric({
+  name: 'database_query_time',
+  value: queryExecutionTime,
+  tags: ['patients', 'read']
+});
+```
+
+### WebSocket Real-time Updates
 
 The system supports real-time updates via WebSocket connections.
 
-### Connection
+#### Connection
 
 ```javascript
 const ws = new WebSocket('wss://api.medical-scheduler.com/realtime');
 ```
 
-### Event Types
+#### Event Types
 
 | Event | Description |
 |-------|-------------|
@@ -446,7 +576,7 @@ const ws = new WebSocket('wss://api.medical-scheduler.com/realtime');
 | `schedule.completed` | Schedule marked as completed |
 | `schedule.overdue` | Schedule became overdue |
 
-### Message Format
+#### Message Format
 
 ```json
 {
@@ -505,20 +635,36 @@ Content-Type: application/json
 ### JavaScript/TypeScript
 
 ```typescript
-import { createClient } from '@supabase/supabase-js';
+// Client-side user operations
+import { createClient } from '@/lib/supabase/client';
 
-const supabase = createClient(
-  'https://your-project.supabase.co',
-  'your-publishable-key'
-);
+const supabase = createClient();
 
-// Fetch patients
+// Fetch patients with type-safe queries
 const { data, error } = await supabase
   .from('patients')
   .select('*')
   .eq('isActive', true)
   .limit(20);
+
+// Server-side admin operations
+import { createServiceClient } from '@/lib/supabase/server';
+
+const adminSupabase = await createServiceClient();
+
+// Bypasses RLS for admin tasks
+const { data, error } = await adminSupabase
+  .from('patients')
+  .update({ status: 'archived' })
+  .eq('id', patientId);
 ```
+
+### Key Security Practices
+
+- **Never expose secret key in client code**
+- Use environment-specific client creation
+- Implement Row Level Security (RLS)
+- Validate all user inputs
 
 ### cURL
 
@@ -546,9 +692,60 @@ For API support and questions:
 - Issues: [GitHub Issues](https://github.com/your-repo/issues)
 - Email: support@medical-scheduler.com
 
+## Error Codes
+
+### New Error Scenarios
+
+| Code | Description | Example Scenario |
+|------|-------------|------------------|
+| `EXECUTION_HISTORY_EXISTS` | Cannot delete item with medical records | Attempting to delete an item with active schedules |
+| `ADMIN_REQUIRED` | Operation requires admin privileges | Non-admin trying to perform admin actions |
+| `CONNECTION_LOST` | Real-time connection interrupted | WebSocket disconnection during live update |
+| `OPTIMISTIC_UPDATE_FAILED` | Rollback triggered | Database mutation fails after optimistic update |
+| `SCHEDULE_CONSTRAINT_VIOLATION` | Schedule creation blocked | Conflicting schedule or policy violation |
+
+## Migration Guide: v1.0 to v1.1
+
+### Authentication System Changes
+- Replace legacy JWT tokens with new publishable/secret keys
+- Update Supabase client initialization
+- Modify authentication middleware
+
+### Server Actions Adoption
+- Migrate traditional API endpoints to Server Actions
+- Implement type-safe mutations
+- Add enhanced authorization checks
+
+### Real-time Subscription Updates
+- Use new event manager for table subscriptions
+- Implement fallback polling strategies
+- Update connection management logic
+
+### Database Schema Changes
+- Added cascade deletion constraints
+- Enhanced Row Level Security policies
+- Introduced more granular role-based access control
+
 ## Changelog
 
-### Version 1.0.0 (Current)
+### Version 1.1.0 (Current)
+- Migrated to new Supabase API key system
+- Enhanced server-side authentication with separate clients
+- Improved type safety with generated database types
+- Implemented stricter Row Level Security (RLS)
+- Added server actions for more secure mutations
+- Improved error handling and validation
+- Comprehensive real-time architecture
+- Advanced performance monitoring
+
+#### Breaking Changes
+- Removed legacy JWT token authentication
+- Require separate publishable and secret keys
+- Updated client initialization methods
+- Server Actions replace traditional REST endpoints
+- Enhanced real-time connection management
+
+### Version 1.0.0
 - Initial API release
 - Patient management endpoints
 - Schedule automation

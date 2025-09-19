@@ -29,21 +29,31 @@ export async function deleteItemAction(id: string) {
     const serviceClient = await createServiceClient()
 
     // 1. 관련 스케줄 찾기
-    const { data: schedules } = await serviceClient
+    const { data: schedules, error: schedulesError } = await serviceClient
       .from('schedules')
       .select('id')
       .eq('item_id', id)
+
+    if (schedulesError) {
+      console.error('Error fetching schedules:', schedulesError)
+      throw new Error(`스케줄 조회 실패: ${schedulesError.message}`)
+    }
 
     // 2. 실행 기록 확인 (의료 기록 보호)
     if (schedules && schedules.length > 0) {
       const scheduleIds = schedules.map(s => s.id)
 
-      const { data: executions } = await serviceClient
+      const { data: executions, error: executionsError } = await serviceClient
         .from('schedule_executions')
         .select('id')
         .eq('status', 'completed')
         .in('schedule_id', scheduleIds)
         .limit(1)
+
+      if (executionsError) {
+        console.error('Error fetching executions:', executionsError)
+        throw new Error(`실행 기록 조회 실패: ${executionsError.message}`)
+      }
 
       if (executions && executions.length > 0) {
         throw new Error('이 항목은 실행 기록이 있어 삭제할 수 없습니다. 비활성화를 사용해주세요.')
@@ -51,17 +61,27 @@ export async function deleteItemAction(id: string) {
 
       // 3. 관련 데이터 삭제 (트리거 수정으로 단순화)
       // notifications 먼저 삭제 (schedule 참조)
-      await serviceClient
+      const { error: notificationsError } = await serviceClient
         .from('notifications')
         .delete()
         .in('schedule_id', scheduleIds)
+
+      if (notificationsError) {
+        console.error('Error deleting notifications:', notificationsError)
+        throw new Error(`알림 삭제 실패: ${notificationsError.message}`)
+      }
     }
 
     // schedules 삭제 (트리거가 DELETE를 로깅하지 않음)
-    await serviceClient
+    const { error: schedulesDeleteError } = await serviceClient
       .from('schedules')
       .delete()
       .eq('item_id', id)
+
+    if (schedulesDeleteError) {
+      console.error('Error deleting schedules:', schedulesDeleteError)
+      throw new Error(`스케줄 삭제 실패: ${schedulesDeleteError.message}`)
+    }
 
     // 3. item 삭제
     const { error: deleteError } = await serviceClient
