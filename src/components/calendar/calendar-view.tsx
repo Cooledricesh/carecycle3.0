@@ -1,18 +1,20 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { 
-  format, 
-  startOfMonth, 
-  endOfMonth, 
-  startOfWeek, 
-  endOfWeek, 
-  addDays, 
-  addMonths, 
-  subMonths, 
-  isSameMonth, 
-  isSameDay, 
-  isToday
+import {
+  format,
+  startOfMonth,
+  endOfMonth,
+  startOfWeek,
+  endOfWeek,
+  startOfDay,
+  addDays,
+  addMonths,
+  subMonths,
+  isSameMonth,
+  isSameDay,
+  isToday,
+  isWithinInterval
 } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { differenceInWeeks } from 'date-fns';
@@ -20,7 +22,7 @@ import { ScheduleResumeDialog } from '@/components/schedules/schedule-resume-dia
 import type { ResumeOptions } from '@/lib/schedule-management/schedule-state-manager';
 import { ScheduleDateCalculator } from '@/lib/schedule-management/schedule-date-calculator';
 import { getSchedulePausedDate, getSchedulePausedDateSync } from '@/lib/schedule-management/schedule-pause-utils';
-import { ChevronLeft, ChevronRight, Calendar, Clock, AlertCircle } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar, Clock, AlertCircle, ChevronUp, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -34,9 +36,10 @@ import { getScheduleStatusLabel, sortSchedulesByPriority } from '@/lib/utils/sch
 import type { ScheduleWithDetails } from '@/types/schedule';
 import { safeFormatDate, safeParse } from '@/lib/utils/date';
 import { scheduleService } from '@/services/scheduleService';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
 import { mapErrorToUserMessage } from '@/lib/error-mapper';
+import { createClient } from '@/lib/supabase/client';
 
 interface CalendarViewProps {
   className?: string;
@@ -51,11 +54,13 @@ interface CalendarDay {
 export function CalendarView({ className }: CalendarViewProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  
+  const [statsExpanded, setStatsExpanded] = useState(false);
+
   // 모바일 상태 확인
   const isMobile = useIsMobile();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const supabase = createClient();
   
   // 모든 스케줄 데이터 가져오기
   const { schedules = [], isLoading, refetch } = useSchedules();
@@ -118,29 +123,66 @@ export function CalendarView({ className }: CalendarViewProps) {
   const monthlyStats = useMemo(() => {
     const monthStart = startOfMonth(currentDate);
     const monthEnd = endOfMonth(currentDate);
-    
+    const today = startOfDay(new Date());
+    const weekStart = startOfWeek(today, { locale: ko });
+    const weekEnd = endOfWeek(today, { locale: ko });
+
     const monthSchedules = schedules.filter(schedule => {
       const scheduleDate = safeParse(schedule.nextDueDate);
       return scheduleDate && scheduleDate >= monthStart && scheduleDate <= monthEnd;
     });
 
+    // 기존 통계
     const activeCount = monthSchedules.filter(s => s.status === 'active').length;
-    const overdueCount = monthSchedules.filter(s => {
-      const scheduleDate = safeParse(s.nextDueDate);
-      return scheduleDate && scheduleDate < new Date() && s.status === 'active';
-    }).length;
-    const completedCount = monthSchedules.filter(s => s.status === 'completed').length;
     const totalCount = monthSchedules.length;
     const daysWithSchedules = calendarDays.filter(day => day.schedules.length > 0).length;
+
+    // 연체된 스케줄 (오늘 이전의 활성 스케줄)
+    const overdueCount = schedules.filter(s => {
+      const scheduleDate = safeParse(s.nextDueDate);
+      return s.status === 'active' && scheduleDate && scheduleDate < today;
+    }).length;
+
+    // 오늘 예정 스케줄
+    const todayCount = schedules.filter(s => {
+      const scheduleDate = safeParse(s.nextDueDate);
+      return s.status === 'active' && scheduleDate && isSameDay(scheduleDate, today);
+    }).length;
+
+    // 이번주 예정 스케줄
+    const weekCount = schedules.filter(s => {
+      const scheduleDate = safeParse(s.nextDueDate);
+      return s.status === 'active' && scheduleDate && isWithinInterval(scheduleDate, { start: weekStart, end: weekEnd });
+    }).length;
 
     return {
       total: totalCount,
       active: activeCount,
       overdue: overdueCount,
-      completed: completedCount,
+      today: todayCount,
+      week: weekCount,
       daysWithSchedules
     };
   }, [currentDate, schedules, calendarDays]);
+
+  // 이번달 완료 횟수 쿼리
+  const { data: monthlyExecutions = 0 } = useQuery({
+    queryKey: ['executions', format(currentDate, 'yyyy-MM')],
+    queryFn: async () => {
+      const monthStart = startOfMonth(currentDate);
+      const monthEnd = endOfMonth(currentDate);
+
+      const { count } = await supabase
+        .from('schedule_executions')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'completed')
+        .gte('executed_date', format(monthStart, 'yyyy-MM-dd'))
+        .lte('executed_date', format(monthEnd, 'yyyy-MM-dd'));
+
+      return count || 0;
+    },
+    enabled: !!supabase
+  });
 
   const navigateMonth = (direction: 'prev' | 'next') => {
     setCurrentDate(prev => 
@@ -296,51 +338,103 @@ export function CalendarView({ className }: CalendarViewProps) {
             </div>
           </div>
           
-          {/* 월별 통계 - 모바일에서 2x3 그리드 */}
-          <div className={`grid gap-3 mt-4 pt-4 border-t ${
-            isMobile ? 'grid-cols-2' : 'grid-cols-2 md:grid-cols-5'
-          }`}>
-            <div className="text-center p-2">
-              <div className={`font-semibold text-gray-900 ${isMobile ? 'text-base' : 'text-lg'}`}>
-                {monthlyStats.total}
+          {/* 모바일과 데스크톱 통계 조건부 렌더링 */}
+          {isMobile ? (
+            <>
+              {/* 모바일: 압축형 통계 바 */}
+              <div className="mt-4 pt-4 border-t">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    {/* 연체 (항상 표시) */}
+                    <div className="flex items-center gap-1">
+                      <AlertCircle className="h-4 w-4 text-red-500" />
+                      <span className="text-sm font-semibold text-red-600">{monthlyStats.overdue}</span>
+                      <span className="text-xs text-gray-500">연체</span>
+                    </div>
+
+                    {/* 오늘 */}
+                    <div className="flex items-center gap-1">
+                      <Clock className="h-4 w-4 text-blue-500" />
+                      <span className="text-sm font-semibold text-blue-600">{monthlyStats.today}</span>
+                      <span className="text-xs text-gray-500">오늘</span>
+                    </div>
+
+                    {/* 이번주 */}
+                    <div className="flex items-center gap-1">
+                      <Calendar className="h-4 w-4 text-green-500" />
+                      <span className="text-sm font-semibold text-green-600">{monthlyStats.week}</span>
+                      <span className="text-xs text-gray-500">이번주</span>
+                    </div>
+                  </div>
+
+                  {/* 더보기 토글 */}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setStatsExpanded(!statsExpanded)}
+                    className="min-h-[32px] min-w-[32px] p-1"
+                  >
+                    {statsExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                    <span className="sr-only">통계 {statsExpanded ? '접기' : '펼치기'}</span>
+                  </Button>
+                </div>
+
+                {/* 확장된 통계 */}
+                {statsExpanded && (
+                  <div className="grid grid-cols-3 gap-2 mt-3 p-3 bg-gray-50 rounded-lg">
+                    <div className="text-center">
+                      <div className="text-base font-semibold text-green-600">{monthlyStats.active}</div>
+                      <div className="text-xs text-gray-500">활성</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-base font-semibold text-blue-600">{monthlyExecutions}</div>
+                      <div className="text-xs text-gray-500">이번달 완료</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-base font-semibold text-purple-600">{monthlyStats.daysWithSchedules}</div>
+                      <div className="text-xs text-gray-500">일정있는 날</div>
+                    </div>
+                  </div>
+                )}
               </div>
-              <div className={`text-gray-500 ${isMobile ? 'text-xs' : 'text-xs'}`}>
-                전체 스케줄
+            </>
+          ) : (
+            /* 데스크톱: 전체 제거, 이번달 완료 추가 */
+            <div className="grid gap-3 mt-4 pt-4 border-t grid-cols-2 md:grid-cols-4">
+              <div className="text-center p-2">
+                <div className="font-semibold text-green-600 text-lg">
+                  {monthlyStats.active}
+                </div>
+                <div className="text-gray-500 text-xs">
+                  활성 스케줄
+                </div>
+              </div>
+              <div className="text-center p-2">
+                <div className="font-semibold text-red-600 text-lg">
+                  {monthlyStats.overdue}
+                </div>
+                <div className="text-gray-500 text-xs">
+                  연체 스케줄
+                </div>
+              </div>
+              <div className="text-center p-2">
+                <div className="font-semibold text-blue-600 text-lg">
+                  {monthlyExecutions}
+                </div>
+                <div className="text-gray-500 text-xs">
+                  이번달 완료
+                </div>
+              </div>
+              <div className="text-center p-2">
+                <div className="font-semibold text-purple-600 text-lg">
+                  {monthlyStats.daysWithSchedules}
+                </div>
+                <div className="text-gray-500 text-xs">
+                  스케줄이 있는 일수
+                </div>
               </div>
             </div>
-            <div className="text-center p-2">
-              <div className={`font-semibold text-green-600 ${isMobile ? 'text-base' : 'text-lg'}`}>
-                {monthlyStats.active}
-              </div>
-              <div className={`text-gray-500 ${isMobile ? 'text-xs' : 'text-xs'}`}>
-                활성 스케줄
-              </div>
-            </div>
-            <div className="text-center p-2">
-              <div className={`font-semibold text-red-600 ${isMobile ? 'text-base' : 'text-lg'}`}>
-                {monthlyStats.overdue}
-              </div>
-              <div className={`text-gray-500 ${isMobile ? 'text-xs' : 'text-xs'}`}>
-                연체 스케줄
-              </div>
-            </div>
-            <div className="text-center p-2">
-              <div className={`font-semibold text-blue-600 ${isMobile ? 'text-base' : 'text-lg'}`}>
-                {monthlyStats.completed}
-              </div>
-              <div className={`text-gray-500 ${isMobile ? 'text-xs' : 'text-xs'}`}>
-                완료된 스케줄
-              </div>
-            </div>
-            <div className={`text-center p-2 ${isMobile ? 'col-span-2' : ''}`}>
-              <div className={`font-semibold text-purple-600 ${isMobile ? 'text-base' : 'text-lg'}`}>
-                {monthlyStats.daysWithSchedules}
-              </div>
-              <div className={`text-gray-500 ${isMobile ? 'text-xs' : 'text-xs'}`}>
-                스케줄이 있는 일수
-              </div>
-            </div>
-          </div>
+          )}
         </CardHeader>
         <CardContent className={isMobile ? 'px-2 pb-4' : ''}>
           {/* 요일 헤더 */}
