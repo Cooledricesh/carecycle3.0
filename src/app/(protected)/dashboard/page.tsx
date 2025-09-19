@@ -24,6 +24,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { responsiveGrid, responsiveText, touchTarget } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
+import { AppIcon } from "@/components/ui/app-icon";
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -142,16 +143,19 @@ export default function DashboardPage() {
   return (
     <div className="space-y-4 sm:space-y-6">
       <div className={`flex ${isMobile ? 'flex-col gap-3' : 'justify-between items-center'}`}>
-        <div>
-          <h1 className={`${responsiveText.h2} font-bold text-gray-900`}>
-            안녕하세요, {profile.name}님
-          </h1>
-          <p className="text-sm sm:text-base text-gray-600">
-            오늘의 스케줄을 확인해보세요.
-            <span className={`${isMobile ? 'block mt-1' : 'ml-2'} text-xs text-gray-400`}>
-              마지막 업데이트: {format(lastUpdated, 'HH:mm:ss')}
-            </span>
-          </p>
+        <div className="flex items-start gap-3">
+          <AppIcon size={isMobile ? "md" : "lg"} className="mt-1" />
+          <div>
+            <h1 className={`${responsiveText.h2} font-bold text-gray-900`}>
+              안녕하세요, {profile.name}님
+            </h1>
+            <p className="text-sm sm:text-base text-gray-600">
+              오늘의 스케줄을 확인해보세요.
+              <span className={`${isMobile ? 'block mt-1' : 'ml-2'} text-xs text-gray-400`}>
+                마지막 업데이트: {format(lastUpdated, 'HH:mm:ss')}
+              </span>
+            </p>
+          </div>
         </div>
         <div className={`flex items-center gap-2 ${isMobile ? 'w-full' : ''}`}>
           <Button
@@ -294,8 +298,9 @@ export default function DashboardPage() {
               스케줄을 불러오는 중...
             </div>
           ) : upcomingSchedules.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
-              실행 가능한 스케줄이 없습니다.
+            <div className="text-center py-12">
+              <AppIcon size="xl" className="mx-auto mb-4 opacity-50" />
+              <p className="text-gray-500">실행 가능한 스케줄이 없습니다.</p>
             </div>
           ) : (
             <div className="space-y-3 sm:space-y-4">
