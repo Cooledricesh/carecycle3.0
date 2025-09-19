@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar, Clock, CheckCircle, AlertCircle, Check, RefreshCw } from "lucide-react";
+import { Calendar, Clock, CheckCircle, TrendingUp, RefreshCw } from "lucide-react";
 import { getScheduleCategoryIcon, getScheduleCategoryColor, getScheduleCategoryBgColor, getScheduleCategoryLabel, getScheduleCardBgColor } from '@/lib/utils/schedule-category';
 import { PatientRegistrationModal } from "@/components/patients/patient-registration-modal";
 import { useAuth } from "@/providers/auth-provider-simple";
@@ -108,6 +108,15 @@ export default function DashboardPage() {
   const overdueCount = todaySchedules.length;
   const weekCount = upcomingSchedules.length;
 
+  // 장기 주기 일정 계산 (28일 이상 주기 중 7일 내 도래)
+  const longCycleCount = upcomingSchedules.filter(schedule => {
+    if (!schedule.intervalWeeks || schedule.intervalWeeks < 4) return false; // 4주(28일) 미만은 제외
+    const dueDate = safeParse(schedule.nextDueDate);
+    if (!dueDate) return false;
+    const daysUntil = Math.ceil((dueDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+    return daysUntil >= 0 && daysUntil <= 7; // 오늘부터 7일 이내
+  }).length;
+
   return (
     <div className="space-y-4 sm:space-y-6">
       <div className={`flex ${isMobile ? 'flex-col gap-3' : 'justify-between items-center'}`}>
@@ -182,13 +191,13 @@ export default function DashboardPage() {
 
         <Card>
           <CardHeader className={`flex flex-row items-center justify-between space-y-0 ${isMobile ? 'p-3 pb-2' : 'pb-2'}`}>
-            <CardTitle className="text-xs sm:text-sm font-medium">알림 필요</CardTitle>
-            <AlertCircle className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
+            <CardTitle className="text-xs sm:text-sm font-medium">장기 주기 예정</CardTitle>
+            <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent className={isMobile ? 'p-3 pt-0' : ''}>
-            <div className="text-xl sm:text-2xl font-bold">{overdueCount}</div>
+            <div className="text-xl sm:text-2xl font-bold">{longCycleCount}</div>
             <p className="text-xs text-muted-foreground">
-              즉시 확인 필요
+              4주+ 주기, 7일 내
             </p>
           </CardContent>
         </Card>
