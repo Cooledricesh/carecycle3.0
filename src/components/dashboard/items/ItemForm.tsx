@@ -168,10 +168,13 @@ export function ItemForm({
                   id="interval"
                   type="number"
                   value={formData.default_interval_weeks || ''}
-                  onChange={(e) => setFormData({
-                    ...formData,
-                    default_interval_weeks: parseInt(e.target.value) || null
-                  })}
+                  onChange={(e) => {
+                    const parsed = parseInt(e.target.value, 10);
+                    setFormData({
+                      ...formData,
+                      default_interval_weeks: e.target.value === '' ? null : (Number.isNaN(parsed) ? null : parsed)
+                    });
+                  }}
                   placeholder="4"
                   className={touchTarget.input}
                 />
@@ -188,10 +191,13 @@ export function ItemForm({
               id="interval"
               type="number"
               value={formData.default_interval_weeks || ''}
-              onChange={(e) => setFormData({
-                ...formData,
-                default_interval_weeks: parseInt(e.target.value) || null
-              })}
+              onChange={(e) => {
+                const parsed = parseInt(e.target.value, 10);
+                setFormData({
+                  ...formData,
+                  default_interval_weeks: e.target.value === '' ? null : (Number.isNaN(parsed) ? null : parsed)
+                });
+              }}
               placeholder="4"
               className={touchTarget.input}
             />
@@ -221,10 +227,13 @@ export function ItemForm({
                   id="notification_days"
                   type="number"
                   value={formData.notification_days_before || ''}
-                  onChange={(e) => setFormData({
-                    ...formData,
-                    notification_days_before: parseInt(e.target.value) || null
-                  })}
+                  onChange={(e) => {
+                    const parsed = parseInt(e.target.value, 10);
+                    setFormData({
+                      ...formData,
+                      notification_days_before: e.target.value === '' ? null : (Number.isNaN(parsed) ? null : parsed)
+                    });
+                  }}
                   placeholder="7"
                   className={touchTarget.input}
                 />
@@ -295,10 +304,13 @@ export function ItemForm({
                 id="sort_order"
                 type="number"
                 value={formData.sort_order || ''}
-                onChange={(e) => setFormData({
-                  ...formData,
-                  sort_order: parseInt(e.target.value) || 0
-                })}
+                onChange={(e) => {
+                  const parsed = parseInt(e.target.value, 10);
+                  setFormData({
+                    ...formData,
+                    sort_order: e.target.value === '' ? null : (Number.isNaN(parsed) ? null : parsed)
+                  });
+                }}
                 placeholder="0"
                 className={touchTarget.input}
               />

@@ -3,12 +3,6 @@
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
 
-interface AppIconProps {
-  size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl';
-  className?: string;
-  priority?: boolean;
-}
-
 const sizeMap = {
   xs: 24,
   sm: 32,
@@ -16,10 +10,23 @@ const sizeMap = {
   lg: 48,
   xl: 64,
   '2xl': 96,
-};
+} as const;
+
+type AppIconSize = keyof typeof sizeMap;
+
+interface AppIconProps {
+  size?: AppIconSize;
+  className?: string;
+  priority?: boolean;
+}
+
+function isValidSize(size: unknown): size is AppIconSize {
+  return typeof size === 'string' && size in sizeMap;
+}
 
 export function AppIcon({ size = 'md', className, priority = false }: AppIconProps) {
-  const dimensions = sizeMap[size];
+  const validSize = isValidSize(size) ? size : 'md';
+  const dimensions = sizeMap[validSize];
 
   return (
     <div className={cn('relative inline-flex items-center justify-center', className)}>
