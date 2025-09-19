@@ -2,20 +2,20 @@
 
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar, Clock, CheckCircle, TrendingUp, RefreshCw } from "lucide-react";
+import { Calendar, Clock, AlertTriangle, TrendingUp, RefreshCw } from "lucide-react";
 import { getScheduleCategoryIcon, getScheduleCategoryColor, getScheduleCategoryBgColor, getScheduleCategoryLabel, getScheduleCardBgColor } from '@/lib/utils/schedule-category';
 import { PatientRegistrationModal } from "@/components/patients/patient-registration-modal";
 import { useAuth } from "@/providers/auth-provider-simple";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
-import { useTodayChecklist, useUpcomingSchedules } from "@/hooks/useSchedules";
+import { useTodayChecklist, useUpcomingSchedules, useSchedules } from "@/hooks/useSchedules";
 import { useScheduleCompletion } from "@/hooks/useScheduleCompletion";
 import { ScheduleCompletionDialog } from "@/components/schedules/schedule-completion-dialog";
 import { ScheduleActionButtons } from "@/components/schedules/schedule-action-buttons";
 import { ScheduleEditModal } from "@/components/schedules/schedule-edit-modal";
 import { getScheduleStatusLabel, getStatusBadgeClass } from "@/lib/utils/schedule-status";
 import type { ScheduleWithDetails } from "@/types/schedule";
-import { format } from "date-fns";
+import { format, startOfWeek, endOfWeek, isWithinInterval, addDays, startOfDay, isSameDay } from "date-fns";
 import { ko } from "date-fns/locale";
 import { safeFormatDate, safeParse, getDaysDifference } from "@/lib/utils/date";
 import { Button } from "@/components/ui/button";
@@ -51,6 +51,9 @@ export default function DashboardPage() {
   // Use React Query hooks for data fetching
   const { data: todaySchedules = [], isLoading: todayLoading, refetch: refetchToday } = useTodayChecklist();
   const { data: upcomingSchedules = [], isLoading: upcomingLoading, refetch: refetchUpcoming } = useUpcomingSchedules(7);
+
+  // Get all schedules for additional calculations
+  const { schedules: allSchedules = [] } = useSchedules();
   
   const loading = todayLoading || upcomingLoading;
 
@@ -105,17 +108,47 @@ export default function DashboardPage() {
   }
 
   // 통계 계산
-  const overdueCount = todaySchedules.length;
-  const weekCount = upcomingSchedules.length;
+  const today = startOfDay(new Date());
+  const tomorrow = addDays(today, 1);
+  const weekStart = startOfWeek(today, { locale: ko });
+  const weekEnd = endOfWeek(today, { locale: ko });
 
-  // 장기 주기 일정 계산 (28일 이상 주기 중 7일 내 도래)
-  const longCycleCount = upcomingSchedules.filter(schedule => {
-    if (!schedule.intervalWeeks || schedule.intervalWeeks < 4) return false; // 4주(28일) 미만은 제외
+  // 1. 오늘 체크리스트 (유지)
+  const todayCount = todaySchedules.length;
+
+  // 2. 미완료 누적 (오늘 이전의 미완료 항목)
+  const overdueCount = allSchedules.filter(schedule => {
+    if (schedule.status !== 'active') return false;
     const dueDate = safeParse(schedule.nextDueDate);
     if (!dueDate) return false;
-    const daysUntil = Math.ceil((dueDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
-    return daysUntil >= 0 && daysUntil <= 7; // 오늘부터 7일 이내
+    return dueDate < today; // 오늘보다 이전
   }).length;
+
+  // 3. 내일 예정 (내일 처리 가능한 항목)
+  const tomorrowCount = allSchedules.filter(schedule => {
+    if (schedule.status !== 'active') return false;
+    const dueDate = safeParse(schedule.nextDueDate);
+    if (!dueDate) return false;
+
+    // 내일이거나, 7일 전부터 실행 가능한 항목 중 내일 처리 예정
+    const daysDiff = getDaysDifference(dueDate, tomorrow);
+    return daysDiff === 0 || (daysDiff <= -6 && daysDiff >= -7);
+  }).length;
+
+  // 4. 이번 주 완료율 계산
+  const weeklySchedules = allSchedules.filter(schedule => {
+    const dueDate = safeParse(schedule.nextDueDate);
+    if (!dueDate) return false;
+    return isWithinInterval(dueDate, { start: weekStart, end: weekEnd });
+  });
+
+  // 실제 완료된 항목은 schedule_executions 테이블에서 가져와야 하지만,
+  // 현재는 간단히 active가 아닌 completed 상태로 계산
+  const completedThisWeek = weeklySchedules.filter(s => s.status === 'completed').length;
+  const totalThisWeek = weeklySchedules.length;
+  const weeklyCompletionRate = totalThisWeek > 0
+    ? Math.round((completedThisWeek / totalThisWeek) * 100)
+    : 0;
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -156,55 +189,59 @@ export default function DashboardPage() {
             <Calendar className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent className={isMobile ? 'p-3 pt-0' : ''}>
-            <div className="text-xl sm:text-2xl font-bold">{overdueCount}</div>
+            <div className="text-xl sm:text-2xl font-bold">{todayCount}</div>
             <p className="text-xs text-muted-foreground">
-              오늘까지 처리할 일정
+              오늘 처리 필요
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className={overdueCount > 0 ? 'border-red-500' : ''}>
+          <CardHeader className={`flex flex-row items-center justify-between space-y-0 ${isMobile ? 'p-3 pb-2' : 'pb-2'}`}>
+            <CardTitle className="text-xs sm:text-sm font-medium">미완료 누적</CardTitle>
+            <AlertTriangle className={`h-3 w-3 sm:h-4 sm:w-4 ${overdueCount > 0 ? 'text-red-500' : 'text-muted-foreground'}`} />
+          </CardHeader>
+          <CardContent className={isMobile ? 'p-3 pt-0' : ''}>
+            <div className={`text-xl sm:text-2xl font-bold ${overdueCount > 0 ? 'text-red-600' : ''}`}>
+              {overdueCount}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              긴급 처리 필요
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className={`flex flex-row items-center justify-between space-y-0 ${isMobile ? 'p-3 pb-2' : 'pb-2'}`}>
-            <CardTitle className="text-xs sm:text-sm font-medium">1주일 이내</CardTitle>
+            <CardTitle className="text-xs sm:text-sm font-medium">내일 예정</CardTitle>
             <Clock className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent className={isMobile ? 'p-3 pt-0' : ''}>
-            <div className="text-xl sm:text-2xl font-bold">{weekCount}</div>
+            <div className="text-xl sm:text-2xl font-bold">{tomorrowCount}</div>
             <p className="text-xs text-muted-foreground">
-              예정된 일정
+              내일 준비 필요
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className={`flex flex-row items-center justify-between space-y-0 ${isMobile ? 'p-3 pb-2' : 'pb-2'}`}>
-            <CardTitle className="text-xs sm:text-sm font-medium">활성 스케줄</CardTitle>
-            <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent className={isMobile ? 'p-3 pt-0' : ''}>
-            <div className="text-xl sm:text-2xl font-bold">{overdueCount + weekCount}</div>
-            <p className="text-xs text-muted-foreground">
-              전체 진행 중
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className={`flex flex-row items-center justify-between space-y-0 ${isMobile ? 'p-3 pb-2' : 'pb-2'}`}>
-            <CardTitle className="text-xs sm:text-sm font-medium">장기 주기 예정</CardTitle>
+            <CardTitle className="text-xs sm:text-sm font-medium">이번 주 완료율</CardTitle>
             <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent className={isMobile ? 'p-3 pt-0' : ''}>
-            <div className="text-xl sm:text-2xl font-bold">{longCycleCount}</div>
+            <div className="text-xl sm:text-2xl font-bold">
+              {weeklyCompletionRate}%
+            </div>
             <p className="text-xs text-muted-foreground">
-              4주+ 주기, 7일 내
+              {completedThisWeek}/{totalThisWeek} 완료
             </p>
           </CardContent>
         </Card>
       </div>
 
       {/* 오늘 체크리스트 */}
-      {todaySchedules.length > 0 && (
+      {todayCount > 0 && (
         <Card>
           <CardHeader className={isMobile ? 'p-4' : ''}>
             <CardTitle className={responsiveText.h3}>오늘 체크리스트</CardTitle>
