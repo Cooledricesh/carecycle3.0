@@ -135,7 +135,7 @@ export function CalendarView({ className }: CalendarViewProps) {
     // 기존 통계
     const activeCount = monthSchedules.filter(s => s.status === 'active').length;
     const totalCount = monthSchedules.length;
-    const daysWithSchedules = calendarDays.filter(day => day.isCurrentMonth && day.schedules.length > 0).length;
+    const daysWithSchedules = calendarDays.filter(day => day.isCurrentMonth && day.schedules.some(s => s.status === 'active')).length;
 
     // 연체된 스케줄 (오늘 이전의 활성 스케줄)
     const overdueCount = schedules.filter(s => {

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Menu, Bell } from 'lucide-react';
+import { Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { 
   Sheet, 
@@ -46,15 +46,6 @@ export function Header() {
 
         {/* Spacer */}
         <div className="flex-1" />
-
-        {/* Right side actions */}
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" className="relative">
-            <Bell className="h-5 w-5" />
-            <span className="absolute -top-1 -right-1 h-2 w-2 bg-red-500 rounded-full" />
-            <span className="sr-only">알림</span>
-          </Button>
-        </div>
       </div>
     </header>
   );
