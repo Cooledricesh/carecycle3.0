@@ -6,6 +6,7 @@ CREATE OR REPLACE FUNCTION public.log_schedule_changes()
 RETURNS trigger
 LANGUAGE plpgsql
 SECURITY DEFINER -- Ensures consistent permissions
+SET search_path = pg_catalog, public -- Fixed search path for security
 AS $function$
 BEGIN
     -- Only log UPDATE operations
@@ -13,7 +14,8 @@ BEGIN
     -- since the schedule being deleted can't be referenced in logs
     IF TG_OP = 'UPDATE' THEN
         BEGIN
-            INSERT INTO schedule_logs (
+            -- Use fully qualified table name for security
+            INSERT INTO public.schedule_logs (
                 schedule_id,
                 action,
                 old_values,
@@ -58,3 +60,26 @@ EXECUTE FUNCTION public.log_schedule_changes();
 -- Add a comment explaining the trigger behavior
 COMMENT ON TRIGGER trigger_log_schedule_changes ON public.schedules IS
 'Logs UPDATE operations on schedules table. DELETE operations are not logged to avoid FK violations.';
+
+-- Security hardening: Set function ownership and revoke unnecessary privileges
+-- Note: In Supabase, these commands might need to be run separately by an admin
+DO $$
+BEGIN
+    -- Change function owner to postgres (superuser)
+    -- This ensures the function runs with appropriate privileges
+    ALTER FUNCTION public.log_schedule_changes() OWNER TO postgres;
+
+    -- Revoke EXECUTE from PUBLIC to minimize attack surface
+    REVOKE EXECUTE ON FUNCTION public.log_schedule_changes() FROM PUBLIC;
+
+    -- Grant EXECUTE only to authenticated users who need it
+    -- In Supabase, authenticated role typically needs this
+    GRANT EXECUTE ON FUNCTION public.log_schedule_changes() TO authenticated;
+
+    RAISE NOTICE 'Function security settings applied successfully';
+EXCEPTION
+    WHEN insufficient_privilege THEN
+        RAISE NOTICE 'Insufficient privileges to change function ownership/permissions. These commands should be run by a database administrator.';
+    WHEN OTHERS THEN
+        RAISE NOTICE 'Could not apply all security settings: %', SQLERRM;
+END $$;
