@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/client'
 import type { Item, ItemInsert, ItemUpdate } from '@/lib/database.types'
+import { deleteItemAction } from '@/app/actions/items'
 
 export async function getItems() {
   const supabase = createClient()
@@ -141,19 +142,8 @@ export async function updateItem(id: string, updates: ItemUpdate) {
 }
 
 export async function deleteItem(id: string) {
-  const supabase = createClient()
-  
-  const { error } = await supabase
-    .from('items')
-    .delete()
-    .eq('id', id)
-
-  if (error) {
-    console.error('Error deleting item:', error)
-    throw error
-  }
-
-  return { success: true }
+  // 서버 액션 호출 (관리자 권한 확인 및 실행 기록 체크 포함)
+  return await deleteItemAction(id)
 }
 
 export async function toggleItemStatus(id: string, isActive: boolean) {
