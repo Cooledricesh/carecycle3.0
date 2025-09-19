@@ -23,6 +23,8 @@ import { Badge } from "@/components/ui/badge";
 import { useQueryClient } from "@tanstack/react-query";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { responsiveGrid, responsiveText, touchTarget } from "@/lib/utils";
+import { createClient } from "@/lib/supabase/client";
+import { AppIcon } from "@/components/ui/app-icon";
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -53,15 +55,13 @@ export default function DashboardPage() {
   const { data: upcomingSchedules = [], isLoading: upcomingLoading, refetch: refetchUpcoming } = useUpcomingSchedules(7);
 
   // Get all schedules for additional calculations
-  const { schedules: allSchedules = [], refetch: refetchAll } = useSchedules();
+  const { schedules: allSchedules = [], isLoading: allLoading, refetch: refetchAll } = useSchedules();
 
-  const loading = todayLoading || upcomingLoading;
+  const loading = todayLoading || upcomingLoading || allLoading;
 
   // Refresh data function
   const refreshData = () => {
-    refetchToday();
-    refetchUpcoming();
-    refetchAll();
+    queryClient.invalidateQueries({ queryKey: ['schedules'] });
   };
 
   // Manual refresh function
@@ -87,9 +87,25 @@ export default function DashboardPage() {
   };
 
   useEffect(() => {
-    if (user) {
-      setProfile({ name: user.email?.split('@')[0] || 'User' });
-    }
+    const fetchProfile = async () => {
+      if (user) {
+        const supabase = createClient();
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('name, email, role, department')
+          .eq('id', user.id)
+          .single();
+
+        if (data) {
+          setProfile(data);
+        } else {
+          // Fallback to email if profile not found
+          setProfile({ name: user.email?.split('@')[0] || 'User', email: user.email });
+        }
+      }
+    };
+
+    fetchProfile();
   }, [user]);
 
   const handleRegistrationSuccess = () => {
@@ -110,6 +126,7 @@ export default function DashboardPage() {
 
   // 통계 계산
   const today = startOfDay(new Date());
+  const todayStr = format(today, 'yyyy-MM-dd');
 
   // 1. 오늘 체크리스트
   const todayCount = todaySchedules.length;
@@ -119,23 +136,26 @@ export default function DashboardPage() {
     if (schedule.status !== 'active') return false;
     const dueDate = safeParse(schedule.nextDueDate);
     if (!dueDate) return false;
-    return dueDate < today;
+    return format(dueDate, 'yyyy-MM-dd') < todayStr;
   }).length;
 
 
   return (
     <div className="space-y-4 sm:space-y-6">
       <div className={`flex ${isMobile ? 'flex-col gap-3' : 'justify-between items-center'}`}>
-        <div>
-          <h1 className={`${responsiveText.h2} font-bold text-gray-900`}>
-            안녕하세요, {profile.name}님
-          </h1>
-          <p className="text-sm sm:text-base text-gray-600">
-            오늘의 스케줄을 확인해보세요.
-            <span className={`${isMobile ? 'block mt-1' : 'ml-2'} text-xs text-gray-400`}>
-              마지막 업데이트: {format(lastUpdated, 'HH:mm:ss')}
-            </span>
-          </p>
+        <div className="flex items-start gap-3">
+          <AppIcon size={isMobile ? "md" : "lg"} className="mt-1" />
+          <div>
+            <h1 className={`${responsiveText.h2} font-bold text-gray-900`}>
+              안녕하세요, {profile.name}님
+            </h1>
+            <p className="text-sm sm:text-base text-gray-600">
+              오늘의 스케줄을 확인해보세요.
+              <span className={`${isMobile ? 'block mt-1' : 'ml-2'} text-xs text-gray-400`}>
+                마지막 업데이트: {format(lastUpdated, 'HH:mm:ss')}
+              </span>
+            </p>
+          </div>
         </div>
         <div className={`flex items-center gap-2 ${isMobile ? 'w-full' : ''}`}>
           <Button
@@ -162,7 +182,7 @@ export default function DashboardPage() {
             <Calendar className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent className={isMobile ? 'p-3 pt-0' : ''}>
-            <div className="text-xl sm:text-2xl font-bold">{todayCount}</div>
+            <div className="text-xl sm:text-2xl font-bold">{todayLoading ? '—' : todayCount}</div>
             <p className="text-xs text-muted-foreground">
               오늘 처리 필요
             </p>
@@ -176,7 +196,7 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent className={isMobile ? 'p-3 pt-0' : ''}>
             <div className={`text-xl sm:text-2xl font-bold ${overdueCount > 0 ? 'text-red-600' : ''}`}>
-              {overdueCount}
+              {allLoading ? '—' : overdueCount}
             </div>
             <p className="text-xs text-muted-foreground">
               긴급 처리 필요
@@ -278,8 +298,9 @@ export default function DashboardPage() {
               스케줄을 불러오는 중...
             </div>
           ) : upcomingSchedules.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
-              실행 가능한 스케줄이 없습니다.
+            <div className="text-center py-12">
+              <AppIcon size="xl" className="mx-auto mb-4 opacity-50" />
+              <p className="text-gray-500">실행 가능한 스케줄이 없습니다.</p>
             </div>
           ) : (
             <div className="space-y-3 sm:space-y-4">

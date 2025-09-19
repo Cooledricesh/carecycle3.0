@@ -1,11 +1,11 @@
 'use client';
 
-import { Plus } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/providers/auth-provider-simple';
+import { AppIcon } from '@/components/ui/app-icon';
 import { 
   HeroSection, 
   FeaturesSection, 
@@ -47,10 +47,8 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center" aria-hidden="true">
-                <Plus className="w-5 h-5 text-white" />
-              </div>
-              <span className="text-xl font-bold text-gray-900">CareScheduler</span>
+              <AppIcon size="sm" priority />
+              <span className="text-xl font-bold text-gray-900">케어스케줄러</span>
             </div>
             
             <nav className="hidden md:flex items-center space-x-8" role="navigation" aria-label="주요 메뉴">
@@ -142,10 +140,8 @@ export default function LandingPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 sm:gap-8">
             <div className="col-span-1 md:col-span-2">
               <div className="flex items-center space-x-2 mb-4">
-                <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-                  <Plus className="w-5 h-5 text-white" />
-                </div>
-                <span className="text-xl font-bold">CareScheduler</span>
+                <AppIcon size="sm" />
+                <span className="text-xl font-bold">케어스케줄러</span>
               </div>
               <p className="text-gray-400 mb-4">
                 반복 검사 및 주사 일정 자동화 스마트 스케줄링 시스템.

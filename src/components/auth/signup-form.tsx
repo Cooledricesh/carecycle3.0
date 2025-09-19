@@ -3,6 +3,7 @@
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
+import { AppIcon } from "@/components/ui/app-icon";
 import {
   Card,
   CardContent,
@@ -60,9 +61,14 @@ export function SignUpForm({
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
       <Card>
-        <CardHeader>
-          <CardTitle className="text-2xl">회원가입</CardTitle>
-          <CardDescription>새 계정을 만드세요</CardDescription>
+        <CardHeader className="space-y-4">
+          <div className="flex justify-center">
+            <AppIcon size="xl" />
+          </div>
+          <div className="text-center">
+            <CardTitle className="text-2xl">회원가입</CardTitle>
+            <CardDescription>새 계정을 만드세요</CardDescription>
+          </div>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSignUp}>

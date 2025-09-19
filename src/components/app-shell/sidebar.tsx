@@ -2,19 +2,20 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { 
-  Calendar, 
+import {
+  Calendar,
   CalendarDays,
-  Clock, 
-  User, 
-  LogOut, 
-  Users, 
+  Clock,
+  User,
+  LogOut,
+  Users,
   UserCog,
   Settings,
   ChevronLeft,
   ChevronRight,
   List
 } from 'lucide-react';
+import { AppIcon } from '@/components/ui/app-icon';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -102,8 +103,15 @@ export function Sidebar({ onNavigate }: SidebarProps = {}) {
     <div className="flex h-full flex-col">
       {/* Header */}
       <div className="flex h-16 items-center justify-between px-6 border-b">
-        {!isCollapsed && (
-          <h1 className="text-xl font-semibold text-gray-900">케어스케줄러</h1>
+        {!isCollapsed ? (
+          <div className="flex items-center gap-2">
+            <AppIcon size="sm" />
+            <h1 className="text-xl font-semibold text-gray-900">케어스케줄러</h1>
+          </div>
+        ) : (
+          <div className="mx-auto">
+            <AppIcon size="sm" />
+          </div>
         )}
         <Button
           variant="ghost"

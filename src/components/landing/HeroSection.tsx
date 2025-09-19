@@ -4,6 +4,7 @@ import { CheckCircle, TrendingUp, Users, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { AppIcon } from "@/components/ui/app-icon";
 
 interface HeroSectionProps {
   onGetStarted: () => void;
@@ -76,40 +77,44 @@ export function HeroSection({ onGetStarted, onLearnMore, showAuthButtons = true 
           </div>
 
           {/* Right Column - Visual Element */}
-          <div className="w-full mt-8 md:mt-0" aria-label="대시보드 미리보기 예시">
-            <Card className="shadow-xl border-0 bg-gradient-to-br from-primary/5 to-white">
-              <CardHeader>
-                <CardTitle className="text-lg sm:text-xl font-semibold text-primary">
-                  오늘 해야 할 항목 요약
-                </CardTitle>
+          <div className="w-full mt-8 md:mt-0" aria-label="케어스케줄러 앱 미리보기">
+            <Card className="shadow-xl border-0 bg-gradient-to-br from-primary/5 to-white overflow-hidden">
+              <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 pb-6">
+                <div className="flex items-center justify-center">
+                  <AppIcon size="2xl" />
+                </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="pt-6">
                 <div className="space-y-4">
-                  {/* Sample stats */}
+                  <div className="text-center mb-4">
+                    <h3 className="text-xl font-bold text-primary">케어스케줄러</h3>
+                    <p className="text-sm text-secondary mt-1">의료 스케줄링의 새로운 기준</p>
+                  </div>
+
+                  {/* Key Features */}
                   <div className="grid grid-cols-2 gap-3 sm:gap-4">
-                    <div className="rounded-lg bg-white p-3 sm:p-4 shadow-sm">
-                      <div className="text-xl sm:text-2xl font-bold text-primary" aria-label="예정된 검사 수">24</div>
-                      <div className="text-xs sm:text-sm text-secondary">예정된 검사</div>
+                    <div className="rounded-lg bg-white p-3 sm:p-4 shadow-sm border border-gray-100">
+                      <div className="text-xl sm:text-2xl font-bold text-primary" aria-label="자동화된 일정">100%</div>
+                      <div className="text-xs sm:text-sm text-secondary">자동화된 일정</div>
                     </div>
-                    <div className="rounded-lg bg-white p-3 sm:p-4 shadow-sm">
-                      <div className="text-xl sm:text-2xl font-bold text-green-600" aria-label="완료된 항목 수">18</div>
-                      <div className="text-xs sm:text-sm text-secondary">완료된 항목</div>
+                    <div className="rounded-lg bg-white p-3 sm:p-4 shadow-sm border border-gray-100">
+                      <div className="text-xl sm:text-2xl font-bold text-green-600" aria-label="누락 방지">0%</div>
+                      <div className="text-xs sm:text-sm text-secondary">누락 방지</div>
                     </div>
                   </div>
-                  
-                  {/* Progress indicator */}
-                  <div className="rounded-lg bg-white p-3 sm:p-4 shadow-sm">
-                    <div className="mb-2 flex items-center justify-between">
-                      <span className="text-xs sm:text-sm font-medium text-secondary">일일 진행률</span>
-                      <span className="text-xs sm:text-sm font-bold text-primary" aria-label="진행률 75%">75%</span>
-                    </div>
-                    <div className="h-2 w-full rounded-full bg-gray-200" role="progressbar" aria-valuenow={75} aria-valuemin={0} aria-valuemax={100}>
-                      <div className="h-2 w-3/4 rounded-full bg-primary"></div>
+
+                  {/* Trust indicator */}
+                  <div className="rounded-lg bg-blue-50 p-3 sm:p-4 border border-blue-100">
+                    <div className="flex items-center justify-center">
+                      <Shield className="mr-2 h-4 w-4 text-blue-600 flex-shrink-0" aria-hidden="true" />
+                      <span className="text-xs sm:text-sm font-medium text-blue-700">
+                        병원 맞춤형 솔루션
+                      </span>
                     </div>
                   </div>
 
                   {/* Efficiency metric */}
-                  <div className="flex items-center justify-center rounded-lg bg-green-50 p-3 sm:p-4">
+                  <div className="flex items-center justify-center rounded-lg bg-green-50 p-3 sm:p-4 border border-green-100">
                     <TrendingUp className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-green-600 flex-shrink-0" aria-hidden="true" />
                     <span className="text-xs sm:text-sm font-medium text-green-700">
                       업무 효율 50% 향상
