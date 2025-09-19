@@ -73,15 +73,7 @@ export function LoginForm({
                 />
               </div>
               <div className="grid gap-2">
-                <div className="flex items-center">
-                  <Label htmlFor="password">비밀번호</Label>
-                  <Link
-                    href="/auth/forgot-password"
-                    className="ml-auto inline-block text-sm underline-offset-4 hover:underline"
-                  >
-                    비밀번호를 잊으셨나요?
-                  </Link>
-                </div>
+                <Label htmlFor="password">비밀번호</Label>
                 <Input
                   id="password"
                   type="password"
@@ -89,6 +81,13 @@ export function LoginForm({
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                 />
+                <Link
+                  href="/auth/forgot-password"
+                  className="text-sm text-right underline-offset-4 hover:underline"
+                  tabIndex={3}
+                >
+                  비밀번호를 잊으셨나요?
+                </Link>
               </div>
               {error && <p className="text-sm text-red-500">{error}</p>}
               <Button type="submit" className="w-full" disabled={isLoading}>

@@ -23,6 +23,7 @@ import { Badge } from "@/components/ui/badge";
 import { useQueryClient } from "@tanstack/react-query";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { responsiveGrid, responsiveText, touchTarget } from "@/lib/utils";
+import { createClient } from "@/lib/supabase/client";
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -85,9 +86,25 @@ export default function DashboardPage() {
   };
 
   useEffect(() => {
-    if (user) {
-      setProfile({ name: user.email?.split('@')[0] || 'User' });
-    }
+    const fetchProfile = async () => {
+      if (user) {
+        const supabase = createClient();
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('name, email, role, department')
+          .eq('id', user.id)
+          .single();
+
+        if (data) {
+          setProfile(data);
+        } else {
+          // Fallback to email if profile not found
+          setProfile({ name: user.email?.split('@')[0] || 'User', email: user.email });
+        }
+      }
+    };
+
+    fetchProfile();
   }, [user]);
 
   const handleRegistrationSuccess = () => {
