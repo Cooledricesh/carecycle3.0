@@ -53,7 +53,11 @@ const adminNavigation: NavItem[] = [
   { name: '사용자 관리', href: '/admin/users', icon: UserCog, roles: ['admin'] },
 ];
 
-export function Sidebar() {
+interface SidebarProps {
+  onNavigate?: () => void;
+}
+
+export function Sidebar({ onNavigate }: SidebarProps = {}) {
   const pathname = usePathname();
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
@@ -178,17 +182,22 @@ export function Sidebar() {
               const linkContent = (
                 <Link
                   href={item.href}
+                  onClick={() => {
+                    // Call onNavigate callback when link is clicked (for mobile auto-close)
+                    onNavigate?.();
+                  }}
                   className={`
-                    flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors
+                    flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-all
+                    min-h-[48px] duration-150
                     ${isActive
-                      ? 'bg-blue-100 text-blue-700'
-                      : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
+                      ? 'bg-blue-100 text-blue-700 border-l-4 border-blue-700 pl-3'
+                      : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900 active:bg-gray-200 active:scale-[0.98]'
                     }
-                    ${isCollapsed ? 'justify-center' : ''}
+                    ${isCollapsed ? 'justify-center px-3' : ''}
                   `}
                 >
-                  <item.icon className={`h-5 w-5 ${isCollapsed ? '' : 'mr-3'}`} />
-                  {!isCollapsed && item.name}
+                  <item.icon className={`h-6 w-6 flex-shrink-0 ${isCollapsed ? '' : 'mr-4'}`} />
+                  {!isCollapsed && <span className="truncate">{item.name}</span>}
                 </Link>
               );
 

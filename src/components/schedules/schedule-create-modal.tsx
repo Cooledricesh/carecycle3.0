@@ -79,6 +79,7 @@ export function ScheduleCreateModal({
   const [items, setItems] = useState<ItemOption[]>([])
   const [itemComboOpen, setItemComboOpen] = useState(false)
   const [itemSearchValue, setItemSearchValue] = useState('')
+  const [datePopoverOpen, setDatePopoverOpen] = useState(false)
   const { toast } = useToast()
   const supabase = createClient()
 
@@ -192,10 +193,30 @@ export function ScheduleCreateModal({
         onSuccess()
       }
     } catch (error) {
-      console.error('Failed to create schedule:', error)
+      let errorMessage = '스케줄 추가에 실패했습니다.'
+      let errorTitle = '오류'
+
+      if (error instanceof Error) {
+        errorMessage = error.message
+
+        // Check for duplicate schedule error (business validation)
+        if (error.message.includes('이미 해당 환자의') && error.message.includes('스케줄이 활성 상태로 존재')) {
+          errorTitle = '중복된 스케줄'
+          // This is expected validation, not a system error
+        } else if (error.message.includes('이미 동일한 스케줄이 존재')) {
+          errorTitle = '중복된 스케줄'
+        } else {
+          // Only log unexpected errors
+          console.error('Failed to create schedule:', error)
+        }
+      } else {
+        // Log non-Error type exceptions
+        console.error('Unexpected error type:', error)
+      }
+
       toast({
-        title: '오류',
-        description: error instanceof Error ? error.message : '스케줄 추가에 실패했습니다.',
+        title: errorTitle,
+        description: errorMessage,
         variant: 'destructive'
       })
     } finally {
@@ -361,7 +382,7 @@ export function ScheduleCreateModal({
               render={({ field }) => (
                 <FormItem className="flex flex-col">
                   <FormLabel>최초 시행일 *</FormLabel>
-                  <Popover>
+                  <Popover open={datePopoverOpen} onOpenChange={setDatePopoverOpen}>
                     <PopoverTrigger asChild>
                       <FormControl>
                         <Button
@@ -384,7 +405,10 @@ export function ScheduleCreateModal({
                       <Calendar
                         mode="single"
                         selected={field.value}
-                        onSelect={field.onChange}
+                        onSelect={(date) => {
+                          field.onChange(date)
+                          setDatePopoverOpen(false)
+                        }}
                         initialFocus
                       />
                     </PopoverContent>

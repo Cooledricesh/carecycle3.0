@@ -142,11 +142,15 @@ export const scheduleService = {
         .maybeSingle()
 
       if (existingSchedule) {
-        console.error('Duplicate active schedule attempted:', {
-          patientId: input.patientId,
-          itemId: itemId,
-          itemName: input.itemName
-        })
+        // This is expected business logic validation, not an error
+        // Log only in development for debugging if needed
+        if (process.env.NODE_ENV === 'development') {
+          console.log('Duplicate schedule validation:', {
+            patientId: input.patientId,
+            itemId: itemId,
+            itemName: input.itemName
+          })
+        }
         throw new Error(`이미 해당 환자의 "${input.itemName}" 스케줄이 활성 상태로 존재합니다. 기존 스케줄을 수정하거나 중지한 후 다시 시도해주세요.`)
       }
 
@@ -190,14 +194,25 @@ export const scheduleService = {
       }
       return snakeToCamel(data) as Schedule
     } catch (error: any) {
-      console.error('Error creating schedule with custom item:', {
-        error,
-        code: error?.code,
-        message: error?.message,
-        details: error?.details,
-        hint: error?.hint,
-        fullError: JSON.stringify(error)
-      })
+      // Only log actual system errors, not business validation
+      const isBusinessValidation = error instanceof Error &&
+        (error.message.includes('이미 해당 환자의') ||
+         error.message.includes('이미 동일한 스케줄이 존재'))
+
+      if (!isBusinessValidation) {
+        console.error('Error creating schedule with custom item:', {
+          error,
+          code: error?.code,
+          message: error?.message,
+          details: error?.details,
+          hint: error?.hint
+        })
+      }
+
+      // Preserve the original error message for better UX
+      if (error instanceof Error) {
+        throw error
+      }
       throw new Error('일정 등록에 실패했습니다')
     }
   },
@@ -581,17 +596,58 @@ export const scheduleService = {
     const client = supabase || createClient()
     try {
       const validated = ScheduleEditSchema.parse(input)
-      
-      // First, create or find the item with the new name
+
+      // First, get the current schedule to check start_date
+      const { data: currentSchedule, error: fetchError } = await client
+        .from('schedules')
+        .select('start_date')
+        .eq('id', id)
+        .single()
+
+      if (fetchError) {
+        console.error('Error fetching schedule:', fetchError)
+        throw fetchError
+      }
+
+      if (!currentSchedule) {
+        throw new Error('스케줄을 찾을 수 없습니다')
+      }
+
+      // Validate next_due_date against start_date
+      if (validated.nextDueDate) {
+        const startDate = new Date(currentSchedule.start_date)
+        const nextDueDate = new Date(validated.nextDueDate)
+
+        // Format dates for better error message
+        const formatDate = (date: Date) => {
+          return date.toLocaleDateString('ko-KR', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit'
+          })
+        }
+
+        if (nextDueDate < startDate) {
+          const errorMsg = `다음 예정일(${formatDate(nextDueDate)})은 시작일(${formatDate(startDate)}) 이후여야 합니다`
+          console.error('Date validation error:', {
+            nextDueDate: validated.nextDueDate,
+            startDate: currentSchedule.start_date,
+            message: errorMsg
+          })
+          throw new Error(errorMsg)
+        }
+      }
+
+      // Create or find the item with the new name
       let itemId: string
-      
+
       // Check if item with this name already exists
       const { data: existingItem } = await client
         .from('items')
         .select('id')
         .eq('name', validated.itemName)
         .maybeSingle()
-      
+
       if (existingItem) {
         itemId = (existingItem as any).id
       } else {
@@ -609,14 +665,14 @@ export const scheduleService = {
           })
           .select()
           .single()
-        
+
         if (itemError) {
           console.error('Error creating item:', itemError)
           throw itemError
         }
         itemId = newItem.id
       }
-      
+
       // Update the schedule with new values
       const updateData: any = {
         item_id: itemId,
@@ -624,7 +680,7 @@ export const scheduleService = {
         notes: validated.notes
       }
 
-      // Add next_due_date if provided
+      // Add next_due_date if provided (already validated above)
       if (validated.nextDueDate) {
         updateData.next_due_date = validated.nextDueDate
       }
@@ -636,10 +692,24 @@ export const scheduleService = {
         .select()
         .single()
       
-      if (error) throw error
+      if (error) {
+        // Handle specific database constraint errors
+        if ((error as any).code === '23514' && (error as any).message?.includes('check_next_due_date')) {
+          console.error('Database constraint violation:', error)
+          throw new Error('다음 예정일은 시작일 이후여야 합니다. 날짜를 다시 확인해주세요.')
+        }
+        throw error
+      }
       return snakeToCamel(data) as Schedule
     } catch (error) {
       console.error('Error editing schedule:', error)
+
+      // If it's already our custom error message, pass it through
+      if (error instanceof Error && error.message.includes('다음 예정일')) {
+        throw error
+      }
+
+      // Otherwise, throw a generic error
       throw new Error('스케줄 수정에 실패했습니다')
     }
   },
