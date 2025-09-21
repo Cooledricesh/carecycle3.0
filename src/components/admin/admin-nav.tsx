@@ -83,7 +83,7 @@ export default function AdminNav({ profile }: AdminNavProps) {
               </p>
               <p className="text-xs text-gray-500 truncate">
                 관리자
-                {profile?.department && ` • ${profile.department}`}
+                {profile?.care_type && ` • ${profile.care_type}`}
               </p>
             </div>
           </div>

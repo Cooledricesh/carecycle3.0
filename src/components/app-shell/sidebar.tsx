@@ -140,7 +140,7 @@ export function Sidebar({ onNavigate }: SidebarProps = {}) {
                 {profile ? (
                   <>
                     {profile.role === 'nurse' ? '스텝' : '관리자'}
-                    {profile.department && ` • ${profile.department}`}
+                    {profile.care_type && ` • ${profile.care_type}`}
                   </>
                 ) : user ? (
                   <span className="text-amber-600">프로필 설정 필요</span>

@@ -26,7 +26,7 @@ import { ChevronLeft, ChevronRight, Calendar, Clock, AlertCircle, ChevronUp, Che
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { useSchedules } from '@/hooks/useSchedules';
+import { useFilteredSchedules } from '@/hooks/useFilteredSchedules';
 import { useScheduleCompletion } from '@/hooks/useScheduleCompletion';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { CalendarDayCard } from '@/components/calendar/calendar-day-card';
@@ -63,7 +63,7 @@ export function CalendarView({ className }: CalendarViewProps) {
   const supabase = createClient();
   
   // 모든 스케줄 데이터 가져오기
-  const { schedules = [], isLoading, refetch } = useSchedules();
+  const { schedules = [], isLoading, refetch } = useFilteredSchedules();
   
   // 완료 처리 훅 사용
   const {

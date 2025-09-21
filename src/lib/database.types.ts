@@ -34,7 +34,7 @@ export interface Database {
           email: string
           name: string
           role: UserRole
-          department: string | null
+          care_type: string | null
           phone: string | null
           is_active: boolean
           approval_status: ApprovalStatus
@@ -48,7 +48,7 @@ export interface Database {
           email: string
           name: string
           role?: UserRole
-          department?: string | null
+          care_type?: string | null
           phone?: string | null
           is_active?: boolean
           approval_status?: ApprovalStatus
@@ -62,7 +62,7 @@ export interface Database {
           email?: string
           name?: string
           role?: UserRole
-          department?: string | null
+          care_type?: string | null
           phone?: string | null
           is_active?: boolean
           approval_status?: ApprovalStatus

@@ -44,7 +44,7 @@ export default function ProfilePage() {
     name: profile?.name || "",
     email: profile?.email || "",
     phone: profile?.phone || "",
-    department: profile?.department || "",
+    care_type: profile?.care_type || "",
     role: profile?.role || "nurse",
   });
   
@@ -68,7 +68,7 @@ export default function ProfilePage() {
         .update({
           name: formData.name,
           phone: formData.phone,
-          department: formData.department,
+          care_type: formData.care_type,
         })
         .eq("id", profile.id);
       
@@ -186,11 +186,11 @@ export default function ProfilePage() {
                 <span className="text-xs sm:text-sm text-gray-600">
                   {profile.role === "admin" ? "관리자" : "스텝"}
                 </span>
-                {profile.department && (
+                {profile.care_type && (
                   <>
                     <span className="text-gray-400">•</span>
                     <span className="text-xs sm:text-sm text-gray-600">
-                      {profile.department}
+                      {profile.care_type}
                     </span>
                   </>
                 )}
@@ -268,14 +268,14 @@ export default function ProfilePage() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="department">부서</Label>
+                    <Label htmlFor="care_type">진료 유형</Label>
                     <div className="relative">
                       <Building className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                       <Input
-                        id="department"
-                        value={formData.department}
+                        id="care_type"
+                        value={formData.care_type}
                         onChange={(e) =>
-                          setFormData({ ...formData, department: e.target.value })
+                          setFormData({ ...formData, care_type: e.target.value })
                         }
                         className={`pl-10 ${touchTarget.input}`}
                         placeholder="소속 부서"

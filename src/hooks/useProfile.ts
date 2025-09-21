@@ -9,7 +9,7 @@ export interface Profile {
   email: string;
   name: string;
   role: 'admin' | 'nurse';
-  department: string | null;
+  care_type: string | null;
   phone?: string | null;
   is_active?: boolean;
   created_at: string;

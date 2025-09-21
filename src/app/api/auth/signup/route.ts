@@ -6,15 +6,15 @@ const signupSchema = z.object({
   email: z.string().email("Invalid email address"),
   password: z.string().min(6, "Password must be at least 6 characters"),
   name: z.string().min(1, "Name is required"),
-  role: z.enum(["nurse", "admin"]).default("nurse"),
-  department: z.string().optional(),
+  role: z.enum(["nurse", "admin", "doctor"]).default("nurse"),
+  care_type: z.string().optional(),
   phone: z.string().optional(),
 });
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { email, password, name, role, department, phone } = signupSchema.parse(body);
+    const { email, password, name, role, care_type, phone } = signupSchema.parse(body);
 
     const supabase = await createClient();
 
@@ -46,7 +46,16 @@ export async function POST(request: NextRequest) {
 
     // Create profile using service role client (bypasses RLS)
     const serviceSupabase = await createServiceClient();
-    
+
+    // Set care_type based on role
+    // Admin and doctor roles should always have NULL care_type
+    // Nurse role defaults to '낮병원' if not specified
+    let finalCareType: string | null = null;
+    if (role === 'nurse') {
+      finalCareType = care_type || '낮병원';
+    }
+    // Admin and doctor remain null (already initialized as null)
+
     const { error: profileError } = await serviceSupabase
       .from("profiles")
       .insert({
@@ -54,7 +63,7 @@ export async function POST(request: NextRequest) {
         email,
         name,
         role,
-        department: department || null,
+        care_type: finalCareType,
         phone: phone || null,
       });
 

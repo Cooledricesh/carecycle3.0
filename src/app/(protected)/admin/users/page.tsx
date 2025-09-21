@@ -25,7 +25,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Check, X, UserCheck, UserX, Shield, User } from 'lucide-react';
+import { Check, X, UserCheck, UserX, Shield, User, Stethoscope } from 'lucide-react';
 
 type UserAction = {
   userId: string;
@@ -158,6 +158,13 @@ export default function AdminUsersPage() {
             스텝
           </Badge>
         );
+      case 'doctor':
+        return (
+          <Badge className="bg-green-100 text-green-800">
+            <Stethoscope className="w-3 h-3 mr-1" />
+            주치의
+          </Badge>
+        );
       default:
         return <Badge variant="outline">{role}</Badge>;
     }
@@ -237,7 +244,7 @@ export default function AdminUsersPage() {
                   <TableRow key={user.id}>
                     <TableCell className="font-medium">{user.name}</TableCell>
                     <TableCell>{user.email}</TableCell>
-                    <TableCell>{user.department || '-'}</TableCell>
+                    <TableCell>{user.care_type || '-'}</TableCell>
                     <TableCell>{getRoleBadge(user.role)}</TableCell>
                     <TableCell>
                       {new Date(user.created_at).toLocaleDateString('ko-KR')}
@@ -303,7 +310,7 @@ export default function AdminUsersPage() {
                 <TableRow key={user.id}>
                   <TableCell className="font-medium">{user.name}</TableCell>
                   <TableCell>{user.email}</TableCell>
-                  <TableCell>{user.department || '-'}</TableCell>
+                  <TableCell>{user.care_type || '-'}</TableCell>
                   <TableCell>{getRoleBadge(user.role)}</TableCell>
                   <TableCell>{getStatusBadge(user.approval_status)}</TableCell>
                   <TableCell>
