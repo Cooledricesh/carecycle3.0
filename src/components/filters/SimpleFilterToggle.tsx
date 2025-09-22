@@ -1,13 +1,11 @@
 'use client'
 
-import { useEffect, useState } from 'react'
 import { cn } from '@/lib/utils'
 import { useFilterContext } from '@/lib/filters/filter-context'
 import { useProfile } from '@/hooks/useProfile'
 import { Users, User, AlertCircle } from 'lucide-react'
-import { scheduleServiceEnhanced } from '@/services/scheduleServiceEnhanced'
-import { FilterStatistics } from '@/services/filters'
 import { useFilteredPatientCount } from '@/hooks/useFilteredPatientCount'
+import { useFilterStatistics } from '@/hooks/useFilterStatistics'
 
 interface SimpleFilterToggleProps {
   className?: string
@@ -17,36 +15,12 @@ interface SimpleFilterToggleProps {
 export function SimpleFilterToggle({ className, onToggle }: SimpleFilterToggleProps) {
   const { filters, updateFilters } = useFilterContext()
   const { data: profile, isLoading } = useProfile()
-  const [statistics, setStatistics] = useState<FilterStatistics | null>(null)
-  const [urgentCount, setUrgentCount] = useState(0)
 
   // Get filtered patient counts
   const { myPatientCount, totalCount } = useFilteredPatientCount()
 
-  // Fetch statistics on mount for urgent counts only
-  useEffect(() => {
-    if (!profile) return
-
-    const fetchStats = async () => {
-      const userContext = {
-        userId: profile.id,
-        role: profile.role,
-        careType: profile.care_type
-      }
-
-      const stats = await scheduleServiceEnhanced.getFilterStatistics(userContext)
-
-      console.log('[SimpleFilterToggle] Statistics fetched:', stats)
-
-      if (stats) {
-        setStatistics(stats)
-        // Calculate urgent count (overdue + today)
-        setUrgentCount((stats.overdueSchedules || 0) + (stats.todaySchedules || 0))
-      }
-    }
-
-    fetchStats()
-  }, [profile])
+  // Use the new hook for statistics
+  const { statistics, urgentCount } = useFilterStatistics(profile)
 
   if (isLoading || !profile) {
     return null
@@ -176,27 +150,12 @@ export function SimpleFilterToggle({ className, onToggle }: SimpleFilterTogglePr
 export function SimpleFilterToggleMobile({ className, onToggle }: SimpleFilterToggleProps) {
   const { filters, updateFilters } = useFilterContext()
   const { data: profile, isLoading } = useProfile()
-  const [statistics, setStatistics] = useState<FilterStatistics | null>(null)
 
   // Get filtered patient counts
   const { myPatientCount, totalCount } = useFilteredPatientCount()
 
-  useEffect(() => {
-    if (!profile) return
-
-    const fetchStats = async () => {
-      const userContext = {
-        userId: profile.id,
-        role: profile.role,
-        careType: profile.care_type
-      }
-
-      const stats = await scheduleServiceEnhanced.getFilterStatistics(userContext)
-      setStatistics(stats)
-    }
-
-    fetchStats()
-  }, [profile])
+  // Use the new hook for statistics
+  const { statistics, urgentCount } = useFilterStatistics(profile)
 
   if (isLoading || !profile || profile.role === 'admin') {
     return null

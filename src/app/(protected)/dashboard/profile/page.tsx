@@ -41,12 +41,25 @@ export default function ProfilePage() {
   
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
-    name: profile?.name || "",
-    email: profile?.email || "",
-    phone: profile?.phone || "",
-    care_type: profile?.care_type || "",
-    role: profile?.role || "nurse",
+    name: "",
+    email: "",
+    phone: "",
+    care_type: "",
+    role: "nurse",
   });
+
+  // Update form data when profile is loaded or updated
+  useEffect(() => {
+    if (profile) {
+      setFormData({
+        name: profile.name || "",
+        email: profile.email || "",
+        phone: profile.phone || "",
+        care_type: profile.care_type || "",
+        role: profile.role || "nurse",
+      });
+    }
+  }, [profile]);
   
   const [passwordData, setPasswordData] = useState({
     currentPassword: "",
@@ -280,7 +293,7 @@ export default function ProfilePage() {
                           setFormData({ ...formData, care_type: e.target.value })
                         }
                         className={`pl-10 ${touchTarget.input}`}
-                        placeholder="소속 부서"
+                        placeholder="진료 유형"
                       />
                     </div>
                   </div>

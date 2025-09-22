@@ -104,7 +104,7 @@ const result = await response.json();
 | Role | Allowed Fields | Restrictions |
 |------|----------------|--------------|
 | Doctor | `metadata` | Can only update own patients |
-| Nurse | `careType`, `department`, `metadata` | Limited to assigned care type |
+| Nurse | `careType`, `metadata` | Limited to assigned care type |
 | Admin | All fields | No restrictions |
 
 ### Handling RLS (Row Level Security) Errors

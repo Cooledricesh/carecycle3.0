@@ -1,6 +1,110 @@
 import { NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
 import { createClient } from '@/lib/supabase/server'
+import { z } from 'zod'
+
+// Define care type enum locally to avoid import issues
+const CareTypeEnum = z.enum(['외래', '입원', '낮병원'])
+
+// Define strict validation schemas for patient updates
+const BasePatientUpdateSchema = z.object({
+  name: z
+    .string()
+    .min(1, '환자명을 입력해주세요')
+    .max(100, '환자명은 100자 이내로 입력해주세요')
+    .regex(/^[가-힣a-zA-Z\s]+$/, '환자명은 한글, 영문, 공백만 입력 가능합니다')
+    .optional(),
+
+  patientNumber: z
+    .string()
+    .min(1, '환자번호를 입력해주세요')
+    .max(50, '환자번호는 50자 이내로 입력해주세요')
+    .regex(/^[A-Z0-9]{1,50}$/, '환자번호는 영문 대문자와 숫자만 입력 가능합니다')
+    .optional(),
+
+  isActive: z.boolean().optional(),
+
+  metadata: z
+    .record(z.string(), z.unknown())
+    .refine((meta) => {
+      // Ensure metadata doesn't contain potentially dangerous keys
+      const dangerousKeys = ['__proto__', 'constructor', 'prototype']
+      return !Object.keys(meta).some(key => dangerousKeys.includes(key))
+    }, 'Metadata contains invalid keys')
+    .optional(),
+})
+
+// Nurse/Admin can update all fields
+const NurseAdminUpdateSchema = BasePatientUpdateSchema.extend({
+  doctorId: z.string().uuid('올바른 의사 ID를 선택해주세요').nullable().optional(),
+  careType: CareTypeEnum.nullable().optional(),
+  department: z.string().max(50, '부서명은 50자 이내로 입력해주세요').nullable().optional(),
+})
+
+// Doctor can only update limited fields (no doctor assignment or care type changes)
+const DoctorUpdateSchema = BasePatientUpdateSchema
+
+// Define strict whitelists for each role
+const DOCTOR_ALLOWED_FIELDS = new Set(['name', 'patientNumber', 'isActive', 'metadata'])
+const NURSE_ADMIN_ALLOWED_FIELDS = new Set([
+  'name',
+  'patientNumber',
+  'isActive',
+  'metadata',
+  'doctorId',
+  'careType',
+  'department'
+])
+
+// Type-safe field mapping utility with role-based filtering
+const mapValidatedFields = (
+  validatedData: z.infer<typeof NurseAdminUpdateSchema>,
+  userRole: string
+) => {
+  const updateData: Record<string, any> = {
+    updated_at: new Date().toISOString()
+  }
+
+  // Choose whitelist based on role
+  const allowedFields = userRole === 'doctor'
+    ? DOCTOR_ALLOWED_FIELDS
+    : NURSE_ADMIN_ALLOWED_FIELDS
+
+  // Map validated fields with explicit type checking and role-based filtering
+  const fieldMappings: Record<string, string> = {
+    doctorId: 'doctor_id',
+    careType: 'care_type',
+    department: 'department',
+    name: 'name',
+    patientNumber: 'patient_number',
+    isActive: 'is_active',
+    metadata: 'metadata'
+  }
+
+  for (const [camelCase, snakeCase] of Object.entries(fieldMappings)) {
+    // Critical security check: Only process fields that are explicitly allowed for this role
+    if (!allowedFields.has(camelCase)) {
+      continue // Skip fields not in whitelist
+    }
+
+    if (camelCase in validatedData) {
+      const value = validatedData[camelCase as keyof typeof validatedData]
+      if (value !== undefined) {
+        // Additional role-based validation for sensitive fields
+        if (userRole === 'doctor') {
+          // Double-check that doctors cannot update restricted fields
+          if (['doctorId', 'careType', 'department'].includes(camelCase)) {
+            console.warn(`[SECURITY] Doctor attempted to update restricted field: ${camelCase}`)
+            continue // Skip this field entirely
+          }
+        }
+        updateData[snakeCase] = value
+      }
+    }
+  }
+
+  return updateData
+}
 
 export async function POST(
   request: Request,
@@ -45,8 +149,21 @@ export async function POST(
       )
     }
 
+    // Validate input based on user role
+    const schema = profile.role === 'doctor' ? DoctorUpdateSchema : NurseAdminUpdateSchema
+    const validationResult = schema.safeParse(updates)
+
+    if (!validationResult.success) {
+      return NextResponse.json(
+        {
+          error: '입력 데이터가 유효하지 않습니다',
+          details: validationResult.error.flatten()
+        },
+        { status: 400 }
+      )
+    }
+
     // If user is a doctor, verify they're assigned to this patient
-    // and restrict what they can update
     if (profile.role === 'doctor') {
       const { data: patient, error: patientError } = await userClient
         .from('patients')
@@ -68,35 +185,13 @@ export async function POST(
           { status: 403 }
         )
       }
-
-      // Restrict fields that doctors can update
-      const restrictedFields = ['doctor_id', 'care_type', 'department', 'hospital_id']
-      const hasRestrictedField = restrictedFields.some(field => field in updates)
-
-      if (hasRestrictedField) {
-        return NextResponse.json(
-          { error: '의사는 해당 필드를 수정할 수 없습니다' },
-          { status: 403 }
-        )
-      }
     }
 
     // Use service client to bypass RLS for the update
     const serviceClient = await createServiceClient()
 
-    // Prepare the update data
-    const updateData: any = {
-      updated_at: new Date().toISOString()
-    }
-
-    // Map camelCase to snake_case for database columns
-    if ('doctorId' in updates) updateData.doctor_id = updates.doctorId
-    if ('careType' in updates) updateData.care_type = updates.careType
-    if ('department' in updates) updateData.department = updates.department
-    if ('name' in updates) updateData.name = updates.name
-    if ('patientNumber' in updates) updateData.patient_number = updates.patientNumber
-    if ('isActive' in updates) updateData.is_active = updates.isActive
-    if ('metadata' in updates) updateData.metadata = updates.metadata
+    // Map validated fields to database columns using the secure mapping utility with role checking
+    const updateData = mapValidatedFields(validationResult.data, profile.role)
 
     // Update the patient
     const { data, error } = await serviceClient

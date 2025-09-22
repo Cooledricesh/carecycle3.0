@@ -160,7 +160,7 @@ Content-Type: application/json
   - Limited fields: `metadata`, `notes`
 
 - **Nurses**:
-  - Can update `careType`, `department`
+  - Can update `careType`
   - Update patients within their care type
 
 - **Admins**:
@@ -174,7 +174,6 @@ Content-Type: application/json
   "patientNumber": "P12345",
   "doctorId": "doctor-uuid",
   "careType": "Chemotherapy",
-  "department": "Oncology",
   "isActive": true,
   "metadata": {
     "roomNumber": "205B",
@@ -191,7 +190,6 @@ Content-Type: application/json
 | `patientNumber` | ❌ | ❌ | ✅ |
 | `doctorId` | ❌ | ❌ | ✅ |
 | `careType` | ❌ | ✅ | ✅ |
-| `department` | ❌ | ✅ | ✅ |
 | `isActive` | ❌ | ❌ | ✅ |
 | `metadata` | ✅ | ✅ | ✅ |
 

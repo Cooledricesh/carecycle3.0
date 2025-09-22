@@ -104,7 +104,7 @@ export class DoctorFilterStrategy implements FilterStrategy {
       item_name: s.items?.name || '',
       item_category: s.items?.category || '',
       next_due_date: s.next_due_date,
-      interval_weeks: s.interval_weeks || 1,
+      interval_weeks: s.interval_weeks ?? 1,
       status: s.status,
       created_at: s.created_at,
       updated_at: s.updated_at,

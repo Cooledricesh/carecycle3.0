@@ -40,6 +40,78 @@ type UserAction = {
   userName: string;
 };
 
+type ValidationResult = {
+  valid: boolean;
+  careType: string | null;
+  error?: string;
+};
+
+// Utility: Validate role and care_type combinations
+function validateRoleAndCareType(role?: string, care_type?: string): ValidationResult {
+  // Admin and doctor roles must have null care_type
+  if (role === 'admin' || role === 'doctor') {
+    return { valid: true, careType: null };
+  }
+
+  // Nurse role must have a valid care_type
+  if (role === 'nurse') {
+    if (!care_type || care_type === '_none') {
+      return {
+        valid: false,
+        careType: null,
+        error: '스텝(간호사)는 반드시 부서를 선택해야 합니다.'
+      };
+    }
+    return { valid: true, careType: care_type };
+  }
+
+  // Other roles: care_type is optional
+  const finalCareType = care_type === '_none' || care_type === undefined ? null : care_type;
+  return { valid: true, careType: finalCareType };
+}
+
+// Utility: Check if current user has admin permissions
+async function checkAdminPermission(supabase: any): Promise<string> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    throw new Error('인증되지 않은 사용자입니다.');
+  }
+
+  const { data: currentProfile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single();
+
+  if (currentProfile?.role !== 'admin') {
+    throw new Error('관리자만 사용자 정보를 수정할 수 있습니다.');
+  }
+
+  return user.id;
+}
+
+// Utility: Make API call to update user
+async function updateUserByAdmin(payload: {
+  userId: string;
+  role?: string;
+  care_type?: string | null;
+}): Promise<void> {
+  const response = await fetch('/api/admin/users/update', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const result = await response.json();
+
+  if (!response.ok) {
+    console.error('API error details:', result);
+    throw new Error(result.error || 'Failed to update user');
+  }
+}
+
 export default function AdminUsersPage() {
   const [users, setUsers] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
@@ -113,26 +185,18 @@ export default function AdminUsersPage() {
   const handleEditSave = async (userId: string, originalRole: string, originalCareType: string | null) => {
     console.log('handleEditSave called:', { userId, originalRole, originalCareType, editForm });
 
-    // Handle care_type based on role constraints
-    let newCareType: string | null;
-
-    // For admins and doctors, care_type must be null
-    if (editForm.role === 'admin' || editForm.role === 'doctor') {
-      newCareType = null;
-    } else if (editForm.role === 'nurse') {
-      // For nurses, ensure a valid care_type is selected
-      if (!editForm.care_type || editForm.care_type === '_none') {
-        toast({
-          title: '오류',
-          description: '스텝(간호사)는 반드시 부서를 선택해야 합니다.',
-          variant: 'destructive',
-        });
-        return;
-      }
-      newCareType = editForm.care_type;
-    } else {
-      newCareType = editForm.care_type === '_none' || editForm.care_type === undefined ? null : editForm.care_type;
+    // Step 1: Validate role and care_type combination
+    const validation = validateRoleAndCareType(editForm.role, editForm.care_type);
+    if (!validation.valid) {
+      toast({
+        title: '오류',
+        description: validation.error,
+        variant: 'destructive',
+      });
+      return;
     }
+
+    const newCareType = validation.careType;
 
     // Check if any changes were made
     if (editForm.role === originalRole && newCareType === originalCareType) {
@@ -142,39 +206,15 @@ export default function AdminUsersPage() {
 
     setSaving(true);
     try {
-      // Check if current user is admin
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('인증되지 않은 사용자입니다.');
-
-      const { data: currentProfile } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', user.id)
-        .single();
-
-      if (currentProfile?.role !== 'admin') {
-        throw new Error('관리자만 사용자 정보를 수정할 수 있습니다.');
-      }
+      // Step 2: Check admin permission
+      const currentUserId = await checkAdminPermission(supabase);
 
       // Prevent changing own role
-      if (userId === user.id && editForm.role !== originalRole) {
+      if (userId === currentUserId && editForm.role !== originalRole) {
         throw new Error('자신의 역할은 변경할 수 없습니다.');
       }
 
-      // Build update object
-      const updateData: any = {
-        updated_at: new Date().toISOString(),
-      };
-
-      if (editForm.role !== originalRole) {
-        updateData.role = editForm.role;
-      }
-
-      if (newCareType !== originalCareType) {
-        updateData.care_type = newCareType;
-      }
-
-      // Use API route for admin operations to bypass RLS
+      // Step 3: Build payload for API call
       const payload = {
         userId,
         role: editForm.role !== originalRole ? editForm.role : undefined,
@@ -182,22 +222,10 @@ export default function AdminUsersPage() {
       };
       console.log('Sending API request with payload:', payload);
 
-      const response = await fetch('/api/admin/users/update', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-      });
+      // Step 4: Call helper to update user
+      await updateUserByAdmin(payload);
 
-      const result = await response.json();
-      console.log('API response:', { ok: response.ok, result });
-
-      if (!response.ok) {
-        console.error('API error details:', result);
-        throw new Error(result.error || 'Failed to update user');
-      }
-
+      // Step 5: Handle successful result
       toast({
         title: '성공',
         description: '사용자 정보가 업데이트되었습니다.',
