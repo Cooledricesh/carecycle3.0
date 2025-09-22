@@ -14,8 +14,8 @@ export interface ScheduleStatusInfo {
  * @returns 상태 레이블과 variant 정보
  */
 export function getScheduleStatusLabel(schedule: ScheduleWithDetails): ScheduleStatusInfo {
-  const scheduleDate = safeParse(schedule.nextDueDate)
-  
+  const scheduleDate = safeParse(schedule.next_due_date)
+
   if (!scheduleDate) {
     return {
       label: '날짜 오류',
@@ -102,15 +102,15 @@ export function sortSchedulesByPriority(schedules: ScheduleWithDetails[]): Sched
   return [...schedules].sort((a, b) => {
     const statusA = getScheduleStatusLabel(a)
     const statusB = getScheduleStatusLabel(b)
-    
+
     // 우선순위로 정렬 (연체 > 오늘 > 가까운 미래 > 먼 미래)
     if (statusA.priority !== statusB.priority) {
       return statusA.priority - statusB.priority
     }
-    
+
     // 같은 우선순위면 날짜로 정렬
-    const dateA = safeParse(a.nextDueDate)
-    const dateB = safeParse(b.nextDueDate)
+    const dateA = safeParse(a.next_due_date)
+    const dateB = safeParse(b.next_due_date)
     
     if (!dateA || !dateB) return 0
     return dateA.getTime() - dateB.getTime()
