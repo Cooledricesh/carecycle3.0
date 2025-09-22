@@ -92,8 +92,8 @@ export function CalendarView({ className }: CalendarViewProps) {
     while (currentDay <= calendarEnd) {
       // 날짜별 스케줄 필터링
       const schedulesByDay = schedules.filter(schedule => {
-        if (!schedule.nextDueDate) return false;
-        const scheduleDate = safeParse(schedule.nextDueDate);
+        if (!schedule.next_due_date) return false;
+        const scheduleDate = safeParse(schedule.next_due_date);
         return scheduleDate && isSameDay(scheduleDate, currentDay);
       });
 
@@ -112,10 +112,12 @@ export function CalendarView({ className }: CalendarViewProps) {
   // 선택된 날짜의 스케줄 (우선순위로 정렬)
   const selectedDateSchedules = useMemo(() => {
     if (!selectedDate) return [];
+
     const daySchedules = schedules.filter(schedule => {
-      const scheduleDate = safeParse(schedule.nextDueDate);
+      const scheduleDate = safeParse(schedule.next_due_date);
       return scheduleDate && isSameDay(scheduleDate, selectedDate);
     });
+
     return sortSchedulesByPriority(daySchedules);
   }, [selectedDate, schedules]);
 
@@ -128,7 +130,7 @@ export function CalendarView({ className }: CalendarViewProps) {
     const weekEnd = endOfWeek(today, { locale: ko });
 
     const monthSchedules = schedules.filter(schedule => {
-      const scheduleDate = safeParse(schedule.nextDueDate);
+      const scheduleDate = safeParse(schedule.next_due_date);
       return scheduleDate && scheduleDate >= monthStart && scheduleDate <= monthEnd;
     });
 
@@ -141,21 +143,21 @@ export function CalendarView({ className }: CalendarViewProps) {
     const overdueCount = monthSchedules.filter(s => {
       // 타임존 안전한 문자열 비교 사용
       const todayString = format(today, 'yyyy-MM-dd');
-      return s.status === 'active' && s.nextDueDate && s.nextDueDate < todayString;
+      return s.status === 'active' && s.next_due_date && s.next_due_date < todayString;
     }).length;
 
     // 오늘 예정 스케줄 - 월별 통계에 포함
     const todayCount = monthSchedules.filter(s => {
       const todayString = format(today, 'yyyy-MM-dd');
-      return s.status === 'active' && s.nextDueDate === todayString;
+      return s.status === 'active' && s.next_due_date === todayString;
     }).length;
 
     // 이번주 예정 스케줄 - 월별 통계에 포함
     const weekStartString = format(weekStart, 'yyyy-MM-dd');
     const weekEndString = format(weekEnd, 'yyyy-MM-dd');
     const weekCount = monthSchedules.filter(s => {
-      return s.status === 'active' && s.nextDueDate &&
-             s.nextDueDate >= weekStartString && s.nextDueDate <= weekEndString;
+      return s.status === 'active' && s.next_due_date &&
+             s.next_due_date >= weekStartString && s.next_due_date <= weekEndString;
     }).length;
 
     return {
@@ -513,8 +515,8 @@ export function CalendarView({ className }: CalendarViewProps) {
                   {/* 스케줄 유형별 카운트 - 모바일에서 더 컴팩트하게 */}
                   <div className={`flex flex-wrap ${isMobile ? 'gap-0.5' : 'gap-1'}`}>
                     {(() => {
-                      const injectionCount = day.schedules.filter(s => s.item?.category === 'injection').length;
-                      const testCount = day.schedules.filter(s => s.item?.category === 'test').length;
+                      const injectionCount = day.schedules.filter(s => s.item_category === 'injection').length;
+                      const testCount = day.schedules.filter(s => s.item_category === 'test').length;
                       
                       return (
                         <>
@@ -578,12 +580,12 @@ export function CalendarView({ className }: CalendarViewProps) {
               <div className={`space-y-3 ${isMobile ? 'max-h-[60vh] overflow-y-auto' : ''}`}>
                 {selectedDateSchedules.map((schedule) => (
                   <CalendarDayCard
-                    key={schedule.id}
+                    key={schedule.schedule_id}
                     schedule={schedule}
                     onComplete={() => handleComplete(schedule)}
-                    onPause={() => handlePauseSchedule(schedule.id)}
+                    onPause={() => handlePauseSchedule(schedule.schedule_id)}
                     onResume={() => handleResumeSchedule(schedule)}
-                    onDelete={() => handleDeleteSchedule(schedule.id)}
+                    onDelete={() => handleDeleteSchedule(schedule.schedule_id)}
                     onRefresh={refreshData}
                   />
                 ))}

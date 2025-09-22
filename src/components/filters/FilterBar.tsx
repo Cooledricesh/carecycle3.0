@@ -1,8 +1,10 @@
 'use client'
 
 import { CareTypeFilter, CareTypeFilterMobile } from './CareTypeFilter'
+import { SimpleFilterToggle, SimpleFilterToggleMobile } from './SimpleFilterToggle'
 import { FilterReset } from './FilterReset'
 import { useFilterContext } from '@/lib/filters/filter-context'
+import { useProfile } from '@/hooks/useProfile'
 import { useIsMobile } from '@/hooks/useIsMobile'
 import { Filter, ChevronDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -27,50 +29,135 @@ export function FilterBar({
 }: FilterBarProps) {
   const isMobile = useIsMobile()
   const { hasActiveFilters, filters } = useFilterContext()
+  const { data: profile } = useProfile()
   const [isOpen, setIsOpen] = useState(!collapsible)
 
   const activeFilterCount =
     filters.careTypes.length +
     (filters.department ? 1 : 0) +
     (filters.doctorId ? 1 : 0) +
-    (filters.dateRange ? 1 : 0)
+    (filters.dateRange ? 1 : 0) +
+    (filters.showAll ? 1 : 0)
 
-  const content = (
-    <div className={cn(
-      'flex items-center gap-3',
-      isMobile && 'flex-col items-start w-full'
-    )}>
-      {/* Care Type Filter */}
-      <div className={cn(
-        'flex items-center gap-2',
-        isMobile && 'w-full'
-      )}>
-        {!isMobile && showTitle && (
-          <span className="text-sm font-medium text-gray-600">진료 구분:</span>
-        )}
-        {isMobile ? <CareTypeFilterMobile /> : <CareTypeFilter />}
-      </div>
+  // Role-based UI differentiation
+  const renderFilterContent = () => {
+    if (!profile) {
+      return null
+    }
 
-      {/* Future: Doctor Filter */}
-      {/* <div className="flex items-center gap-2">
-        <span className="text-sm font-medium text-gray-600">주치의:</span>
-        <DoctorFilter />
-      </div> */}
-
-      {/* Reset Button */}
-      {hasActiveFilters && (
+    // Doctor: Simple toggle only
+    if (profile.role === 'doctor') {
+      return (
         <div className={cn(
-          'ml-auto',
-          isMobile && 'ml-0 w-full flex justify-center'
+          'flex items-center gap-3',
+          isMobile && 'flex-col items-start w-full'
         )}>
-          <FilterReset
-            size={isMobile ? 'default' : 'sm'}
-            className={isMobile ? 'w-full' : ''}
-          />
+          {isMobile ? (
+            <SimpleFilterToggleMobile className="w-full" />
+          ) : (
+            <SimpleFilterToggle />
+          )}
+
+          {/* Reset button if there are other active filters */}
+          {hasActiveFilters && !filters.showAll && (
+            <div className={cn(
+              'ml-auto',
+              isMobile && 'ml-0 w-full flex justify-center mt-2'
+            )}>
+              <FilterReset
+                size={isMobile ? 'default' : 'sm'}
+                className={isMobile ? 'w-full' : ''}
+              />
+            </div>
+          )}
         </div>
-      )}
-    </div>
-  )
+      )
+    }
+
+    // Nurse: Simple toggle + collapsible advanced filters
+    if (profile.role === 'nurse') {
+      return (
+        <div className={cn(
+          'space-y-3',
+          !isMobile && 'space-y-0 flex items-center gap-3'
+        )}>
+          {/* Primary: Simple toggle */}
+          {isMobile ? (
+            <SimpleFilterToggleMobile className="w-full" />
+          ) : (
+            <SimpleFilterToggle />
+          )}
+
+          {/* Secondary: Care type filter (collapsible on mobile) */}
+          {isMobile ? (
+            <Collapsible>
+              <CollapsibleTrigger asChild>
+                <button className="w-full flex items-center justify-between text-sm text-muted-foreground hover:text-foreground">
+                  <span>고급 필터</span>
+                  <ChevronDown className="h-4 w-4" />
+                </button>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="pt-2">
+                <CareTypeFilterMobile />
+              </CollapsibleContent>
+            </Collapsible>
+          ) : (
+            <div className="flex items-center gap-2 ml-auto">
+              <span className="text-sm text-muted-foreground">추가 필터:</span>
+              <CareTypeFilter />
+            </div>
+          )}
+
+          {/* Reset button */}
+          {hasActiveFilters && (
+            <div className={cn(
+              'ml-auto',
+              isMobile && 'ml-0 w-full flex justify-center'
+            )}>
+              <FilterReset
+                size={isMobile ? 'default' : 'sm'}
+                className={isMobile ? 'w-full' : ''}
+              />
+            </div>
+          )}
+        </div>
+      )
+    }
+
+    // Admin: Full filter controls
+    return (
+      <div className={cn(
+        'flex items-center gap-3',
+        isMobile && 'flex-col items-start w-full'
+      )}>
+        {/* Care Type Filter */}
+        <div className={cn(
+          'flex items-center gap-2',
+          isMobile && 'w-full'
+        )}>
+          {!isMobile && showTitle && (
+            <span className="text-sm font-medium text-gray-600">진료 구분:</span>
+          )}
+          {isMobile ? <CareTypeFilterMobile /> : <CareTypeFilter />}
+        </div>
+
+        {/* Reset Button */}
+        {hasActiveFilters && (
+          <div className={cn(
+            'ml-auto',
+            isMobile && 'ml-0 w-full flex justify-center'
+          )}>
+            <FilterReset
+              size={isMobile ? 'default' : 'sm'}
+              className={isMobile ? 'w-full' : ''}
+            />
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  const content = renderFilterContent()
 
   if (!collapsible) {
     return (

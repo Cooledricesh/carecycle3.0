@@ -8,7 +8,7 @@ export interface Profile {
   id: string;
   email: string;
   name: string;
-  role: 'admin' | 'nurse';
+  role: 'admin' | 'nurse' | 'doctor';
   care_type: string | null;
   phone?: string | null;
   is_active?: boolean;

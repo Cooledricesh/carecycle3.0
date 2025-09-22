@@ -139,7 +139,9 @@ export function Sidebar({ onNavigate }: SidebarProps = {}) {
               <p className="text-xs text-gray-500 truncate">
                 {profile ? (
                   <>
-                    {profile.role === 'nurse' ? '스텝' : '관리자'}
+                    {profile.role === 'nurse' ? '스텝' :
+                     profile.role === 'doctor' ? '의사' :
+                     profile.role === 'admin' ? '관리자' : '사용자'}
                     {profile.care_type && ` • ${profile.care_type}`}
                   </>
                 ) : user ? (

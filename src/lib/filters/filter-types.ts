@@ -21,6 +21,12 @@ export interface ScheduleFilter {
 
   // 스케줄 상태 필터
   includeInactive?: boolean
+
+  // 역할 기반 필터 - 전체 보기 토글
+  showAll?: boolean
+
+  // 긴급도 필터 (의료 환경 특화)
+  urgencyLevel?: 'all' | 'urgent' | 'normal'
 }
 
 export interface FilterState {
@@ -34,7 +40,9 @@ export const defaultFilters: ScheduleFilter = {
   doctorId: null,
   department: null,
   dateRange: null,
-  includeInactive: false
+  includeInactive: false,
+  showAll: false, // 기본적으로 역할 기반 필터 적용
+  urgencyLevel: 'all'
 }
 
 // Helper functions
@@ -44,7 +52,9 @@ export const hasActiveFilters = (filters: ScheduleFilter): boolean => {
     filters.doctorId !== null ||
     filters.department !== null ||
     filters.dateRange !== null ||
-    filters.includeInactive === true
+    filters.includeInactive === true ||
+    filters.showAll === true ||
+    (filters.urgencyLevel !== undefined && filters.urgencyLevel !== 'all')
   )
 }
 

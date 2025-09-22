@@ -184,7 +184,9 @@ export default function ProfilePage() {
               <div className={`flex ${isMobile ? 'justify-center' : ''} items-center gap-2`}>
                 <Shield className="h-3 w-3 sm:h-4 sm:w-4 text-gray-400" />
                 <span className="text-xs sm:text-sm text-gray-600">
-                  {profile.role === "admin" ? "관리자" : "스텝"}
+                  {profile.role === "admin" ? "관리자" :
+                   profile.role === "doctor" ? "의사" :
+                   profile.role === "nurse" ? "간호사" : "스텝"}
                 </span>
                 {profile.care_type && (
                   <>
