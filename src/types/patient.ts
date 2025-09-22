@@ -15,6 +15,8 @@ export interface Patient {
   name: string
   department?: string | null
   careType?: '외래' | '입원' | '낮병원' | null
+  doctorId?: string | null
+  doctorName?: string | null
   isActive: boolean
   metadata?: Record<string, any>
   createdBy?: string | null
@@ -43,6 +45,7 @@ export interface PatientCreateInput {
   name: string
   department?: string | null
   careType?: '외래' | '입원' | '낮병원' | null
+  doctorId?: string | null
   isActive?: boolean
   metadata?: Record<string, any>
 }
@@ -52,6 +55,7 @@ export interface PatientUpdateInput {
   name?: string
   department?: string | null
   careType?: '외래' | '입원' | '낮병원' | null
+  doctorId?: string | null
   isActive?: boolean
   metadata?: Record<string, any>
 }
@@ -70,6 +74,8 @@ export interface PatientListItem {
   name: string
   department?: string | null
   careType?: '외래' | '입원' | '낮병원' | null
+  doctorId?: string | null
+  doctorName?: string | null
   isActive: boolean
   scheduleCount?: number
   lastExecutionDate?: string | null

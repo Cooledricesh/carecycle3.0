@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { Calendar, Clock, Plus, Filter, Search, Trash2, Edit, AlertCircle, RefreshCw, MoreVertical, Pause, Play } from "lucide-react";
+import { useState, useMemo } from "react";
+import { Calendar, Clock, Plus, Filter, Search, Trash2, Edit, AlertCircle, RefreshCw, MoreVertical, Pause, Play, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,7 +13,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ScheduleCreateModal } from "@/components/schedules/schedule-create-modal";
 import { ScheduleEditModal } from "@/components/schedules/schedule-edit-modal";
 import { ScheduleResumeDialog } from '@/components/schedules/schedule-resume-dialog';
-import { useSchedules, useOverdueSchedules } from "@/hooks/useSchedules";
+import { useFilteredSchedules } from "@/hooks/useFilteredSchedules";
+import { useOverdueSchedules } from "@/hooks/useSchedules";
 import { getScheduleCategoryIcon, getScheduleCategoryColor, getScheduleCategoryBgColor, getScheduleCategoryLabel, getScheduleCardBgColor } from '@/lib/utils/schedule-category';
 import { scheduleService } from "@/services/scheduleService";
 import type { ScheduleWithDetails } from "@/types/schedule";
@@ -37,15 +38,19 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { touchTarget, responsiveText, responsivePadding, cn } from "@/lib/utils";
+import { FilterProvider } from "@/providers/filter-provider";
+import { SimpleFilterToggle } from "@/components/filters/SimpleFilterToggle";
+import { useProfile } from "@/hooks/useProfile";
+import { useFilteredPatientCount } from "@/hooks/useFilteredPatientCount";
 
-export default function SchedulesPage() {
+function SchedulesContent() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedTab, setSelectedTab] = useState("all");
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const isMobile = useIsMobile();
   
-  const { schedules, isLoading: schedulesLoading, error: schedulesError, refetch: refetchSchedules } = useSchedules();
+  const { schedules, isLoading: schedulesLoading, error: schedulesError, refetch: refetchSchedules } = useFilteredSchedules();
   const { data: overdueSchedules = [], isLoading: overdueLoading, error: overdueError, refetch: refetchOverdue } = useOverdueSchedules();
   
   const loading = schedulesLoading || overdueLoading;
@@ -140,30 +145,34 @@ export default function SchedulesPage() {
     }
   };
 
-  const filteredSchedules = schedules.filter((schedule) => {
-    const matchesSearch = 
+  const filteredSchedules = schedules.filter((schedule: any) => {
+    const matchesSearch =
       schedule.patient?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       schedule.item?.name?.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesTab = 
+
+    const matchesTab =
       selectedTab === "all" ||
       (selectedTab === "active" && schedule.status === 'active') ||
       (selectedTab === "paused" && schedule.status === 'paused') ||
-      (selectedTab === "overdue" && overdueSchedules.some(o => o.id === schedule.id));
-    
+      (selectedTab === "overdue" && overdueSchedules.some((o: any) => o.id === schedule.id));
+
     return matchesSearch && matchesTab;
   });
 
   const displaySchedules = selectedTab === "overdue" ? overdueSchedules : filteredSchedules;
 
-  const getStatusBadge = (schedule: ScheduleWithDetails) => {
+  // Get patient counts from the dedicated hook
+  const { myPatientCount, totalCount, isShowingAll } = useFilteredPatientCount();
+  const uniquePatientCount = isShowingAll ? totalCount : myPatientCount;
+
+  const getStatusBadge = (schedule: any) => {
     if (schedule.status === 'paused') {
       return <Badge variant="secondary">일시중지</Badge>;
     }
     if (schedule.status === 'completed') {
       return <Badge variant="outline">완료</Badge>;
     }
-    if (overdueSchedules.some(o => o.id === schedule.id)) {
+    if (overdueSchedules.some((o: any) => o.id === schedule.id)) {
       return <Badge variant="destructive">지연</Badge>;
     }
     return <Badge className="bg-green-100 text-green-800">활성</Badge>;
@@ -508,5 +517,24 @@ export default function SchedulesPage() {
         />
       )}
     </div>
+  );
+}
+
+export default function SchedulesPage() {
+  const { data: profile } = useProfile();
+
+  return (
+    <FilterProvider persistToUrl={true}>
+      <div className="space-y-4">
+        {/* Show filter toggle for nurse and doctor */}
+        {profile && (profile.role === 'nurse' || profile.role === 'doctor') && (
+          <div className="p-3 bg-gray-50 border rounded-lg">
+            <SimpleFilterToggle />
+          </div>
+        )}
+
+        <SchedulesContent />
+      </div>
+    </FilterProvider>
   );
 }

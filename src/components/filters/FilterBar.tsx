@@ -74,45 +74,24 @@ export function FilterBar({
       )
     }
 
-    // Nurse: Simple toggle + collapsible advanced filters
+    // Nurse: Simple toggle only (same as doctor)
     if (profile.role === 'nurse') {
       return (
         <div className={cn(
-          'space-y-3',
-          !isMobile && 'space-y-0 flex items-center gap-3'
+          'flex items-center gap-3',
+          isMobile && 'flex-col items-start w-full'
         )}>
-          {/* Primary: Simple toggle */}
           {isMobile ? (
             <SimpleFilterToggleMobile className="w-full" />
           ) : (
             <SimpleFilterToggle />
           )}
 
-          {/* Secondary: Care type filter (collapsible on mobile) */}
-          {isMobile ? (
-            <Collapsible>
-              <CollapsibleTrigger asChild>
-                <button className="w-full flex items-center justify-between text-sm text-muted-foreground hover:text-foreground">
-                  <span>고급 필터</span>
-                  <ChevronDown className="h-4 w-4" />
-                </button>
-              </CollapsibleTrigger>
-              <CollapsibleContent className="pt-2">
-                <CareTypeFilterMobile />
-              </CollapsibleContent>
-            </Collapsible>
-          ) : (
-            <div className="flex items-center gap-2 ml-auto">
-              <span className="text-sm text-muted-foreground">추가 필터:</span>
-              <CareTypeFilter />
-            </div>
-          )}
-
-          {/* Reset button */}
-          {hasActiveFilters && (
+          {/* Reset button if there are other active filters */}
+          {hasActiveFilters && !filters.showAll && (
             <div className={cn(
               'ml-auto',
-              isMobile && 'ml-0 w-full flex justify-center'
+              isMobile && 'ml-0 w-full flex justify-center mt-2'
             )}>
               <FilterReset
                 size={isMobile ? 'default' : 'sm'}

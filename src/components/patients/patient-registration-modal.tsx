@@ -35,6 +35,7 @@ import { useToast } from '@/hooks/use-toast'
 import { createClient } from '@/lib/supabase/client'
 import { usePatientRestoration } from '@/hooks/usePatientRestoration'
 import { PatientRestorationDialog } from './patient-restoration-dialog'
+import { useDoctors } from '@/hooks/useDoctors'
 
 const PatientRegistrationSchema = z.object({
   name: z
@@ -53,6 +54,11 @@ const PatientRegistrationSchema = z.object({
     .enum(['외래', '입원', '낮병원'], {
       required_error: '진료구분을 선택해주세요',
     }),
+
+  doctorId: z
+    .string()
+    .optional()
+    .nullable(),
 })
 
 type PatientRegistrationFormData = z.infer<typeof PatientRegistrationSchema>
@@ -71,8 +77,9 @@ export function PatientRegistrationModal({
   const [open, setOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const { toast } = useToast()
-  
+
   const restoration = usePatientRestoration()
+  const { data: doctors, isLoading: isLoadingDoctors } = useDoctors()
 
   const form = useForm<PatientRegistrationFormData>({
     resolver: zodResolver(PatientRegistrationSchema),
@@ -80,6 +87,7 @@ export function PatientRegistrationModal({
       name: '',
       patientNumber: '',
       careType: '외래',
+      doctorId: null,
     },
   })
 
@@ -154,6 +162,7 @@ export function PatientRegistrationModal({
         name: data.name,
         patientNumber: data.patientNumber,
         careType: data.careType,
+        doctorId: data.doctorId,
         isActive: true,
       }, supabase)
       
@@ -165,7 +174,12 @@ export function PatientRegistrationModal({
       })
 
       // Reset form and close modal
-      form.reset()
+      form.reset({
+        name: '',
+        patientNumber: '',
+        careType: '외래',
+        doctorId: null,
+      })
       setOpen(false)
 
       // Call success callback if provided
@@ -207,12 +221,18 @@ export function PatientRegistrationModal({
       await restoration.restorePatient(restoration.state.inactivePatient.id, {
         updateInfo: {
           name: formData.name,
-          careType: formData.careType
+          careType: formData.careType,
+          doctorId: formData.doctorId
         }
       })
 
       // Reset form and close modal only after successful restore
-      form.reset()
+      form.reset({
+        name: '',
+        patientNumber: '',
+        careType: '외래',
+        doctorId: null,
+      })
       setOpen(false)
 
       // Call success callback if provided
@@ -248,11 +268,17 @@ export function PatientRegistrationModal({
       await restoration.createWithArchive(formData.patientNumber, {
         name: formData.name,
         careType: formData.careType,
+        doctorId: formData.doctorId,
         metadata: {}
       })
 
       // Success branch: reset form, close modal, and call success callback
-      form.reset()
+      form.reset({
+        name: '',
+        patientNumber: '',
+        careType: '외래',
+        doctorId: null,
+      })
       setOpen(false)
       
       if (onSuccess) {
@@ -362,12 +388,46 @@ export function PatientRegistrationModal({
                 </FormItem>
               )}
             />
+            <FormField
+              control={form.control}
+              name="doctorId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>주치의</FormLabel>
+                  <Select
+                    onValueChange={(value) => field.onChange(value === 'none' ? null : value)}
+                    value={field.value || 'none'}
+                    disabled={isSubmitting || isLoadingDoctors}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="주치의를 선택하세요 (선택사항)" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="none">선택 안함</SelectItem>
+                      {doctors?.map((doctor) => (
+                        <SelectItem key={doctor.id} value={doctor.id}>
+                          {doctor.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <div className="flex justify-end space-x-2 pt-4">
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => {
-                  form.reset()
+                  form.reset({
+                    name: '',
+                    patientNumber: '',
+                    careType: '외래',
+                    doctorId: null,
+                  })
                   setOpen(false)
                 }}
                 disabled={isSubmitting}

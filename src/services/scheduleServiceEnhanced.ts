@@ -8,7 +8,6 @@ import {
   FilterStrategyFactory,
   FilterOptions,
   UserContext,
-  ScheduleWithDetails,
   FilterStatistics
 } from './filters'
 
@@ -45,7 +44,7 @@ export class ScheduleServiceEnhanced {
     userContext: UserContext,
     supabase?: SupabaseClient<Database>
   ): Promise<{
-    schedules: ScheduleWithDetails[]
+    schedules: any[]  // Returns transformed data that UI expects
     statistics?: FilterStatistics
     metrics?: PerformanceMetrics
   }> {
@@ -64,7 +63,7 @@ export class ScheduleServiceEnhanced {
 
     // Check cache first
     const cacheKey = strategy.getCacheKey(filters, userContext)
-    const cached = this.getFromCache<ScheduleWithDetails[]>(cacheKey)
+    const cached = this.getFromCache<any[]>(cacheKey)
 
     if (cached) {
       const metrics: PerformanceMetrics = {
@@ -104,7 +103,77 @@ export class ScheduleServiceEnhanced {
         throw error
       }
 
-      const schedules = data || []
+      const flatSchedules = data || []
+
+      // Transform flattened data to nested format for UI compatibility
+      const schedules = flatSchedules.map((s: any) => {
+        // If it's already in nested format with camelCase, return as is
+        if (s.patient && s.item && s.id) {
+          return s
+        }
+
+        // If it's in nested format with patients/items (plural), transform to singular
+        if (s.patients || s.items) {
+          return {
+            // Keep both naming conventions for compatibility
+            id: s.id,
+            patient_id: s.patient_id,
+            patientId: s.patient_id,
+            item_id: s.item_id,
+            itemId: s.item_id,
+            next_due_date: s.next_due_date,
+            nextDueDate: s.next_due_date,
+            interval_weeks: s.interval_weeks,
+            intervalWeeks: s.interval_weeks,
+            status: s.status,
+            notes: s.notes,
+            created_at: s.created_at,
+            createdAt: s.created_at,
+            updated_at: s.updated_at,
+            updatedAt: s.updated_at,
+            patient: s.patients || null,
+            item: s.items || null
+          }
+        }
+
+        // Transform from flattened RPC format to nested format
+        // Keep both snake_case and camelCase for backward compatibility
+        return {
+          // Main schedule properties with both naming conventions
+          id: s.schedule_id || s.id,
+          patient_id: s.patient_id,  // snake_case for compatibility
+          patientId: s.patient_id,   // camelCase
+          item_id: s.item_id,        // snake_case
+          itemId: s.item_id,         // camelCase
+          next_due_date: s.next_due_date,  // snake_case (used by calendar)
+          nextDueDate: s.next_due_date,    // camelCase
+          interval_weeks: s.interval_weeks, // snake_case
+          intervalWeeks: s.interval_weeks,  // camelCase
+          status: s.status,
+          notes: s.notes,
+          created_at: s.created_at,  // snake_case
+          createdAt: s.created_at,   // camelCase
+          updated_at: s.updated_at,  // snake_case
+          updatedAt: s.updated_at,   // camelCase
+          // Create nested patient object
+          patient: s.patient_name ? {
+            id: s.patient_id,
+            name: s.patient_name,
+            careType: s.patient_care_type,
+            care_type: s.patient_care_type,  // Both formats
+            patientNumber: s.patient_number,
+            patient_number: s.patient_number, // Both formats
+            doctorId: s.doctor_id,
+            doctor_id: s.doctor_id  // Both formats
+          } : null,
+          // Create nested item object
+          item: s.item_name ? {
+            id: s.item_id,
+            name: s.item_name,
+            category: s.item_category
+          } : null
+        }
+      })
 
       // Cache the result
       this.setCache(cacheKey, schedules, strategy.getCacheTTL())
@@ -120,7 +189,7 @@ export class ScheduleServiceEnhanced {
       console.log(`[DB Query] ${cacheKey}: ${schedules.length} records in ${metrics.queryTime.toFixed(2)}ms`)
 
       // Optionally fetch statistics
-      const statistics = await this.getFilterStatistics(userContext, client)
+      const statistics = await this.getFilterStatistics(userContext, client) ?? undefined
 
       console.log('[scheduleServiceEnhanced] Returning:', {
         schedulesCount: schedules.length,
@@ -178,7 +247,9 @@ export class ScheduleServiceEnhanced {
         console.log('[getTodayChecklist] RPC function issue, falling back to direct query')
 
         // Fallback: Query schedules directly for today
-        const today = new Date().toISOString().split('T')[0]
+        const today = format(new Date(), 'yyyy-MM-dd')
+
+        console.log('[getTodayChecklist] Fallback query with date:', today)
 
         let query = client
           .from('schedules')
@@ -187,14 +258,18 @@ export class ScheduleServiceEnhanced {
             patient_id,
             item_id,
             next_due_date,
+            interval_weeks,
+            notes,
             status,
             patients!inner (
               id,
               name,
               care_type,
-              doctor_id
+              doctor_id,
+              patient_number
             ),
             items!inner (
+              id,
               name,
               category
             )
@@ -211,7 +286,26 @@ export class ScheduleServiceEnhanced {
           }
         }
 
-        const { data: schedules, error: queryError } = await query
+        const { data: schedules, error: queryError } = await query as {
+          data: Array<{
+            id: string
+            patient_id: string
+            item_id: string
+            next_due_date: string
+            status: string
+            patients: {
+              id: string
+              name: string
+              care_type: string
+              doctor_id: string | null
+            }
+            items: {
+              name: string
+              category: string
+            }
+          }> | null
+          error: any
+        }
 
         if (queryError) {
           throw queryError
@@ -219,17 +313,37 @@ export class ScheduleServiceEnhanced {
 
         console.log('[getTodayChecklist] Fallback query successful:', schedules?.length || 0, 'items')
 
-        // Transform the data to match expected format
+        // Transform the data to match expected format used by UI
         return (schedules || []).map(s => ({
-          schedule_id: s.id,
+          // Keep both naming conventions for compatibility
+          id: s.id,
           patient_id: s.patient_id,
-          patient_name: s.patients?.name || '',
-          patient_care_type: s.patients?.care_type || '',
-          doctor_id: s.patients?.doctor_id,
-          item_name: s.items?.name || '',
-          item_category: s.items?.category || '',
+          patientId: s.patient_id,
+          item_id: s.item_id,
+          itemId: s.item_id,
+          next_due_date: s.next_due_date,
+          nextDueDate: s.next_due_date,
+          interval_weeks: s.interval_weeks,
+          intervalWeeks: s.interval_weeks,
           status: s.status,
-          completed: false // Would need a separate query for completion status
+          notes: s.notes,
+          // Nested patient object
+          patient: s.patients ? {
+            id: s.patients.id,
+            name: s.patients.name,
+            care_type: s.patients.care_type,
+            careType: s.patients.care_type,
+            doctor_id: s.patients.doctor_id,
+            doctorId: s.patients.doctor_id,
+            patient_number: s.patients.patient_number,
+            patientNumber: s.patients.patient_number
+          } : null,
+          // Nested item object
+          item: s.items ? {
+            id: s.items.id,
+            name: s.items.name,
+            category: s.items.category
+          } : null
         }))
       }
 

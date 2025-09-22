@@ -1,6 +1,6 @@
 import { isToday, isBefore, differenceInDays } from 'date-fns'
 import { safeParse } from '@/lib/utils/date'
-import type { ScheduleWithDetails } from '@/types/schedule'
+import type { ScheduleWithDetails, Schedule, ScheduleWithRelations } from '@/types/schedule'
 
 export interface ScheduleStatusInfo {
   label: string
@@ -8,13 +8,23 @@ export interface ScheduleStatusInfo {
   priority: number // 낮을수록 우선순위 높음
 }
 
+// Type guard to check if schedule has snake_case date field
+function hasSnakeCaseDate(schedule: any): schedule is ScheduleWithDetails {
+  return 'next_due_date' in schedule;
+}
+
 /**
  * 스케줄의 상태 레이블과 정보를 반환합니다.
- * @param schedule 스케줄 정보
+ * @param schedule 스케줄 정보 (both camelCase and snake_case supported)
  * @returns 상태 레이블과 variant 정보
  */
-export function getScheduleStatusLabel(schedule: ScheduleWithDetails): ScheduleStatusInfo {
-  const scheduleDate = safeParse(schedule.next_due_date)
+export function getScheduleStatusLabel(schedule: ScheduleWithDetails | Schedule | ScheduleWithRelations): ScheduleStatusInfo {
+  // Handle both snake_case and camelCase date fields
+  const dateString = hasSnakeCaseDate(schedule)
+    ? schedule.next_due_date
+    : (schedule as Schedule | ScheduleWithRelations).nextDueDate;
+
+  const scheduleDate = safeParse(dateString)
 
   if (!scheduleDate) {
     return {
@@ -98,7 +108,7 @@ export function getStatusBadgeClass(variant: ScheduleStatusInfo['variant']): str
  * @param schedules 스케줄 목록
  * @returns 정렬된 스케줄 목록
  */
-export function sortSchedulesByPriority(schedules: ScheduleWithDetails[]): ScheduleWithDetails[] {
+export function sortSchedulesByPriority<T extends ScheduleWithDetails | Schedule | ScheduleWithRelations>(schedules: T[]): T[] {
   return [...schedules].sort((a, b) => {
     const statusA = getScheduleStatusLabel(a)
     const statusB = getScheduleStatusLabel(b)
@@ -109,8 +119,10 @@ export function sortSchedulesByPriority(schedules: ScheduleWithDetails[]): Sched
     }
 
     // 같은 우선순위면 날짜로 정렬
-    const dateA = safeParse(a.next_due_date)
-    const dateB = safeParse(b.next_due_date)
+    const dateStringA = hasSnakeCaseDate(a) ? a.next_due_date : (a as any).nextDueDate
+    const dateStringB = hasSnakeCaseDate(b) ? b.next_due_date : (b as any).nextDueDate
+    const dateA = safeParse(dateStringA)
+    const dateB = safeParse(dateStringB)
     
     if (!dateA || !dateB) return 0
     return dateA.getTime() - dateB.getTime()

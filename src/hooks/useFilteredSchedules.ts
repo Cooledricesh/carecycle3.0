@@ -146,23 +146,59 @@ export function useFilteredUpcomingSchedules(daysAhead: number = 7) {
   const supabase = createClient()
 
   return useQuery({
-    queryKey: ['schedules', 'upcoming', daysAhead, user?.id, filters, profile?.role],
+    queryKey: ['schedules', 'upcoming', daysAhead, user?.id, filters, profile?.role, profile?.care_type],
     queryFn: async () => {
       try {
         console.log('[useFilteredUpcomingSchedules] Profile check:', {
           hasProfile: !!profile,
-          role: profile?.role
+          role: profile?.role,
+          careType: profile?.care_type,
+          showAll: filters.showAll
         })
 
-        // For now, use the old service for upcoming schedules
-        // Enhanced service can be extended later for this specific view
-        // But wait for profile to be loaded before running
-        if (!profile) {
-          console.log('[useFilteredUpcomingSchedules] Waiting for profile...')
+        if (!profile || !user) {
+          console.log('[useFilteredUpcomingSchedules] Waiting for profile or user...')
           return []
         }
 
-        return await scheduleService.getUpcomingSchedules(daysAhead, filters, supabase)
+        // Get all schedules first
+        const allSchedules = await scheduleService.getUpcomingSchedules(daysAhead, filters, supabase)
+
+        // Apply role-based filtering if showAll is false
+        if (!filters.showAll) {
+          if (profile.role === 'nurse' && profile.care_type) {
+            // Filter by care_type for nurses
+            // Handle both possible property names (patients or patient)
+            const filtered = allSchedules.filter((schedule: any) =>
+              (schedule.patients?.care_type === profile.care_type) ||
+              (schedule.patient?.careType === profile.care_type) ||
+              (schedule.patient?.care_type === profile.care_type)
+            )
+            console.log('[useFilteredUpcomingSchedules] Filtered for nurse:', {
+              careType: profile.care_type,
+              originalCount: allSchedules.length,
+              filteredCount: filtered.length
+            })
+            return filtered
+          } else if (profile.role === 'doctor') {
+            // Filter by doctor_id for doctors
+            // Handle both possible property names (patients or patient)
+            const filtered = allSchedules.filter((schedule: any) =>
+              (schedule.patients?.doctor_id === user.id) ||
+              (schedule.patient?.doctorId === user.id) ||
+              (schedule.patient?.doctor_id === user.id)
+            )
+            console.log('[useFilteredUpcomingSchedules] Filtered for doctor:', {
+              doctorId: user.id,
+              originalCount: allSchedules.length,
+              filteredCount: filtered.length
+            })
+            return filtered
+          }
+        }
+
+        // Admin or showAll = true: return all schedules
+        return allSchedules
       } catch (error) {
         const message = mapErrorToUserMessage(error)
         toast({

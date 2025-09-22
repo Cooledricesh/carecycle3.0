@@ -24,8 +24,15 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { Check, X, UserCheck, UserX, Shield, User, Stethoscope } from 'lucide-react';
+import { Check, X, UserCheck, UserX, Shield, User, Stethoscope, Edit2, Save, XCircle } from 'lucide-react';
 
 type UserAction = {
   userId: string;
@@ -38,11 +45,35 @@ export default function AdminUsersPage() {
   const [loading, setLoading] = useState(true);
   const [actionDialog, setActionDialog] = useState<UserAction | null>(null);
   const [processing, setProcessing] = useState(false);
+  const [editingUser, setEditingUser] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState<{ role?: string; care_type?: string }>({});
+  const [saving, setSaving] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const supabase = createClient();
   const { toast } = useToast();
 
+  // Available care types (departments) - 간호사 역할에만 중요
+  const careTypes = [
+    { value: '외래', label: '외래' },
+    { value: '입원', label: '병동' },  // Database expects '입원', display as '병동'
+    { value: '낮병원', label: '낮병원' },
+  ];
+
+  // Available roles
+  const roles = [
+    { value: 'nurse', label: '스텝' },
+    { value: 'doctor', label: '주치의' },
+    { value: 'admin', label: '관리자' },
+  ];
+
   const fetchUsers = useCallback(async () => {
     try {
+      // Get current user
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (authUser) {
+        setCurrentUserId(authUser.id);
+      }
+
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
@@ -65,6 +96,128 @@ export default function AdminUsersPage() {
   useEffect(() => {
     fetchUsers();
   }, [fetchUsers]);
+
+  const handleEditStart = (userId: string, currentRole: string, currentCareType: string | null) => {
+    setEditingUser(userId);
+    setEditForm({
+      role: currentRole,
+      care_type: currentCareType || undefined,
+    });
+  };
+
+  const handleEditCancel = () => {
+    setEditingUser(null);
+    setEditForm({});
+  };
+
+  const handleEditSave = async (userId: string, originalRole: string, originalCareType: string | null) => {
+    console.log('handleEditSave called:', { userId, originalRole, originalCareType, editForm });
+
+    // Handle care_type based on role constraints
+    let newCareType: string | null;
+
+    // For admins and doctors, care_type must be null
+    if (editForm.role === 'admin' || editForm.role === 'doctor') {
+      newCareType = null;
+    } else if (editForm.role === 'nurse') {
+      // For nurses, ensure a valid care_type is selected
+      if (!editForm.care_type || editForm.care_type === '_none') {
+        toast({
+          title: '오류',
+          description: '스텝(간호사)는 반드시 부서를 선택해야 합니다.',
+          variant: 'destructive',
+        });
+        return;
+      }
+      newCareType = editForm.care_type;
+    } else {
+      newCareType = editForm.care_type === '_none' || editForm.care_type === undefined ? null : editForm.care_type;
+    }
+
+    // Check if any changes were made
+    if (editForm.role === originalRole && newCareType === originalCareType) {
+      handleEditCancel();
+      return;
+    }
+
+    setSaving(true);
+    try {
+      // Check if current user is admin
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('인증되지 않은 사용자입니다.');
+
+      const { data: currentProfile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single();
+
+      if (currentProfile?.role !== 'admin') {
+        throw new Error('관리자만 사용자 정보를 수정할 수 있습니다.');
+      }
+
+      // Prevent changing own role
+      if (userId === user.id && editForm.role !== originalRole) {
+        throw new Error('자신의 역할은 변경할 수 없습니다.');
+      }
+
+      // Build update object
+      const updateData: any = {
+        updated_at: new Date().toISOString(),
+      };
+
+      if (editForm.role !== originalRole) {
+        updateData.role = editForm.role;
+      }
+
+      if (newCareType !== originalCareType) {
+        updateData.care_type = newCareType;
+      }
+
+      // Use API route for admin operations to bypass RLS
+      const payload = {
+        userId,
+        role: editForm.role !== originalRole ? editForm.role : undefined,
+        care_type: newCareType !== originalCareType ? newCareType : undefined,
+      };
+      console.log('Sending API request with payload:', payload);
+
+      const response = await fetch('/api/admin/users/update', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const result = await response.json();
+      console.log('API response:', { ok: response.ok, result });
+
+      if (!response.ok) {
+        console.error('API error details:', result);
+        throw new Error(result.error || 'Failed to update user');
+      }
+
+      toast({
+        title: '성공',
+        description: '사용자 정보가 업데이트되었습니다.',
+      });
+
+      await fetchUsers();
+      handleEditCancel();
+    } catch (error: any) {
+      console.error('Error updating user:', error);
+      const errorMessage = error?.message || error?.error_description || error?.details ||
+                          (typeof error === 'string' ? error : '사용자 정보 업데이트에 실패했습니다.');
+      toast({
+        title: '오류',
+        description: errorMessage,
+        variant: 'destructive',
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const handleUserAction = async () => {
     if (!actionDialog) return;
@@ -244,7 +397,7 @@ export default function AdminUsersPage() {
                   <TableRow key={user.id}>
                     <TableCell className="font-medium">{user.name}</TableCell>
                     <TableCell>{user.email}</TableCell>
-                    <TableCell>{user.care_type || '-'}</TableCell>
+                    <TableCell>{user.care_type === '입원' ? '병동' : (user.care_type || '-')}</TableCell>
                     <TableCell>{getRoleBadge(user.role)}</TableCell>
                     <TableCell>
                       {new Date(user.created_at).toLocaleDateString('ko-KR')}
@@ -302,55 +455,156 @@ export default function AdminUsersPage() {
                 <TableHead>상태</TableHead>
                 <TableHead>활성화</TableHead>
                 <TableHead>가입일</TableHead>
-                <TableHead className="text-right">작업</TableHead>
+                <TableHead className="text-center">작업</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {users.map((user) => (
-                <TableRow key={user.id}>
-                  <TableCell className="font-medium">{user.name}</TableCell>
-                  <TableCell>{user.email}</TableCell>
-                  <TableCell>{user.care_type || '-'}</TableCell>
-                  <TableCell>{getRoleBadge(user.role)}</TableCell>
-                  <TableCell>{getStatusBadge(user.approval_status)}</TableCell>
-                  <TableCell>
-                    <Badge 
-                      variant={user.is_active ? "default" : "secondary"}
-                      className={user.is_active ? "bg-green-100 text-green-800" : ""}
-                    >
-                      {user.is_active ? '활성' : '비활성'}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    {new Date(user.created_at).toLocaleDateString('ko-KR')}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {user.approval_status === 'approved' && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setActionDialog({
-                          userId: user.id,
-                          action: user.is_active ? 'deactivate' : 'activate',
-                          userName: user.name
-                        })}
+              {users.map((user) => {
+                const isEditing = editingUser === user.id;
+                const isCurrentUser = user.id === currentUserId; // Prevent editing current admin
+
+                return (
+                  <TableRow key={user.id}>
+                    <TableCell className="font-medium">{user.name}</TableCell>
+                    <TableCell>{user.email}</TableCell>
+                    <TableCell>
+                      {isEditing ? (
+                        <Select
+                          value={editForm.care_type || '_none'}
+                          onValueChange={(value) => setEditForm({ ...editForm, care_type: value === '_none' ? undefined : value })}
+                          disabled={saving || editForm.role === 'admin' || editForm.role === 'doctor'}
+                        >
+                          <SelectTrigger className="w-[140px]">
+                            <SelectValue placeholder="부서 선택" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {(editForm.role === 'admin' || editForm.role === 'doctor') ? (
+                              <SelectItem value="_none">-</SelectItem>
+                            ) : (
+                              <>
+                                <SelectItem value="_none" disabled={editForm.role === 'nurse'}>
+                                  없음
+                                </SelectItem>
+                                {careTypes.map(type => (
+                                  <SelectItem key={type.value} value={type.value}>
+                                    {type.label}
+                                  </SelectItem>
+                                ))}
+                              </>
+                            )}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        user.care_type === '입원' ? '병동' : (user.care_type || '-')
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {isEditing && !isCurrentUser ? (
+                        <Select
+                          value={editForm.role}
+                          onValueChange={(value) => {
+                            // Auto-adjust care_type based on new role
+                            if (value === 'admin' || value === 'doctor') {
+                              // Admins and doctors must have null care_type
+                              setEditForm({ role: value, care_type: undefined });
+                            } else if (value === 'nurse' && !editForm.care_type) {
+                              // Nurses must have a care_type, default to 외래
+                              setEditForm({ role: value, care_type: '외래' });
+                            } else {
+                              setEditForm({ ...editForm, role: value });
+                            }
+                          }}
+                          disabled={saving}
+                        >
+                          <SelectTrigger className="w-[120px]">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {roles.map(role => (
+                              <SelectItem key={role.value} value={role.value}>
+                                {role.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        getRoleBadge(user.role)
+                      )}
+                    </TableCell>
+                    <TableCell>{getStatusBadge(user.approval_status)}</TableCell>
+                    <TableCell>
+                      <Badge
+                        variant={user.is_active ? "default" : "secondary"}
+                        className={user.is_active ? "bg-green-100 text-green-800" : ""}
                       >
-                        {user.is_active ? (
+                        {user.is_active ? '활성' : '비활성'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {new Date(user.created_at).toLocaleDateString('ko-KR')}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center justify-center gap-1">
+                        {isEditing ? (
                           <>
-                            <UserX className="w-4 h-4 mr-1" />
-                            비활성화
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleEditSave(user.id, user.role, user.care_type)}
+                              disabled={saving}
+                            >
+                              <Save className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={handleEditCancel}
+                              disabled={saving}
+                            >
+                              <XCircle className="w-4 h-4" />
+                            </Button>
                           </>
                         ) : (
                           <>
-                            <UserCheck className="w-4 h-4 mr-1" />
-                            활성화
+                            {user.approval_status === 'approved' && !isCurrentUser && (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => handleEditStart(user.id, user.role, user.care_type)}
+                              >
+                                <Edit2 className="w-4 h-4" />
+                              </Button>
+                            )}
+                            {user.approval_status === 'approved' && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => setActionDialog({
+                                  userId: user.id,
+                                  action: user.is_active ? 'deactivate' : 'activate',
+                                  userName: user.name
+                                })}
+                              >
+                                {user.is_active ? (
+                                  <>
+                                    <UserX className="w-4 h-4 mr-1" />
+                                    비활성화
+                                  </>
+                                ) : (
+                                  <>
+                                    <UserCheck className="w-4 h-4 mr-1" />
+                                    활성화
+                                  </>
+                                )}
+                              </Button>
+                            )}
                           </>
                         )}
-                      </Button>
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </CardContent>

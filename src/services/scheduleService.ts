@@ -266,16 +266,26 @@ export const scheduleService = {
           // Filter by care types
           if (filters.careTypes && filters.careTypes.length > 0) {
             schedules = schedules.filter(schedule => {
-              return schedule.patient?.careType &&
-                     filters.careTypes.includes(schedule.patient.careType as any)
+              const careType = schedule.patient_care_type || (schedule as any).patient?.careType
+              return careType && filters.careTypes.includes(careType as any)
             })
           }
 
           // Filter by department
           if (filters.department) {
-            schedules = schedules.filter(schedule =>
-              schedule.patient?.department === filters.department
-            )
+            schedules = schedules.filter(schedule => {
+              const department = (schedule as any).patient?.department
+              return department === filters.department
+            })
+          }
+
+          // Filter by doctor (for "my patients" view)
+          if (filters.doctorId) {
+            schedules = schedules.filter(schedule => {
+              // Access doctor_id from the flattened schedule or from nested patient
+              const doctorId = schedule.doctor_id || (schedule as any).patient?.doctorId
+              return doctorId === filters.doctorId
+            })
           }
         }
 
@@ -341,16 +351,26 @@ export const scheduleService = {
           // Filter by care types
           if (filters.careTypes && filters.careTypes.length > 0) {
             schedules = schedules.filter(schedule => {
-              return schedule.patient?.careType &&
-                     filters.careTypes.includes(schedule.patient.careType as any)
+              const careType = schedule.patient_care_type || (schedule as any).patient?.careType
+              return careType && filters.careTypes.includes(careType as any)
             })
           }
 
           // Filter by department
           if (filters.department) {
-            schedules = schedules.filter(schedule =>
-              schedule.patient?.department === filters.department
-            )
+            schedules = schedules.filter(schedule => {
+              const department = (schedule as any).patient?.department
+              return department === filters.department
+            })
+          }
+
+          // Filter by doctor (for "my patients" view)
+          if (filters.doctorId) {
+            schedules = schedules.filter(schedule => {
+              // Access doctor_id from the flattened schedule or from nested patient
+              const doctorId = schedule.doctor_id || (schedule as any).patient?.doctorId
+              return doctorId === filters.doctorId
+            })
           }
         }
 
@@ -628,24 +648,25 @@ export const scheduleService = {
           // Filter by care types
           if (filters.careTypes && filters.careTypes.length > 0) {
             schedules = schedules.filter(schedule => {
-              return schedule.patient?.careType &&
-                     filters.careTypes.includes(schedule.patient.careType as any)
+              const careType = schedule.patient_care_type || (schedule as any).patient?.careType
+              return careType && filters.careTypes.includes(careType as any)
             })
           }
 
           // Filter by department
           if (filters.department) {
-            schedules = schedules.filter(schedule =>
-              schedule.patient?.department === filters.department
-            )
+            schedules = schedules.filter(schedule => {
+              const department = (schedule as any).patient?.department
+              return department === filters.department
+            })
           }
 
           // Filter by date range
           if (filters.dateRange) {
             schedules = schedules.filter(schedule => {
-              if (!schedule.nextDueDate) return false
-              return schedule.nextDueDate >= filters.dateRange!.start &&
-                     schedule.nextDueDate <= filters.dateRange!.end
+              if (!schedule.next_due_date) return false
+              return schedule.next_due_date >= filters.dateRange!.start &&
+                     schedule.next_due_date <= filters.dateRange!.end
             })
           }
 

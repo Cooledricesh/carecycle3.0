@@ -22,7 +22,8 @@ import { ScheduleResumeDialog } from '@/components/schedules/schedule-resume-dia
 import type { ResumeOptions } from '@/lib/schedule-management/schedule-state-manager';
 import { ScheduleDateCalculator } from '@/lib/schedule-management/schedule-date-calculator';
 import { getSchedulePausedDate, getSchedulePausedDateSync } from '@/lib/schedule-management/schedule-pause-utils';
-import { ChevronLeft, ChevronRight, Calendar, Clock, AlertCircle, ChevronUp, ChevronDown } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar, Clock, AlertCircle, ChevronUp, ChevronDown, Users, User } from 'lucide-react';
+import { useProfile } from '@/hooks/useProfile';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -40,6 +41,8 @@ import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
 import { mapErrorToUserMessage } from '@/lib/error-mapper';
 import { createClient } from '@/lib/supabase/client';
+import { scheduleServiceEnhanced } from '@/services/scheduleServiceEnhanced';
+import { useFilterContext } from '@/lib/filters/filter-context';
 
 interface CalendarViewProps {
   className?: string;
@@ -61,9 +64,19 @@ export function CalendarView({ className }: CalendarViewProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const supabase = createClient();
-  
+  const { filters } = useFilterContext();
+  const { data: profile } = useProfile();
+
   // 모든 스케줄 데이터 가져오기
   const { schedules = [], isLoading, refetch } = useFilteredSchedules();
+
+  // 디버깅: 스케줄 데이터 확인
+  console.log('[CalendarView] Schedules received:', {
+    count: schedules.length,
+    firstSchedule: schedules[0],
+    hasNextDueDate: schedules[0]?.next_due_date,
+    hasNextDueDateCamel: schedules[0]?.nextDueDate
+  });
   
   // 완료 처리 훅 사용
   const {
@@ -79,6 +92,7 @@ export function CalendarView({ className }: CalendarViewProps) {
     setDialogOpen
   } = useScheduleCompletion();
 
+
   // 캘린더 날짜 계산
   const calendarDays = useMemo(() => {
     const monthStart = startOfMonth(currentDate);
@@ -92,9 +106,18 @@ export function CalendarView({ className }: CalendarViewProps) {
     while (currentDay <= calendarEnd) {
       // 날짜별 스케줄 필터링
       const schedulesByDay = schedules.filter(schedule => {
-        if (!schedule.next_due_date) return false;
-        const scheduleDate = safeParse(schedule.next_due_date);
-        return scheduleDate && isSameDay(scheduleDate, currentDay);
+        // 두 가지 형식 모두 확인
+        const dueDateValue = schedule.next_due_date || schedule.nextDueDate;
+        if (!dueDateValue) {
+          console.log('[CalendarView] Schedule missing date:', schedule);
+          return false;
+        }
+        const scheduleDate = safeParse(dueDateValue);
+        const isMatch = scheduleDate && isSameDay(scheduleDate, currentDay);
+        if (isMatch && currentDay.getDate() === 23) {
+          console.log('[CalendarView] Found schedule for 23rd:', schedule);
+        }
+        return isMatch;
       });
 
       days.push({
@@ -114,7 +137,9 @@ export function CalendarView({ className }: CalendarViewProps) {
     if (!selectedDate) return [];
 
     const daySchedules = schedules.filter(schedule => {
-      const scheduleDate = safeParse(schedule.next_due_date);
+      const dueDateValue = schedule.next_due_date || schedule.nextDueDate;
+      if (!dueDateValue) return false;
+      const scheduleDate = safeParse(dueDateValue);
       return scheduleDate && isSameDay(scheduleDate, selectedDate);
     });
 
@@ -130,7 +155,9 @@ export function CalendarView({ className }: CalendarViewProps) {
     const weekEnd = endOfWeek(today, { locale: ko });
 
     const monthSchedules = schedules.filter(schedule => {
-      const scheduleDate = safeParse(schedule.next_due_date);
+      const dueDateValue = schedule.next_due_date || schedule.nextDueDate;
+      if (!dueDateValue) return false;
+      const scheduleDate = safeParse(dueDateValue);
       return scheduleDate && scheduleDate >= monthStart && scheduleDate <= monthEnd;
     });
 
@@ -202,13 +229,15 @@ export function CalendarView({ className }: CalendarViewProps) {
   
   // 스케줄 액션 핸들러들
   const statusMutation = useMutation({
-    mutationFn: ({ id, status }: { id: string; status: 'active' | 'paused' }) => 
+    mutationFn: ({ id, status }: { id: string; status: 'active' | 'paused' }) =>
       scheduleService.updateStatus(id, status),
     onSuccess: (_, variables) => {
+      // scheduleServiceEnhanced 캐시 클리어
+      scheduleServiceEnhanced.clearCache();
       queryClient.invalidateQueries({ queryKey: ['schedules'] });
       toast({
         title: "성공",
-        description: variables.status === 'paused' 
+        description: variables.status === 'paused'
           ? "스케줄이 일시중지되었습니다."
           : "스케줄이 재개되었습니다.",
       });
@@ -226,6 +255,7 @@ export function CalendarView({ className }: CalendarViewProps) {
   const deleteMutation = useMutation({
     mutationFn: scheduleService.delete,
     onSuccess: () => {
+      scheduleServiceEnhanced.clearCache();
       queryClient.invalidateQueries({ queryKey: ['schedules'] });
       toast({
         title: "성공",
@@ -259,6 +289,7 @@ export function CalendarView({ className }: CalendarViewProps) {
 
     try {
       await scheduleService.resumeSchedule(selectedScheduleForResume.id, options);
+      scheduleServiceEnhanced.clearCache();
       queryClient.invalidateQueries({ queryKey: ['schedules'] });
       toast({
         title: "성공",
@@ -305,12 +336,33 @@ export function CalendarView({ className }: CalendarViewProps) {
       <Card>
         <CardHeader className={`pb-3 ${isMobile ? 'px-3 py-4' : ''}`}>
           <div className={`flex items-center justify-between ${isMobile ? 'flex-col gap-3' : ''}`}>
-            <CardTitle className={`font-semibold flex items-center gap-2 ${
-              isMobile ? 'text-lg' : 'text-xl'
-            }`}>
-              <Calendar className={`${isMobile ? 'h-4 w-4' : 'h-5 w-5'}`} />
-              {format(currentDate, 'yyyy년 MMMM', { locale: ko })}
-            </CardTitle>
+            <div className="flex flex-col gap-1">
+              <CardTitle className={`font-semibold flex items-center gap-2 ${
+                isMobile ? 'text-lg' : 'text-xl'
+              }`}>
+                <Calendar className={`${isMobile ? 'h-4 w-4' : 'h-5 w-5'}`} />
+                {format(currentDate, 'yyyy년 MMMM', { locale: ko })}
+              </CardTitle>
+
+              {/* 필터 상태 표시 */}
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                {filters.showAll ? (
+                  <>
+                    <Users className="h-3 w-3" />
+                    <span>전체 환자</span>
+                  </>
+                ) : (
+                  <>
+                    <User className="h-3 w-3" />
+                    <span>
+                      {profile?.role === 'doctor' ? '내 환자' :
+                       profile?.role === 'nurse' ? `${profile?.care_type || '소속'} 환자` :
+                       '환자'}
+                    </span>
+                  </>
+                )}
+              </div>
+            </div>
             
             {/* 네비게이션 버튼 - 모바일에서 더 크게 */}
             <div className={`flex items-center ${isMobile ? 'gap-2 w-full justify-center' : 'gap-1'}`}>
@@ -515,9 +567,15 @@ export function CalendarView({ className }: CalendarViewProps) {
                   {/* 스케줄 유형별 카운트 - 모바일에서 더 컴팩트하게 */}
                   <div className={`flex flex-wrap ${isMobile ? 'gap-0.5' : 'gap-1'}`}>
                     {(() => {
-                      const injectionCount = day.schedules.filter(s => s.item_category === 'injection').length;
-                      const testCount = day.schedules.filter(s => s.item_category === 'test').length;
-                      
+                      const injectionCount = day.schedules.filter(s => {
+                        const category = s.item?.category || s.items?.category || s.item_category;
+                        return category === 'injection';
+                      }).length;
+                      const testCount = day.schedules.filter(s => {
+                        const category = s.item?.category || s.items?.category || s.item_category;
+                        return category === 'test';
+                      }).length;
+
                       return (
                         <>
                           {injectionCount > 0 && (
@@ -580,12 +638,12 @@ export function CalendarView({ className }: CalendarViewProps) {
               <div className={`space-y-3 ${isMobile ? 'max-h-[60vh] overflow-y-auto' : ''}`}>
                 {selectedDateSchedules.map((schedule) => (
                   <CalendarDayCard
-                    key={schedule.schedule_id}
+                    key={schedule.id || schedule.schedule_id || `schedule-${schedule.patient_id}-${schedule.item_id}`}
                     schedule={schedule}
                     onComplete={() => handleComplete(schedule)}
-                    onPause={() => handlePauseSchedule(schedule.schedule_id)}
+                    onPause={() => handlePauseSchedule(schedule.id || schedule.schedule_id)}
                     onResume={() => handleResumeSchedule(schedule)}
-                    onDelete={() => handleDeleteSchedule(schedule.schedule_id)}
+                    onDelete={() => handleDeleteSchedule(schedule.id || schedule.schedule_id)}
                     onRefresh={refreshData}
                   />
                 ))}

@@ -7,6 +7,7 @@ import { useProfile } from '@/hooks/useProfile'
 import { Users, User, AlertCircle } from 'lucide-react'
 import { scheduleServiceEnhanced } from '@/services/scheduleServiceEnhanced'
 import { FilterStatistics } from '@/services/filters'
+import { useFilteredPatientCount } from '@/hooks/useFilteredPatientCount'
 
 interface SimpleFilterToggleProps {
   className?: string
@@ -19,7 +20,10 @@ export function SimpleFilterToggle({ className, onToggle }: SimpleFilterTogglePr
   const [statistics, setStatistics] = useState<FilterStatistics | null>(null)
   const [urgentCount, setUrgentCount] = useState(0)
 
-  // Fetch statistics on mount and filter changes
+  // Get filtered patient counts
+  const { myPatientCount, totalCount } = useFilteredPatientCount()
+
+  // Fetch statistics on mount for urgent counts only
   useEffect(() => {
     if (!profile) return
 
@@ -42,7 +46,7 @@ export function SimpleFilterToggle({ className, onToggle }: SimpleFilterTogglePr
     }
 
     fetchStats()
-  }, [profile, filters.showAll])
+  }, [profile])
 
   if (isLoading || !profile) {
     return null
@@ -64,16 +68,17 @@ export function SimpleFilterToggle({ className, onToggle }: SimpleFilterTogglePr
       return {
         my: '내 환자',
         all: '전체 환자',
-        myCount: statistics?.myPatients || 0,
-        allCount: statistics?.totalPatients || 0
+        myCount: myPatientCount,
+        allCount: totalCount
       }
     } else if (profile.role === 'nurse') {
       const careTypeDisplay = profile.care_type || '소속'
+      // For nurses, show care_type patient count
       return {
         my: `${careTypeDisplay} 환자`,
         all: '전체 환자',
-        myCount: statistics?.totalSchedules || 0,
-        allCount: statistics?.totalPatients || 0
+        myCount: myPatientCount,
+        allCount: totalCount
       }
     }
     return { my: '필터', all: '전체', myCount: 0, allCount: 0 }
@@ -173,6 +178,9 @@ export function SimpleFilterToggleMobile({ className, onToggle }: SimpleFilterTo
   const { data: profile, isLoading } = useProfile()
   const [statistics, setStatistics] = useState<FilterStatistics | null>(null)
 
+  // Get filtered patient counts
+  const { myPatientCount, totalCount } = useFilteredPatientCount()
+
   useEffect(() => {
     if (!profile) return
 
@@ -188,7 +196,7 @@ export function SimpleFilterToggleMobile({ className, onToggle }: SimpleFilterTo
     }
 
     fetchStats()
-  }, [profile, filters.showAll])
+  }, [profile])
 
   if (isLoading || !profile || profile.role === 'admin') {
     return null
@@ -204,16 +212,16 @@ export function SimpleFilterToggleMobile({ className, onToggle }: SimpleFilterTo
       return {
         my: '내 환자만 보기',
         all: '모든 환자 보기',
-        myCount: statistics?.myPatients || 0,
-        allCount: statistics?.totalPatients || 0
+        myCount: myPatientCount,
+        allCount: totalCount
       }
     } else if (profile.role === 'nurse') {
       const careTypeDisplay = profile.care_type || '소속'
       return {
         my: `${careTypeDisplay} 환자만 보기`,
         all: '모든 환자 보기',
-        myCount: statistics?.totalSchedules || 0,
-        allCount: statistics?.totalPatients || 0
+        myCount: myPatientCount,
+        allCount: totalCount
       }
     }
     return { my: '필터', all: '전체', myCount: 0, allCount: 0 }
