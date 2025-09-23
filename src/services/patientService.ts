@@ -327,7 +327,7 @@ export const patientService = {
 
           try {
             const response = await fetch(`/api/patients/${id}/update`, {
-              method: 'POST',
+              method: 'PUT',
               headers: {
                 'Content-Type': 'application/json',
               },
