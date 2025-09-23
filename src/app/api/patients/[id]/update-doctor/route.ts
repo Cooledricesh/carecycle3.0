@@ -1,14 +1,32 @@
 import { NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
 import { createClient } from '@/lib/supabase/server'
+import { z } from 'zod'
+
+// Input validation schema
+const updateDoctorSchema = z.object({
+  doctorId: z.string().uuid().nullable()
+})
 
 export async function POST(
   request: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
-    const { id } = await params
-    const { doctorId } = await request.json()
+    const { id } = params
+
+    // Parse and validate request body
+    const body = await request.json()
+    const validationResult = updateDoctorSchema.safeParse(body)
+
+    if (!validationResult.success) {
+      return NextResponse.json(
+        { error: '잘못된 요청 형식입니다', details: validationResult.error.flatten() },
+        { status: 400 }
+      )
+    }
+
+    const { doctorId } = validationResult.data
 
     // First verify the user is authenticated and has permission
     const userClient = await createClient()
@@ -45,6 +63,43 @@ export async function POST(
 
     // Use service client to bypass RLS for the update
     const serviceClient = await createServiceClient()
+
+    // Validate doctor existence/role/state when assigning (not when removing)
+    if (doctorId) {
+      const { data: doctor, error: doctorError } = await serviceClient
+        .from('profiles')
+        .select('id, role, is_active, approval_status')
+        .eq('id', doctorId)
+        .single()
+
+      if (doctorError || !doctor) {
+        return NextResponse.json(
+          { error: '지정한 의사를 찾을 수 없습니다' },
+          { status: 400 }
+        )
+      }
+
+      if (doctor.role !== 'doctor') {
+        return NextResponse.json(
+          { error: '지정한 사용자는 의사가 아닙니다' },
+          { status: 400 }
+        )
+      }
+
+      if (!doctor.is_active) {
+        return NextResponse.json(
+          { error: '비활성화된 의사는 주치의로 배정할 수 없습니다' },
+          { status: 400 }
+        )
+      }
+
+      if (doctor.approval_status !== 'approved') {
+        return NextResponse.json(
+          { error: '승인되지 않은 의사는 주치의로 배정할 수 없습니다' },
+          { status: 400 }
+        )
+      }
+    }
 
     // Update the patient's doctor_id
     const { data, error } = await serviceClient
