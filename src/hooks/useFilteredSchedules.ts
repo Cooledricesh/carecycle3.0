@@ -68,7 +68,14 @@ export function useFilteredSchedules() {
   })
 
   const refetch = () => {
+    // 정확한 queryKey로 invalidate
+    queryClient.invalidateQueries({
+      queryKey: ['schedules', user?.id, filters, profile?.role, profile?.care_type]
+    })
+    // 다른 관련 쿼리들도 무효화
     queryClient.invalidateQueries({ queryKey: ['schedules'] })
+    // 강제 refetch
+    query.refetch()
   }
 
   return {
