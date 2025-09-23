@@ -21,7 +21,7 @@ import type { ScheduleWithDetails } from "@/types/schedule";
 import type { ItemCategory } from "@/lib/database.types";
 import { format, differenceInWeeks } from "date-fns";
 import { ko } from "date-fns/locale";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { mapErrorToUserMessage } from "@/lib/error-mapper";
 import {
   Table,
@@ -31,12 +31,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { touchTarget, responsiveText, responsivePadding, cn } from "@/lib/utils";
 import { FilterProvider } from "@/providers/filter-provider";
@@ -111,7 +105,6 @@ function SchedulesContent() {
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [selectedTab, setSelectedTab] = useState("all");
   const { toast } = useToast();
-  const queryClient = useQueryClient();
   const isMobile = useIsMobile();
   const { data: profile } = useProfile();
   const { filters } = useFilterContext();
