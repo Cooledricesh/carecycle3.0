@@ -21,7 +21,7 @@ import type { ScheduleWithDetails } from "@/types/schedule";
 import type { ItemCategory } from "@/lib/database.types";
 import { format, differenceInWeeks } from "date-fns";
 import { ko } from "date-fns/locale";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { mapErrorToUserMessage } from "@/lib/error-mapper";
 import {
   Table,
@@ -105,6 +105,7 @@ function SchedulesContent() {
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [selectedTab, setSelectedTab] = useState("all");
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const isMobile = useIsMobile();
   const { data: profile } = useProfile();
   const { filters } = useFilterContext();
@@ -113,12 +114,6 @@ function SchedulesContent() {
   const { schedules, isLoading: schedulesLoading, error: schedulesError, refetch: refetchSchedules } = useFilteredSchedules();
   const { data: overdueSchedules = [], isLoading: overdueLoading, error: overdueError, refetch: refetchOverdue } = useOverdueSchedules();
 
-  // 디버깅: 실제 데이터 구조 확인
-  console.log('[SchedulesPage] Schedules data:', {
-    schedulesCount: schedules?.length,
-    firstSchedule: schedules?.[0],
-    queryKey: ['schedules', user?.id, filters, profile?.role, profile?.care_type]
-  });
 
   const loading = schedulesLoading || overdueLoading;
   const error = schedulesError || overdueError;
@@ -130,16 +125,14 @@ function SchedulesContent() {
 
   const deleteMutation = useMutation({
     mutationFn: scheduleService.delete,
-    onSuccess: () => {
+    onSuccess: async () => {
       toast({
         title: "성공",
         description: "스케줄이 삭제되었습니다.",
       });
 
-      // 간단하게 페이지 새로고침
-      setTimeout(() => {
-        window.location.reload();
-      }, 500);
+      // 단순한 키로 무효화
+      await queryClient.invalidateQueries({ queryKey: ['schedules'] });
     },
     onError: (error) => {
       const message = mapErrorToUserMessage(error);
@@ -161,7 +154,7 @@ function SchedulesContent() {
   const statusMutation = useMutation({
     mutationFn: ({ id, status }: { id: string; status: 'active' | 'paused' }) =>
       scheduleService.updateStatus(id, status),
-    onSuccess: (_, variables) => {
+    onSuccess: async (_, variables) => {
       toast({
         title: "성공",
         description: variables.status === 'paused'
@@ -169,10 +162,8 @@ function SchedulesContent() {
           : "스케줄이 재개되었습니다.",
       });
 
-      // 간단하게 페이지 새로고침
-      setTimeout(() => {
-        window.location.reload();
-      }, 500);
+      // 단순한 키로 무효화
+      await queryClient.invalidateQueries({ queryKey: ['schedules'] });
     },
     onError: (error) => {
       const message = mapErrorToUserMessage(error);
@@ -210,10 +201,8 @@ function SchedulesContent() {
       setResumeDialogOpen(false);
       setSelectedScheduleForResume(null);
 
-      // 간단하게 페이지 새로고침
-      setTimeout(() => {
-        window.location.reload();
-      }, 500);
+      // 단순한 키로 무효화
+      await queryClient.invalidateQueries({ queryKey: ['schedules'] });
     } catch (error) {
       toast({
         title: "오류",

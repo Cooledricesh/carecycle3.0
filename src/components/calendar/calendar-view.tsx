@@ -21,7 +21,6 @@ import { differenceInWeeks } from 'date-fns';
 import { ScheduleResumeDialog } from '@/components/schedules/schedule-resume-dialog';
 import type { ResumeOptions } from '@/lib/schedule-management/schedule-state-manager';
 import { ScheduleDateCalculator } from '@/lib/schedule-management/schedule-date-calculator';
-import { getSchedulePausedDate, getSchedulePausedDateSync } from '@/lib/schedule-management/schedule-pause-utils';
 import { ChevronLeft, ChevronRight, Calendar, Clock, AlertCircle, ChevronUp, ChevronDown, Users, User } from 'lucide-react';
 import { useProfile } from '@/hooks/useProfile';
 import { Button } from '@/components/ui/button';
@@ -33,7 +32,8 @@ import { CalendarDayCard } from '@/components/calendar/calendar-day-card';
 import { ScheduleCompletionDialog } from '@/components/schedules/schedule-completion-dialog';
 import { ScheduleEditModal } from '@/components/schedules/schedule-edit-modal';
 import { getScheduleStatusLabel, sortSchedulesByPriority } from '@/lib/utils/schedule-status';
-import type { ScheduleWithDetails } from '@/types/schedule';
+import type { ScheduleWithDetails, Schedule } from '@/types/schedule';
+import type { ScheduleStatus } from '@/lib/database.types';
 import { safeFormatDate, safeParse } from '@/lib/utils/date';
 import { scheduleService } from '@/services/scheduleService';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
@@ -88,7 +88,7 @@ export function CalendarView({ className }: CalendarViewProps) {
 
     setIsSubmitting(true);
     try {
-      await scheduleService.markAsCompleted(selectedSchedule.id || selectedSchedule.schedule_id, {
+      await scheduleService.markAsCompleted(selectedSchedule.schedule_id, {
         executedDate: executionDate,
         notes: executionNotes,
         executedBy: profile.id
@@ -107,16 +107,9 @@ export function CalendarView({ className }: CalendarViewProps) {
       // 캐시 클리어 및 데이터 새로고침
       scheduleServiceEnhanced.clearCache();
 
-      // 모든 관련 쿼리 무효화
-      await queryClient.invalidateQueries();
-
-      // refetch를 await로 호출
-      await refetch();
-
-      // 그래도 업데이트가 안되면 강제 새로고침
-      setTimeout(() => {
-        window.location.reload();
-      }, 100);
+      // 단순한 키로 모든 스케줄 관련 쿼리 무효화
+      await queryClient.invalidateQueries({ queryKey: ['schedules'] });
+      await queryClient.invalidateQueries({ queryKey: ['executions'] });
 
     } catch (error) {
       console.error('Failed to mark schedule as completed:', error);
@@ -241,7 +234,7 @@ export function CalendarView({ className }: CalendarViewProps) {
 
   // 이번달 완료 횟수 쿼리
   const { data: monthlyExecutions = 0 } = useQuery({
-    queryKey: ['executions', format(currentDate, 'yyyy-MM')],
+    queryKey: ['executions', format(currentDate, 'yyyy-MM')], // Simplified key
     queryFn: async () => {
       const monthStart = startOfMonth(currentDate);
       const monthEnd = endOfMonth(currentDate);
@@ -281,10 +274,8 @@ export function CalendarView({ className }: CalendarViewProps) {
           : "스케줄이 재개되었습니다.",
       });
 
-      // 강제 새로고침으로 확실한 업데이트
-      setTimeout(() => {
-        window.location.reload();
-      }, 100);
+      // 단순한 키로 무효화
+      await queryClient.invalidateQueries({ queryKey: ['schedules'] });
     },
     onError: (error) => {
       const message = mapErrorToUserMessage(error);
@@ -304,10 +295,8 @@ export function CalendarView({ className }: CalendarViewProps) {
         description: "스케줄이 삭제되었습니다.",
       });
 
-      // 강제 새로고침으로 확실한 업데이트
-      setTimeout(() => {
-        window.location.reload();
-      }, 100);
+      // 단순한 키로 무효화
+      await queryClient.invalidateQueries({ queryKey: ['schedules'] });
     },
     onError: (error) => {
       const message = mapErrorToUserMessage(error);
@@ -335,7 +324,7 @@ export function CalendarView({ className }: CalendarViewProps) {
     if (!selectedScheduleForResume) return;
 
     try {
-      await scheduleService.resumeSchedule(selectedScheduleForResume.id, options);
+      await scheduleService.resumeSchedule(selectedScheduleForResume.schedule_id, options);
 
       toast({
         title: "성공",
@@ -345,10 +334,8 @@ export function CalendarView({ className }: CalendarViewProps) {
       setResumeDialogOpen(false);
       setSelectedScheduleForResume(null);
 
-      // 강제 새로고침으로 확실한 업데이트
-      setTimeout(() => {
-        window.location.reload();
-      }, 100);
+      // 단순한 키로 무효화
+      await queryClient.invalidateQueries({ queryKey: ['schedules'] });
     } catch (error) {
       toast({
         title: "오류",
@@ -620,11 +607,11 @@ export function CalendarView({ className }: CalendarViewProps) {
                   <div className={`flex flex-wrap ${isMobile ? 'gap-0.5' : 'gap-1'}`}>
                     {(() => {
                       const injectionCount = day.schedules.filter(s => {
-                        const category = s.item?.category || s.items?.category || s.item_category;
+                        const category = s.item_category;
                         return category === 'injection';
                       }).length;
                       const testCount = day.schedules.filter(s => {
-                        const category = s.item?.category || s.items?.category || s.item_category;
+                        const category = s.item_category;
                         return category === 'test';
                       }).length;
 
@@ -722,15 +709,31 @@ export function CalendarView({ className }: CalendarViewProps) {
       {selectedScheduleForResume && (() => {
         // Calculate missed executions and pause duration
         const calculator = new ScheduleDateCalculator();
-        // Use updatedAt (camelCase) to match TypeScript interface
+        // Transform ScheduleWithDetails to Schedule format
+        const scheduleForCalculation: Schedule = {
+          id: selectedScheduleForResume.schedule_id,
+          patientId: selectedScheduleForResume.patient_id,
+          itemId: selectedScheduleForResume.item_id,
+          intervalWeeks: selectedScheduleForResume.interval_weeks,
+          startDate: selectedScheduleForResume.next_due_date, // Using next_due_date as startDate
+          nextDueDate: selectedScheduleForResume.next_due_date,
+          status: selectedScheduleForResume.status as ScheduleStatus,
+          priority: selectedScheduleForResume.priority || 1,
+          requiresNotification: false,
+          notificationDaysBefore: 0,
+          createdAt: selectedScheduleForResume.created_at,
+          updatedAt: selectedScheduleForResume.updated_at,
+          notes: selectedScheduleForResume.notes
+        };
+
         // TODO: For better accuracy, consider using getSchedulePausedDate() from schedule-pause-utils
         // to fetch the actual pause date from schedule_logs
-        const pausedDate = selectedScheduleForResume.updatedAt ? new Date(selectedScheduleForResume.updatedAt) : new Date();
+        const pausedDate = selectedScheduleForResume.updated_at ? new Date(selectedScheduleForResume.updated_at) : new Date();
         const resumeDate = new Date();
-        const missedExecutions = selectedScheduleForResume.updatedAt
-          ? calculator.getMissedExecutions(selectedScheduleForResume, pausedDate, resumeDate).length
+        const missedExecutions = selectedScheduleForResume.updated_at
+          ? calculator.getMissedExecutions(scheduleForCalculation, pausedDate, resumeDate).length
           : 0;
-        const pauseDuration = selectedScheduleForResume.updatedAt
+        const pauseDuration = selectedScheduleForResume.updated_at
           ? Math.max(1, differenceInWeeks(resumeDate, pausedDate))
           : 1;
 
@@ -742,7 +745,7 @@ export function CalendarView({ className }: CalendarViewProps) {
               setSelectedScheduleForResume(null);
             }}
             onConfirm={handleConfirmResume}
-            schedule={selectedScheduleForResume}
+            schedule={scheduleForCalculation}
             missedExecutions={missedExecutions}
             pauseDuration={pauseDuration}
           />

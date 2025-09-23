@@ -9,6 +9,7 @@ import { useProfile } from '@/hooks/useProfile'
 import { useToast } from '@/hooks/use-toast'
 import { mapErrorToUserMessage } from '@/lib/error-mapper'
 import { createClient } from '@/lib/supabase/client'
+import { queryKeys } from '@/lib/query-keys'
 import type { UserContext } from '@/services/filters/types'
 
 export function useFilteredSchedules() {
@@ -21,7 +22,7 @@ export function useFilteredSchedules() {
 
 
   const query = useQuery({
-    queryKey: ['schedules', user?.id, filters, profile?.role, profile?.care_type], // Fixed: care_type not careType
+    queryKey: ['schedules'], // Simplified key for proper invalidation
     queryFn: async () => {
       try {
         // Always try to get schedules, even without full profile
@@ -53,7 +54,6 @@ export function useFilteredSchedules() {
         // No user at all
         return []
       } catch (error) {
-        console.error('[useFilteredSchedules] Query error:', error)
         const message = mapErrorToUserMessage(error)
         toast({
           title: '오류',
@@ -71,14 +71,13 @@ export function useFilteredSchedules() {
     // 캐시 완전히 제거
     scheduleServiceEnhanced.clearCache();
 
-    // 모든 schedules 관련 쿼리 무효화
+    // 단순한 키로 무효화
     await queryClient.invalidateQueries({ queryKey: ['schedules'] });
     await queryClient.invalidateQueries({ queryKey: ['executions'] });
 
     // 강제 refetch
     await query.refetch();
 
-    // 그래도 안되면 확실한 새로고침
     return true;
   }
 
@@ -98,16 +97,9 @@ export function useFilteredTodayChecklist() {
   const supabase = createClient()
 
   return useQuery({
-    queryKey: ['schedules', 'today', user?.id, filters, profile?.role],
+    queryKey: ['schedules', 'today'], // Simplified key
     queryFn: async () => {
       try {
-        console.log('[useFilteredTodayChecklist] Starting query:', {
-          hasUser: !!user,
-          hasProfile: !!profile,
-          profileRole: profile?.role,
-          showAll: filters.showAll
-        })
-
         // Use enhanced service for today's checklist
         if (user && profile) {
           const userContext: UserContext = {
@@ -116,24 +108,16 @@ export function useFilteredTodayChecklist() {
             careType: profile.care_type || null
           }
 
-          console.log('[useFilteredTodayChecklist] Using enhanced service with showAll:', filters.showAll)
-
           const result = await scheduleServiceEnhanced.getTodayChecklist(
             filters.showAll || false,
             userContext,
             supabase
           )
 
-          console.log('[useFilteredTodayChecklist] Enhanced service result:', {
-            count: result.length,
-            userContext
-          })
-
           return result
         }
 
         // Fallback to old service
-        console.log('[useFilteredTodayChecklist] Falling back to old service')
         return await scheduleService.getTodayChecklist(filters, supabase)
       } catch (error) {
         const message = mapErrorToUserMessage(error)
@@ -157,18 +141,10 @@ export function useFilteredUpcomingSchedules(daysAhead: number = 7) {
   const supabase = createClient()
 
   return useQuery({
-    queryKey: ['schedules', 'upcoming', daysAhead, user?.id, filters, profile?.role, profile?.care_type],
+    queryKey: ['schedules', 'upcoming', daysAhead], // Simplified key
     queryFn: async () => {
       try {
-        console.log('[useFilteredUpcomingSchedules] Profile check:', {
-          hasProfile: !!profile,
-          role: profile?.role,
-          careType: profile?.care_type,
-          showAll: filters.showAll
-        })
-
         if (!profile || !user) {
-          console.log('[useFilteredUpcomingSchedules] Waiting for profile or user...')
           return []
         }
 
@@ -185,11 +161,6 @@ export function useFilteredUpcomingSchedules(daysAhead: number = 7) {
               (schedule.patient?.careType === profile.care_type) ||
               (schedule.patient?.care_type === profile.care_type)
             )
-            console.log('[useFilteredUpcomingSchedules] Filtered for nurse:', {
-              careType: profile.care_type,
-              originalCount: allSchedules.length,
-              filteredCount: filtered.length
-            })
             return filtered
           } else if (profile.role === 'doctor') {
             // Filter by doctor_id for doctors
@@ -199,11 +170,6 @@ export function useFilteredUpcomingSchedules(daysAhead: number = 7) {
               (schedule.patient?.doctorId === user.id) ||
               (schedule.patient?.doctor_id === user.id)
             )
-            console.log('[useFilteredUpcomingSchedules] Filtered for doctor:', {
-              doctorId: user.id,
-              originalCount: allSchedules.length,
-              filteredCount: filtered.length
-            })
             return filtered
           }
         }

@@ -267,6 +267,8 @@ export class ScheduleServiceEnhanced {
             interval_weeks,
             notes,
             status,
+            created_at,
+            updated_at,
             patients!inner (
               id,
               name,
@@ -298,14 +300,20 @@ export class ScheduleServiceEnhanced {
             patient_id: string
             item_id: string
             next_due_date: string
+            interval_weeks: number
+            notes: string | null
             status: string
+            created_at: string
+            updated_at: string
             patients: {
               id: string
               name: string
               care_type: string
               doctor_id: string | null
+              patient_number: string
             }
             items: {
+              id: string
               name: string
               category: string
             }
@@ -333,6 +341,10 @@ export class ScheduleServiceEnhanced {
           intervalWeeks: s.interval_weeks,
           status: s.status,
           notes: s.notes,
+          created_at: s.created_at,
+          createdAt: s.created_at,
+          updated_at: s.updated_at,
+          updatedAt: s.updated_at,
           // Nested patient object
           patient: s.patients ? {
             id: s.patients.id,

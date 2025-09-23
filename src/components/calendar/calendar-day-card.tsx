@@ -9,6 +9,7 @@ import { ScheduleActionButtons } from "@/components/schedules/schedule-action-bu
 import { ScheduleEditModal } from "@/components/schedules/schedule-edit-modal"
 import { getScheduleStatusLabel, getStatusBadgeClass } from "@/lib/utils/schedule-status"
 import type { ScheduleWithDetails } from "@/types/schedule"
+import type { ItemCategory } from "@/lib/database.types"
 
 interface CalendarDayCardProps {
   schedule: ScheduleWithDetails
@@ -42,9 +43,9 @@ export function CalendarDayCard({
       setEditModalOpen(false)
     }
   }, [editModalOpen])
-  
-  // Get the category from schedule
-  const category = schedule.item_category;
+
+  // Get the category from schedule and cast to ItemCategory
+  const category = schedule.item_category as ItemCategory;
 
   return (
     <div
@@ -78,15 +79,15 @@ export function CalendarDayCard({
               isMobile ? 'text-xs' : 'text-sm'
             }`}>
               {(() => {
-                const IconComponent = getScheduleCategoryIcon(schedule.item_category);
+                const IconComponent = getScheduleCategoryIcon(category);
                 return IconComponent ? (
-                  <IconComponent className={`h-4 w-4 ${getScheduleCategoryColor(schedule.item_category)}`} />
+                  <IconComponent className={`h-4 w-4 ${getScheduleCategoryColor(category)}`} />
                 ) : null;
               })()}
               <span className="font-medium">{schedule.item_name || '항목 정보 없음'}</span>
-              {schedule.item_category && (
-                <span className={`px-2 py-0.5 rounded-full text-xs ${getScheduleCategoryBgColor(schedule.item_category)} ${getScheduleCategoryColor(schedule.item_category)}`}>
-                  {getScheduleCategoryLabel(schedule.item_category)}
+              {category && (
+                <span className={`px-2 py-0.5 rounded-full text-xs ${getScheduleCategoryBgColor(category)} ${getScheduleCategoryColor(category)}`}>
+                  {getScheduleCategoryLabel(category)}
                 </span>
               )}
             </div>
