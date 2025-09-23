@@ -30,7 +30,7 @@ export interface Schedule {
   updatedAt: string
 }
 
-// Extended types with relations
+// Extended types with relations (for direct database queries)
 export interface ScheduleWithRelations extends Schedule {
   patient?: Patient
   item?: Item
@@ -40,8 +40,26 @@ export interface ScheduleWithRelations extends Schedule {
   }
 }
 
-// Alias for compatibility
-export type ScheduleWithDetails = ScheduleWithRelations
+// Flat structure from RPC functions (matches get_filtered_schedules response)
+export interface ScheduleWithDetails {
+  schedule_id: string
+  patient_id: string
+  patient_name: string
+  patient_care_type: string
+  patient_number: string
+  doctor_id: string | null
+  doctor_name: string
+  item_id: string
+  item_name: string
+  item_category: string
+  next_due_date: string
+  status: string
+  interval_weeks: number
+  priority?: number
+  created_at: string
+  updated_at: string
+  notes?: string | null
+}
 
 // Form input types
 export interface ScheduleCreateInput {

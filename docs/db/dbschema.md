@@ -1,8 +1,9 @@
 # Comprehensive Database Schema Documentation
 
-**Last Updated**: September 14, 2025
-**Schema Version**: 2.4.0 (Current Production State)
-**Migration Count**: 24 migrations applied  
+**Last Updated**: September 22, 2025
+**Schema Version**: 2.5.0 (Current Production State - Verified)
+**Migration Count**: 24+ migrations applied
+**Direct DB Verification**: 2025-09-22  
 
 ## Overview
 
@@ -22,28 +23,32 @@ This document provides a complete and accurate description of the medical schedu
 ## Core Tables
 
 ### 1. profiles
-**Purpose**: User profile and authentication management with approval workflow  
-**Created**: 2025-08-16 | **Enhanced**: 2025-09-02 (User Approval System)
+**Purpose**: User profile and authentication management with approval workflow
+**Created**: 2025-08-16 | **Enhanced**: 2025-09-02 (User Approval System) | **Verified**: 2025-09-22
 
 | Column | Type | Constraints | Description |
 |--------|------|-------------|-------------|
 | id | uuid | PRIMARY KEY, REFERENCES auth.users(id) ON DELETE CASCADE | User ID from Supabase auth |
 | email | text | NOT NULL | User email address |
 | name | text | NOT NULL | User display name |
-| role | user_role | NOT NULL DEFAULT 'nurse' | User role (nurse, admin) |
-| department | text | NULL | Department assignment |
+| role | user_role | NOT NULL DEFAULT 'nurse' | User role (nurse, admin, **doctor**) |
+| **care_type** | text | NULL | Care type assignment for nurses (외래/입원/낮병원), NULL for admin/doctor roles |
 | phone | text | NULL | Contact phone number |
 | is_active | boolean | NOT NULL DEFAULT true | User activation status |
 | **approval_status** | approval_status | NOT NULL DEFAULT 'pending' | Approval workflow status |
-| **approved_by** | uuid | NULL REFERENCES auth.users(id) | Admin who approved the user |
+| **approved_by** | uuid | NULL REFERENCES profiles(id) | Admin who approved the user |
 | **approved_at** | timestamptz | NULL | Timestamp of approval |
 | **rejection_reason** | text | NULL | Reason for rejection (if any) |
 | created_at | timestamptz | DEFAULT NOW() | Creation timestamp |
 | updated_at | timestamptz | DEFAULT NOW() | Last update timestamp |
 
 **Enums**:
-- `user_role`: 'nurse', 'admin'
+- `user_role`: 'nurse', 'admin', **'doctor'** (doctor role added)
 - `approval_status`: 'pending', 'approved', 'rejected'
+
+**Important Changes**:
+- **department** column has been **replaced** with **care_type**
+- **doctor** role has been added to user_role enum
 
 **Key Changes**:
 - **SECURITY CRITICAL**: New users default to `is_active=true` and `approval_status='pending'`
@@ -51,25 +56,26 @@ This document provides a complete and accurate description of the medical schedu
 - Added audit trail for approval actions
 
 ### 2. patients
-**Purpose**: Patient information (simplified, no encryption)  
-**Created**: 2025-08-18 | **Enhanced**: 2025-09-09 (Archiving Support)
+**Purpose**: Patient information (simplified, no encryption)
+**Created**: 2025-08-18 | **Enhanced**: 2025-09-09 (Archiving Support) | **Verified**: 2025-09-22
 
 | Column | Type | Constraints | Description |
 |--------|------|-------------|-------------|
 | id | uuid | PRIMARY KEY DEFAULT gen_random_uuid() | Patient unique identifier |
-| hospital_id | uuid | NULL | Future multi-tenancy support |
 | patient_number | text | NOT NULL | Patient identification number |
 | name | text | NOT NULL | Patient full name |
-| department | text | NULL | Medical department |
-| care_type | text | NULL | Type of care (added 2025-01-19) |
+| **care_type** | text | NULL, CHECK (care_type IN ('외래','입원','낮병원')) | Type of care: 외래/입원/낮병원 |
+| **doctor_id** | uuid | NULL REFERENCES profiles(id) | Assigned doctor ID |
 | is_active | boolean | DEFAULT true | Active status |
-| **archived** | boolean | DEFAULT false | Archival status (NEW) |
-| **archived_at** | timestamptz | NULL | Archival timestamp (NEW) |
-| **original_patient_number** | text | NULL | Original number before archiving (NEW) |
+| **archived** | boolean | DEFAULT false | Archival status |
+| **archived_at** | timestamptz | NULL | Archival timestamp |
+| **original_patient_number** | text | NULL | Original number before archiving |
 | metadata | jsonb | DEFAULT '{}' | Additional patient data |
 | created_by | uuid | REFERENCES auth.users(id) | User who created record |
 | created_at | timestamptz | DEFAULT now() | Creation timestamp |
 | updated_at | timestamptz | DEFAULT now() | Last update timestamp |
+
+**Note**: hospital_id column is not present in current production database
 
 **Unique Constraints**:
 - `unique_active_patient_number`: Unique constraint on `patient_number` WHERE `is_active = true AND archived = false`
@@ -262,6 +268,22 @@ This document provides a complete and accurate description of the medical schedu
 
 ## Views
 
+### Materialized Views
+
+#### dashboard_schedule_summary
+**Purpose**: Optimized view for dashboard performance
+**Created**: 2025 | **Verified**: 2025-09-22
+**Columns**:
+- All schedule fields (id, patient_id, item_id, etc.)
+- patient_name, patient_care_type, patient_number
+- doctor_id, doctor_name (from profiles join)
+- item_name, item_category (from items join)
+- urgency_level (calculated: 'overdue', 'due_today', 'upcoming', 'future')
+**Filters**: Only active and paused schedules
+**Indexes**:
+- idx_dashboard_summary_care_type (care_type, next_due_date)
+- idx_dashboard_summary_doctor (doctor_id, next_due_date)
+
 ### System Views
 
 #### database_health
@@ -348,6 +370,26 @@ This document provides a complete and accurate description of the medical schedu
 
 ### Performance Functions
 
+#### get_filtered_schedules(p_user_id, p_show_all, p_care_types, p_date_start, p_date_end)
+**Purpose**: Server-side filtering with role-based access control
+**Created**: 2025 | **Verified**: 2025-09-22
+**Parameters**:
+- `p_user_id` (UUID): User requesting data
+- `p_show_all` (BOOLEAN, default FALSE): Bypass role restrictions
+- `p_care_types` (TEXT[], optional): Filter by care types
+- `p_date_start` (DATE, optional): Date range start
+- `p_date_end` (DATE, optional): Date range end
+
+**Returns**: Filtered schedule records with patient and item details
+**Logic**:
+- Admin role: Sees all data
+- Doctor role: Sees only patients where doctor_id = user_id (unless show_all = true)
+- Nurse role: Sees only patients matching nurse's care_type (unless show_all = true)
+- show_all = TRUE bypasses role restrictions
+
+#### get_filter_statistics(p_user_id)
+**Purpose**: Get filter usage statistics for user
+
 #### get_db_stats()
 **Purpose**: Database statistics (admin only)
 
@@ -361,29 +403,46 @@ This document provides a complete and accurate description of the medical schedu
 ### Core Table Indexes
 
 **profiles**:
-- `idx_profiles_role` (role)
-- `idx_profiles_department` (department)  
-- `idx_profiles_email` (email)
-- `idx_profiles_is_active` (is_active)
-- `idx_profiles_role_department_active` (role, department, is_active)
+- `idx_profiles_role` (role) - *not found in current DB*
+- `idx_profiles_role_care_type` (role, care_type) WHERE role = 'nurse'
+- `idx_profiles_id_role_care_type` (id, role, care_type)
+- `idx_profiles_active_role_dept` (is_active, role, care_type) WHERE is_active = true
+- `idx_profiles_role_department_active` (role, care_type, is_active)
+- `idx_profiles_approved_by` (approved_by)
 
 **patients**:
 - `idx_patients_patient_number` (patient_number)
 - `idx_patients_name` (name)
 - `idx_patients_is_active` (is_active)
+- `idx_patients_active` (is_active)
 - `idx_patients_created_at` (created_at DESC)
-- `idx_patients_archived` (archived, archived_at) *NEW*
-- `idx_patients_original_number` (original_patient_number) *NEW*
-- `unique_active_patient_number` (patient_number) WHERE active AND not archived
+- `idx_patients_created_by` (created_by)
+- `idx_patients_care_type` (care_type)
+- `idx_patients_care_type_active` (care_type) WHERE NOT archived
+- `idx_patients_care_type_doctor` (care_type, doctor_id)
+- `idx_patients_doctor_care_type` (doctor_id, care_type) WHERE doctor_id IS NOT NULL
+- `idx_patients_doctor_id` (doctor_id)
+- `idx_patients_archived` (archived, archived_at)
+- `idx_patients_original_number` (original_patient_number)
+- `unique_active_patient_number` (patient_number) WHERE is_active = true AND archived = false
 
 **schedules**:
 - `idx_schedules_patient` (patient_id)
+- `idx_schedules_patient_id` (patient_id)
 - `idx_schedules_item` (item_id)
-- `idx_schedules_nurse` (assigned_nurse_id)
+- `idx_schedules_item_id` (item_id)
+- `idx_schedules_nurse` (assigned_nurse_id) WHERE status = 'active'
 - `idx_schedules_status` (status)
+- `idx_schedules_status_date` (status, next_due_date)
+- `idx_schedules_status_next_due` (status, next_due_date) WHERE status IN ('active', 'paused')
 - `idx_schedules_next_due` (next_due_date) WHERE status = 'active'
-- `idx_schedules_notification` (next_due_date, requires_notification)
+- `idx_schedules_active_due_date` (status, next_due_date) WHERE status = 'active'
+- `idx_schedules_notification` (next_due_date, requires_notification) WHERE status = 'active' AND requires_notification = true
 - `idx_schedules_interval` (interval_weeks)
+- `idx_schedules_composite` (patient_id, next_due_date, status)
+- `idx_schedules_patient_status_date` (patient_id, status, next_due_date) WHERE status IN ('active', 'paused')
+- `idx_schedules_created_by` (created_by)
+- `idx_schedules_unique_active` (patient_id, item_id) WHERE status = 'active'
 
 **schedule_executions**:
 - `idx_executions_schedule` (schedule_id)
@@ -518,14 +577,14 @@ Applied to all major tables for automatic timestamp updates:
 ### Custom Enums
 
 ```sql
--- User roles
-CREATE TYPE user_role AS ENUM ('nurse', 'admin');
+-- User roles (UPDATED: doctor role added)
+CREATE TYPE user_role AS ENUM ('nurse', 'admin', 'doctor');
 
 -- Approval workflow
 CREATE TYPE approval_status AS ENUM ('pending', 'approved', 'rejected');
 
--- Schedule statuses  
-CREATE TYPE schedule_status AS ENUM ('active', 'paused', 'completed', 'cancelled');
+-- Schedule statuses (includes 'deleted' in actual DB)
+CREATE TYPE schedule_status AS ENUM ('active', 'paused', 'completed', 'deleted', 'cancelled');
 
 -- Execution statuses
 CREATE TYPE execution_status AS ENUM ('planned', 'completed', 'skipped', 'overdue');
@@ -613,8 +672,17 @@ CREATE TYPE appointment_type AS ENUM ('consultation', 'treatment', 'follow_up', 
 - **Analytics Functions**: Added pause statistics and resume validation functions
 - **Trigger Simplification**: Moved complex logic to application layer for reliability
 
-**Total Migrations**: 24 applied migrations
-**Current Status**: Production-ready with complete schedule management and conflict resolution
+### Phase 5: Role-Based Filtering Enhancement (Before September 22, 2025)
+- **Doctor Role Addition**: Added 'doctor' to user_role enum
+- **Profile Enhancement**: Replaced department with care_type column
+- **Patient Assignment**: Added doctor_id to patients table for doctor-patient relationships
+- **Filtering Function**: Implemented get_filtered_schedules with role-based access control
+- **Performance Indexes**: Added multiple indexes for filtering optimization
+- **Materialized View**: dashboard_schedule_summary for performance
+
+**Total Migrations**: 24+ applied migrations
+**Current Status**: Production-ready with complete role-based filtering and schedule management
+**Database Verification**: Direct verification performed on 2025-09-22
 
 ---
 
@@ -674,8 +742,14 @@ CREATE TYPE appointment_type AS ENUM ('consultation', 'treatment', 'follow_up', 
 
 ---
 
-**Document Version**: 1.2.0
-**Schema Accuracy**: Verified against actual database state
-**Last Verified**: September 14, 2025
+**Document Version**: 2.0.0
+**Schema Accuracy**: Directly verified against production database
+**Last Verified**: September 22, 2025
+**Verification Method**: Direct SQL queries against production database
 
-*This document reflects the actual production database state based on 24 applied migrations through Phase 4 (September 14, 2025). Recent updates include schedule pause/resume system, notification state enhancements, and conflict resolution improvements.*
+*This document reflects the actual production database state as verified through direct database inspection on 2025-09-22. Major updates include:*
+- *Doctor role implementation with patient assignment*
+- *Profile care_type column (replacing department)*
+- *Complete role-based filtering system with get_filtered_schedules function*
+- *Dashboard optimization with materialized view*
+- *Comprehensive index strategy for performance*

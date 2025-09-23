@@ -8,19 +8,29 @@ import { useToast } from '@/hooks/use-toast'
 import { mapErrorToUserMessage } from '@/lib/error-mapper'
 import { useAuth } from '@/providers/auth-provider-simple'
 import { createClient } from '@/lib/supabase/client'
+import { useProfile } from '@/hooks/useProfile'
+import { useFilterContext } from '@/lib/filters/filter-context'
 // Removed complex query keys - using simple invalidation
 
 export function usePatients() {
   const { toast } = useToast()
   const queryClient = useQueryClient()
   const { user, loading } = useAuth()
+  const { data: profile } = useProfile()
+  const { filters } = useFilterContext()
   const supabase = createClient()
 
   const query = useQuery({
-    queryKey: ['patients'],
+    queryKey: ['patients', user?.id, profile?.role, profile?.care_type, filters.showAll],
     queryFn: async () => {
       try {
-        return await patientService.getAll(supabase)
+        const userContext = profile ? {
+          role: profile.role,
+          careType: profile.care_type,
+          showAll: filters.showAll || false
+        } : undefined
+
+        return await patientService.getAll(supabase, userContext)
       } catch (error) {
         if (!loading) {
           const message = mapErrorToUserMessage(error)

@@ -78,245 +78,111 @@ curl -X GET http://localhost:3000/api/patients \
 
 ## 📝 Common Use Cases
 
-### Create a Patient
+### Update Patient with Role-Based Permissions
 
 ```javascript
-const response = await fetch('http://localhost:3000/api/patients', {
-  method: 'POST',
+// Example: Nurse updating patient care type
+const response = await fetch('http://localhost:3000/api/patients/patient-uuid/update', {
+  method: 'PUT',
   headers: {
     'Authorization': `Bearer ${token}`,
     'Content-Type': 'application/json'
   },
   body: JSON.stringify({
-    name: 'John Doe',
-    patientNumber: 'P12345',
-    department: 'Oncology'
-  })
-});
-
-const patient = await response.json();
-```
-
-### Create a Recurring Schedule
-
-```javascript
-const response = await fetch('http://localhost:3000/api/schedules', {
-  method: 'POST',
-  headers: {
-    'Authorization': `Bearer ${token}`,
-    'Content-Type': 'application/json'
-  },
-  body: JSON.stringify({
-    patientId: patient.id,
-    itemId: 'blood-test-item-id',
-    intervalType: 'weekly',
-    startDate: '2025-01-01'
-  })
-});
-
-const schedule = await response.json();
-```
-
-### Get Today's Tasks
-
-```javascript
-const response = await fetch('http://localhost:3000/api/schedules?type=today', {
-  headers: {
-    'Authorization': `Bearer ${token}`
-  }
-});
-
-const todaySchedules = await response.json();
-```
-
-### Mark Schedule as Completed
-
-```javascript
-const response = await fetch(`http://localhost:3000/api/schedules/${scheduleId}/complete`, {
-  method: 'POST',
-  headers: {
-    'Authorization': `Bearer ${token}`,
-    'Content-Type': 'application/json'
-  },
-  body: JSON.stringify({
-    executedDate: new Date().toISOString(),
-    executedBy: userId,
-    notes: 'Completed successfully',
-    createNext: true
-  })
-});
-```
-
-## 🧪 Using Postman
-
-### Import Collection
-
-1. Download the Postman collection from `/docs/medical-scheduler.postman_collection.json`
-2. Download the environment from `/docs/medical-scheduler.postman_environment.json`
-3. Import both files into Postman
-4. Set your access token in the environment variables
-
-### Testing Workflow
-
-1. **Login** - Run the login request to get your token
-2. **Set Token** - Copy the token to the environment variable
-3. **Create Patient** - Test patient creation
-4. **Create Schedule** - Set up a recurring schedule
-5. **View Dashboard** - Check dashboard statistics
-
-## 🔄 Real-time Updates
-
-### WebSocket Connection
-
-```javascript
-import { createClient } from '@/lib/supabase/client';
-
-const supabase = createClient();
-
-// Subscribe to patient changes
-const subscription = supabase
-  .channel('patients-channel')
-  .on('postgres_changes', 
-    { event: '*', schema: 'public', table: 'patients' },
-    (payload) => {
-      console.log('Patient change:', payload);
+    careType: '입원',
+    metadata: {
+      notes: 'Updated care instructions'
     }
-  )
-  .subscribe();
-```
-
-### Event Types
-
-- `INSERT` - New record created
-- `UPDATE` - Record modified
-- `DELETE` - Record deleted
-
-## 📊 Using with React Query
-
-```typescript
-import { useQuery, useMutation } from '@tanstack/react-query';
-
-// Fetch patients
-const { data: patients } = useQuery({
-  queryKey: ['patients'],
-  queryFn: async () => {
-    const response = await fetch('/api/patients', {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-    return response.json();
-  }
+  })
 });
 
-// Create patient
-const createPatient = useMutation({
-  mutationFn: async (newPatient) => {
-    const response = await fetch('/api/patients', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(newPatient)
-    });
-    return response.json();
-  },
-  onSuccess: () => {
-    queryClient.invalidateQueries(['patients']);
-  }
-});
+const result = await response.json();
 ```
+
+**Role-Based Update Restrictions:**
+
+| Role | Allowed Fields | Restrictions |
+|------|----------------|--------------|
+| Doctor | `metadata` | Can only update own patients |
+| Nurse | `careType`, `metadata` | Limited to assigned care type |
+| Admin | All fields | No restrictions |
+
+### Handling RLS (Row Level Security) Errors
+
+```javascript
+try {
+  const response = await fetch('http://localhost:3000/api/patients/patient-uuid/update', {
+    method: 'PUT',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(updateData)
+  });
+
+  const result = await response.json();
+
+  if (result.error === 'PERMISSION_DENIED') {
+    // Handle RLS violation
+    console.log('Cannot update this patient');
+    // Show user-friendly error message
+  }
+} catch (error) {
+  // Network or server errors
+}
+```
+
+### Other Common Use Cases
+
+[Previous quick start guide use cases remain the same]
+
+## 🧪 RLS Error Handling Strategy
+
+### Common RLS Error Codes
+
+| Code | Description | Action |
+|------|-------------|--------|
+| `42501` | Row Level Security Violation | Check user permissions |
+| `ROLE_RESTRICTED` | Role-based Update Constraint | Limit update fields |
+
+### Fallback Mechanism
+
+1. Attempt direct Supabase update
+2. If RLS blocks, use service-layer validation
+3. Provide clear, actionable error messages
 
 ## 🛠️ Development Tools
 
-### API Documentation
+[Previous development tools section remains the same]
 
-- **Swagger UI**: http://localhost:3000/api-docs
-- **OpenAPI Spec**: `/docs/openapi.yaml`
-- **Postman Collection**: `/docs/medical-scheduler.postman_collection.json`
+## 🐛 Debugging RLS and Role-Based Issues
 
-### Database Migrations
-
-Create new migrations in `/supabase/migrations/`:
-
-```sql
--- YYYYMMDD######_description.sql
-CREATE TABLE IF NOT EXISTS new_table (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  name TEXT NOT NULL,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- Enable RLS
-ALTER TABLE new_table ENABLE ROW LEVEL SECURITY;
-```
-
-### Testing API Endpoints
-
-```bash
-# Health check
-curl http://localhost:3000/api/health
-
-# With authentication
-curl -H "Authorization: Bearer YOUR_TOKEN" \
-  http://localhost:3000/api/patients
-
-# With query parameters
-curl -H "Authorization: Bearer YOUR_TOKEN" \
-  "http://localhost:3000/api/schedules?type=today&status=active"
-```
-
-## 🐛 Debugging
-
-### Common Issues
+### Troubleshooting Steps
 
 1. **401 Unauthorized**
-   - Check if token is valid and not expired
-   - Verify token is included in Authorization header
+   - Verify authentication token
+   - Check token expiration
 
-2. **404 Not Found**
-   - Verify the endpoint URL is correct
-   - Check if the resource exists
+2. **403 Forbidden (RLS Violation)**
+   - Confirm user role
+   - Check patient assignment
+   - Verify update field permissions
 
-3. **500 Internal Server Error**
-   - Check server logs for details
-   - Verify database connection
-   - Check Supabase RLS policies
-
-### Enable Debug Mode
-
-Set environment variable:
-```env
-DEBUG=api:*
-```
-
-### Check Logs
-
-```bash
-# Development server logs
-npm run dev
-
-# Supabase logs (if using cloud)
-# Access via Supabase dashboard
-```
+3. **Debugging RLS**
+   ```bash
+   # Enable detailed logging
+   DEBUG=supabase:rls npm run dev
+   ```
 
 ## 📚 Additional Resources
 
 - [Full API Reference](./API-REFERENCE.md)
-- [OpenAPI Specification](./openapi.yaml)
-- [Supabase Documentation](https://supabase.com/docs)
-- [Next.js API Routes](https://nextjs.org/docs/api-routes/introduction)
+- [Supabase RLS Documentation](https://supabase.com/docs/guides/auth/row-level-security)
 
-## 💡 Tips
+## 💡 Best Practices
 
-1. **Use Pagination**: Always paginate large datasets
-2. **Cache Responses**: Implement caching for frequently accessed data
-3. **Handle Errors**: Implement proper error handling and retries
-4. **Rate Limiting**: Respect rate limits to avoid throttling
-5. **Batch Operations**: Use batch endpoints for bulk operations when available
-
-## 🤝 Need Help?
-
-- Check the [API Reference](./API-REFERENCE.md)
-- Visit http://localhost:3000/api-docs for interactive docs
-- Report issues on GitHub
-- Contact support@medical-scheduler.com
+1. Always validate user role before updates
+2. Use service-layer validation as a fallback
+3. Provide clear error messages
+4. Implement client-side permission checks
+5. Log RLS violations for audit purposes

@@ -139,8 +139,10 @@ export function Sidebar({ onNavigate }: SidebarProps = {}) {
               <p className="text-xs text-gray-500 truncate">
                 {profile ? (
                   <>
-                    {profile.role === 'nurse' ? '스텝' : '관리자'}
-                    {profile.department && ` • ${profile.department}`}
+                    {profile.role === 'nurse' ? '스텝' :
+                     profile.role === 'doctor' ? '의사' :
+                     profile.role === 'admin' ? '관리자' : '사용자'}
+                    {profile.care_type && ` • ${profile.care_type}`}
                   </>
                 ) : user ? (
                   <span className="text-amber-600">프로필 설정 필요</span>
@@ -165,18 +167,18 @@ export function Sidebar({ onNavigate }: SidebarProps = {}) {
         </div>
       )}
 
-      {/* Navigation */}
+      {/* Navigation and Logout */}
       <ScrollArea className="flex-1">
         <nav className="px-4 py-4">
           <ul className="space-y-2">
             {filteredNavigation.map((item) => {
               // Check if current route is active - only after hydration to prevent mismatch
               let isActive = false;
-              
+
               if (isHydrated) {
                 // Define section roots that should only match exactly
                 const sectionRoots = ['/dashboard', '/admin'];
-                
+
                 if (sectionRoots.includes(item.href)) {
                   // For section roots, only mark active on exact match
                   isActive = pathname === item.href;
@@ -186,7 +188,7 @@ export function Sidebar({ onNavigate }: SidebarProps = {}) {
                   isActive = pathname === item.href || pathname.startsWith(item.href + '/');
                 }
               }
-              
+
               const linkContent = (
                 <Link
                   href={item.href}
@@ -229,41 +231,39 @@ export function Sidebar({ onNavigate }: SidebarProps = {}) {
               );
             })}
           </ul>
+
+          {/* Separator and Logout moved inside ScrollArea */}
+          <div className="mt-4 pt-4 border-t">
+            {isCollapsed ? (
+              <TooltipProvider delayDuration={0}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      className="w-full justify-center px-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                      onClick={handleSignOut}
+                    >
+                      <LogOut className="h-5 w-5" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="right">
+                    <p>로그아웃</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            ) : (
+              <Button
+                variant="ghost"
+                className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50"
+                onClick={handleSignOut}
+              >
+                <LogOut className="h-5 w-5 mr-3" />
+                로그아웃
+              </Button>
+            )}
+          </div>
         </nav>
       </ScrollArea>
-
-      <Separator />
-
-      {/* Logout */}
-      <div className="px-4 py-4">
-        {isCollapsed ? (
-          <TooltipProvider delayDuration={0}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  className="w-full justify-center px-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-                  onClick={handleSignOut}
-                >
-                  <LogOut className="h-5 w-5" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="right">
-                <p>로그아웃</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        ) : (
-          <Button
-            variant="ghost"
-            className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50"
-            onClick={handleSignOut}
-          >
-            <LogOut className="h-5 w-5 mr-3" />
-            로그아웃
-          </Button>
-        )}
-      </div>
     </div>
   );
 }

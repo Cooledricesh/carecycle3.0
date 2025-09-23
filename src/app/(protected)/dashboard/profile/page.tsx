@@ -41,12 +41,25 @@ export default function ProfilePage() {
   
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
-    name: profile?.name || "",
-    email: profile?.email || "",
-    phone: profile?.phone || "",
-    department: profile?.department || "",
-    role: profile?.role || "nurse",
+    name: "",
+    email: "",
+    phone: "",
+    care_type: "",
+    role: "nurse",
   });
+
+  // Update form data when profile is loaded or updated
+  useEffect(() => {
+    if (profile) {
+      setFormData({
+        name: profile.name || "",
+        email: profile.email || "",
+        phone: profile.phone || "",
+        care_type: profile.care_type || "",
+        role: profile.role || "nurse",
+      });
+    }
+  }, [profile]);
   
   const [passwordData, setPasswordData] = useState({
     currentPassword: "",
@@ -68,7 +81,7 @@ export default function ProfilePage() {
         .update({
           name: formData.name,
           phone: formData.phone,
-          department: formData.department,
+          care_type: formData.care_type,
         })
         .eq("id", profile.id);
       
@@ -184,13 +197,15 @@ export default function ProfilePage() {
               <div className={`flex ${isMobile ? 'justify-center' : ''} items-center gap-2`}>
                 <Shield className="h-3 w-3 sm:h-4 sm:w-4 text-gray-400" />
                 <span className="text-xs sm:text-sm text-gray-600">
-                  {profile.role === "admin" ? "관리자" : "스텝"}
+                  {profile.role === "admin" ? "관리자" :
+                   profile.role === "doctor" ? "의사" :
+                   profile.role === "nurse" ? "간호사" : "스텝"}
                 </span>
-                {profile.department && (
+                {profile.care_type && (
                   <>
                     <span className="text-gray-400">•</span>
                     <span className="text-xs sm:text-sm text-gray-600">
-                      {profile.department}
+                      {profile.care_type}
                     </span>
                   </>
                 )}
@@ -268,17 +283,17 @@ export default function ProfilePage() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="department">부서</Label>
+                    <Label htmlFor="care_type">진료 유형</Label>
                     <div className="relative">
                       <Building className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                       <Input
-                        id="department"
-                        value={formData.department}
+                        id="care_type"
+                        value={formData.care_type}
                         onChange={(e) =>
-                          setFormData({ ...formData, department: e.target.value })
+                          setFormData({ ...formData, care_type: e.target.value })
                         }
                         className={`pl-10 ${touchTarget.input}`}
-                        placeholder="소속 부서"
+                        placeholder="진료 유형"
                       />
                     </div>
                   </div>

@@ -9,7 +9,7 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[]
 
-export type UserRole = 'nurse' | 'admin'
+export type UserRole = 'nurse' | 'admin' | 'doctor'
 
 export type ApprovalStatus = 'pending' | 'approved' | 'rejected'
 
@@ -34,7 +34,7 @@ export interface Database {
           email: string
           name: string
           role: UserRole
-          department: string | null
+          care_type: string | null
           phone: string | null
           is_active: boolean
           approval_status: ApprovalStatus
@@ -48,7 +48,7 @@ export interface Database {
           email: string
           name: string
           role?: UserRole
-          department?: string | null
+          care_type?: string | null
           phone?: string | null
           is_active?: boolean
           approval_status?: ApprovalStatus
@@ -62,7 +62,7 @@ export interface Database {
           email?: string
           name?: string
           role?: UserRole
-          department?: string | null
+          care_type?: string | null
           phone?: string | null
           is_active?: boolean
           approval_status?: ApprovalStatus
@@ -233,6 +233,7 @@ export interface Database {
           name: string
           department: string | null
           care_type: string | null
+          doctor_id: string | null
           is_active: boolean
           archived: boolean
           archived_at: string | null
@@ -249,6 +250,7 @@ export interface Database {
           name: string
           department?: string | null
           care_type?: string | null
+          doctor_id?: string | null
           is_active?: boolean
           archived?: boolean
           archived_at?: string | null
@@ -265,6 +267,7 @@ export interface Database {
           name?: string
           department?: string | null
           care_type?: string | null
+          doctor_id?: string | null
           is_active?: boolean
           archived?: boolean
           archived_at?: string | null

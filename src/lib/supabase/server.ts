@@ -88,19 +88,30 @@ export async function getCurrentUser() {
 
 export async function getCurrentUserProfile(): Promise<any> {
   const user = await getCurrentUser();
-  
+
   if (!user) {
     return null;
   }
-  
-  // Simplified: Return user data as profile without fetching from profiles table
-  // The profiles table query was causing hangs - see AUTH_FAILURE_ANALYSIS.md
-  return {
-    id: user.id,
-    email: user.email,
-    name: user.email?.split('@')[0] || 'User',
-    role: 'user' // Default role
-  };
+
+  // Fetch actual profile from database
+  const supabase = await createClient();
+  const { data: profile, error } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', user.id)
+    .single();
+
+  if (error || !profile) {
+    // Fallback to default if profile not found
+    return {
+      id: user.id,
+      email: user.email,
+      name: user.email?.split('@')[0] || 'User',
+      role: 'user'
+    };
+  }
+
+  return profile;
 }
 
 export async function requireAuth() {

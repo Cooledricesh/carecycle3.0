@@ -4,6 +4,7 @@ import { useState, useMemo, useEffect } from 'react'
 import { PatientRegistrationModal } from '@/components/patients/patient-registration-modal'
 import { PatientDeleteDialog } from '@/components/patients/patient-delete-dialog'
 import { PatientCareTypeSelect } from '@/components/patients/patient-care-type-select'
+import { PatientDoctorSelect } from '@/components/patients/patient-doctor-select'
 import { ScheduleCreateModal } from '@/components/schedules/schedule-create-modal'
 import { usePatients } from '@/hooks/usePatients'
 import { useQueryClient } from '@tanstack/react-query'
@@ -39,8 +40,15 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { useIsMobile } from '@/hooks/useIsMobile'
 import { touchTarget, responsiveText, responsivePadding, responsiveSpacing } from '@/lib/utils'
+import { FilterProvider } from '@/providers/filter-provider'
+import { SimpleFilterToggle } from '@/components/filters/SimpleFilterToggle'
+import { useProfile } from '@/hooks/useProfile'
 
-export default function PatientsPage() {
+interface PatientsContentProps {
+  userRole?: string
+}
+
+function PatientsContent({ userRole }: PatientsContentProps) {
   const { patients, isLoading, error, refetch, deletePatient, isDeleting } = usePatients()
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const [isRefreshing, setIsRefreshing] = useState(false)
@@ -61,18 +69,20 @@ export default function PatientsPage() {
     if (!searchTerm.trim()) {
       return patients
     }
-    
+
     const searchLower = searchTerm.toLowerCase()
     return patients.filter((patient) => {
       // Safely convert each field to string before calling toLowerCase/includes
       const name = String(patient.name ?? '').toLowerCase()
       const patientNumber = String(patient.patientNumber ?? '').toLowerCase()
       const careType = String(patient.careType ?? '').toLowerCase()
-      
+      const doctorName = String(patient.doctorName ?? '').toLowerCase()
+
       return (
         name.includes(searchLower) ||
         patientNumber.includes(searchLower) ||
-        careType.includes(searchLower)
+        careType.includes(searchLower) ||
+        doctorName.includes(searchLower)
       )
     })
   }, [patients, searchTerm])
@@ -189,7 +199,7 @@ export default function PatientsPage() {
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4 z-10 pointer-events-none" />
               <Input
-                placeholder={isMobile ? "검색..." : "환자명, 환자번호, 진료구분으로 검색..."}
+                placeholder={isMobile ? "검색..." : "환자명, 환자번호, 진료구분, 주치의로 검색..."}
                 value={searchTerm}
                 onChange={(e) => handleSearchChange(e.target.value)}
                 className={`!pl-20 ${touchTarget.input}`}
@@ -257,6 +267,16 @@ export default function PatientsPage() {
                               compact={true}
                             />
                           </div>
+                          {userRole === 'admin' && (
+                            <div className="flex justify-between items-center">
+                              <span className={`${responsiveText.small} text-muted-foreground`}>주치의</span>
+                              <PatientDoctorSelect
+                                patient={patient}
+                                onSuccess={() => refetch()}
+                                compact={true}
+                              />
+                            </div>
+                          )}
                         </div>
                         
                         {/* Action Buttons */}
@@ -291,6 +311,7 @@ export default function PatientsPage() {
                         <TableHead>환자번호</TableHead>
                         <TableHead>환자명</TableHead>
                         <TableHead>진료구분</TableHead>
+                        {userRole === 'admin' && <TableHead>주치의</TableHead>}
                         <TableHead className="text-right">작업</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -307,6 +328,14 @@ export default function PatientsPage() {
                               onSuccess={() => refetch()}
                             />
                           </TableCell>
+                          {userRole === 'admin' && (
+                            <TableCell>
+                              <PatientDoctorSelect
+                                patient={patient}
+                                onSuccess={() => refetch()}
+                              />
+                            </TableCell>
+                          )}
                           <TableCell className="text-right">
                             <div className="flex items-center justify-end gap-2">
                               <ScheduleCreateModal
@@ -401,5 +430,24 @@ export default function PatientsPage() {
         </CardContent>
       </Card>
     </div>
+  )
+}
+
+export default function PatientsPage() {
+  const { data: profile } = useProfile()
+
+  return (
+    <FilterProvider persistToUrl={true}>
+      <div className="space-y-4">
+        {/* Show filter toggle for nurse and doctor */}
+        {profile && (profile.role === 'nurse' || profile.role === 'doctor') && (
+          <div className="p-3 bg-gray-50 border rounded-lg">
+            <SimpleFilterToggle />
+          </div>
+        )}
+
+        <PatientsContent userRole={profile?.role} />
+      </div>
+    </FilterProvider>
   )
 }

@@ -32,7 +32,13 @@ export const PatientCreateSchema = z.object({
   careType: CareTypeEnum
     .nullable()
     .optional(),
-  
+
+  doctorId: z
+    .string()
+    .uuid('올바른 의사 ID를 선택해주세요')
+    .nullable()
+    .optional(),
+
   isActive: z
     .boolean()
     .default(true),

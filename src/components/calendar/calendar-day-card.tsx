@@ -49,7 +49,7 @@ export function CalendarDayCard({
         ${isMobile ? 'p-3' : 'p-4'} border rounded-lg transition-all hover:shadow-sm
         ${isOverdue ? 'border-red-200 bg-red-50/30' :
           isToday ? 'border-orange-200 bg-orange-50/30' :
-          getScheduleCardBgColor(schedule.item?.category) || 'border-gray-200 hover:border-gray-300'}
+          getScheduleCardBgColor(schedule.item_category) || 'border-gray-200 hover:border-gray-300'}
       `}
     >
       <div className={`flex flex-col gap-3`}>
@@ -59,7 +59,7 @@ export function CalendarDayCard({
             {/* 환자명과 상태 배지 */}
             <div className={`flex items-center gap-2 ${isMobile ? 'flex-wrap' : ''}`}>
               <h4 className={`font-semibold text-gray-900 ${isMobile ? 'text-sm' : ''}`}>
-                {schedule.patient?.name}
+                {schedule.patient?.name || schedule.patients?.name || schedule.patient_name || '환자 정보 없음'}
               </h4>
               <Badge className={`text-xs ${getStatusBadgeClass(statusInfo.variant)}`}>
                 {statusInfo.variant === 'overdue' && (
@@ -68,23 +68,27 @@ export function CalendarDayCard({
                 {statusInfo.label}
               </Badge>
             </div>
-            
+
             {/* 검사/주사 정보 */}
             <div className={`flex items-center gap-2 text-gray-600 ${
               isMobile ? 'text-xs' : 'text-sm'
             }`}>
               {(() => {
-                const IconComponent = getScheduleCategoryIcon(schedule.item?.category);
+                const category = schedule.item?.category || schedule.items?.category || schedule.item_category;
+                const IconComponent = getScheduleCategoryIcon(category);
                 return IconComponent ? (
-                  <IconComponent className={`h-4 w-4 ${getScheduleCategoryColor(schedule.item?.category)}`} />
+                  <IconComponent className={`h-4 w-4 ${getScheduleCategoryColor(category)}`} />
                 ) : null;
               })()}
-              <span className="font-medium">{schedule.item?.name}</span>
-              {schedule.item?.category && (
-                <span className={`px-2 py-0.5 rounded-full text-xs ${getScheduleCategoryBgColor(schedule.item?.category)} ${getScheduleCategoryColor(schedule.item?.category)}`}>
-                  {getScheduleCategoryLabel(schedule.item.category)}
-                </span>
-              )}
+              <span className="font-medium">{schedule.item?.name || schedule.items?.name || schedule.item_name || '항목 정보 없음'}</span>
+              {(() => {
+                const category = schedule.item?.category || schedule.items?.category || schedule.item_category;
+                return category ? (
+                  <span className={`px-2 py-0.5 rounded-full text-xs ${getScheduleCategoryBgColor(category)} ${getScheduleCategoryColor(category)}`}>
+                    {getScheduleCategoryLabel(category)}
+                  </span>
+                ) : null;
+              })()}
             </div>
           </div>
         </div>
@@ -93,18 +97,13 @@ export function CalendarDayCard({
         <div className={`grid gap-2 ${
           isMobile ? 'grid-cols-1 text-xs' : 'grid-cols-1 md:grid-cols-2 gap-3 text-sm'
         }`}>
-          {schedule.intervalWeeks && (
+          {(schedule.interval_weeks || schedule.intervalWeeks) && (
             <div className="flex items-center gap-2 text-gray-500">
               <Clock className={`${isMobile ? 'h-3 w-3' : 'h-4 w-4'}`} />
-              <span>주기: {schedule.intervalWeeks}주마다</span>
+              <span>주기: {schedule.interval_weeks || schedule.intervalWeeks}주마다</span>
             </div>
           )}
-          {schedule.assignedNurse && (
-            <div className="flex items-center gap-2 text-gray-500">
-              <span className="font-medium">담당:</span>
-              <span>{schedule.assignedNurse.name}</span>
-            </div>
-          )}
+          {/* Note: assignedNurse data not available in current RPC response */}
         </div>
         
         {/* 메모 */}

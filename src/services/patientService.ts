@@ -40,6 +40,7 @@ export const patientService = {
         name: validated.name,
         patient_number: validated.patientNumber,
         care_type: validated.careType || null,
+        doctor_id: validated.doctorId || null,
         is_active: validated.isActive ?? true,
         metadata: validated.metadata || {}
       }
@@ -82,6 +83,7 @@ export const patientService = {
                 patientNumber: validated.patientNumber,
                 department: validated.department,
                 careType: validated.careType,
+                doctorId: validated.doctorId,
                 isActive: validated.isActive,
                 metadata: validated.metadata
               })
@@ -132,17 +134,33 @@ export const patientService = {
     }
   },
 
-  async getAll(supabase?: SupabaseClient): Promise<Patient[]> {
+  async getAll(supabase?: SupabaseClient, userContext?: { role?: string; careType?: string | null; showAll?: boolean }): Promise<Patient[]> {
     const client = supabase || createClient()
-    
+
     // Helper function to execute query with retry on auth failure
     const executeQuery = async (retryCount = 0): Promise<Patient[]> => {
       try {
-        console.log('[patientService.getAll] Fetching patients... (attempt:', retryCount + 1, ')')
-        const { data, error } = await client
+        console.log('[patientService.getAll] Fetching patients with context:', userContext)
+
+        let query = client
           .from('patients')
-          .select('*')
+          .select(`
+            *,
+            doctor:profiles!doctor_id(id, name)
+          `)
           .eq('is_active', true)
+
+        // Apply role-based filtering for nurse and doctor
+        if (userContext) {
+          if ((userContext.role === 'nurse' || userContext.role === 'doctor') && !userContext.showAll) {
+            if (userContext.careType) {
+              console.log('[patientService.getAll] Filtering by care_type:', userContext.careType)
+              query = query.eq('care_type', userContext.careType)
+            }
+          }
+        }
+
+        const { data, error } = await query
           .order('created_at', { ascending: false })
         
         if (error) {
@@ -161,7 +179,17 @@ export const patientService = {
           throw error
         }
         
-        const patients = (data || []).map(item => toCamelCase(item) as Patient)
+        const patients = (data || []).map(item => {
+          const camelCaseItem = toCamelCase(item) as any
+          // Extract doctor information from the joined data
+          const patient: Patient = {
+            ...camelCaseItem,
+            doctorName: camelCaseItem.doctor?.name || null,
+            // Remove the nested doctor object to keep the interface clean
+            doctor: undefined
+          }
+          return patient
+        })
         console.log(`[patientService.getAll] Fetched ${patients.length} patients`)
         return patients
       } catch (error) {
@@ -178,16 +206,25 @@ export const patientService = {
     try {
       const { data, error } = await client
         .from('patients')
-        .select('*')
+        .select(`
+          *,
+          doctor:profiles!doctor_id(id, name)
+        `)
         .eq('id', id)
         .single()
-      
+
       if (error) {
         if (error.code === 'PGRST116') return null // Not found
         throw error
       }
-      
-      return toCamelCase(data) as Patient
+
+      const camelCaseItem = toCamelCase(data) as any
+      const patient: Patient = {
+        ...camelCaseItem,
+        doctorName: camelCaseItem.doctor?.name || null,
+        doctor: undefined
+      }
+      return patient
     } catch (error) {
       console.error('Error fetching patient:', error)
       throw new Error('환자 정보 조회에 실패했습니다')
@@ -258,20 +295,20 @@ export const patientService = {
       
       const validated = PatientUpdateSchema.parse(input)
       const snakeData = toSnakeCase(validated)
-      
+
       // Build the query with native AbortSignal support
       const baseQuery = client
         .from('patients')
         .update(snakeData)
         .eq('id', id)
-      
+
       // Execute query with AbortSignal support using type-safe helper
       const { data, error } = await executeQueryWithSignal<Patient>(
         baseQuery,
         signal,
         { select: true, single: true }
       )
-      
+
       if (error) {
         // Check if this was an abort error
         if (error.name === 'AbortError' || error.message?.includes('aborted')) {
@@ -279,21 +316,77 @@ export const patientService = {
           abortError.name = 'AbortError'
           throw abortError
         }
+
+        // Use API route fallback for any RLS-related errors
+        // Common error codes: 42501 (insufficient_privilege), 42P01 (undefined_table), 42703 (undefined_column), 42P17 (check_violation)
+        const rlsErrorCodes = ['42501', '42P01', '42703', '42P17', '23503']
+        const shouldUseFallback = rlsErrorCodes.includes(error.code) || error.message?.includes('violates')
+
+        if (shouldUseFallback) {
+          console.log('[patientService.update] RLS error detected, using API route fallback. Error code:', error.code)
+
+          try {
+            const response = await fetch(`/api/patients/${id}/update`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify(validated),
+              credentials: 'include', // Include cookies for authentication
+              signal
+            })
+
+            if (!response.ok) {
+              const errorData = await response.json()
+              throw new Error(errorData.error || '환자 정보 수정에 실패했습니다')
+            }
+
+            const responseData = await response.json()
+            console.log('[patientService.update] Successfully updated via API route')
+            return toCamelCase(responseData) as Patient
+
+          } catch (apiError) {
+            // Re-throw abort errors as-is
+            if (apiError instanceof Error && apiError.name === 'AbortError') {
+              throw apiError
+            }
+            console.error('[patientService.update] API route fallback failed:', apiError)
+            throw apiError instanceof Error ? apiError : new Error('환자 정보 수정에 실패했습니다')
+          }
+        }
+
         throw error
       }
-      
+
       if (!data) {
         throw new Error('환자 정보 수정에 실패했습니다: 데이터가 없습니다')
       }
-      
+
       return toCamelCase(data) as Patient
     } catch (error) {
       // Check if this was an abort
       if (error instanceof Error && (error.name === 'AbortError' || error.message === 'Request was aborted')) {
         throw error // Re-throw abort errors as-is
       }
-      
-      console.error('Error updating patient:', error)
+
+      // Properly log error details for debugging
+      console.error('Error updating patient:', {
+        isError: error instanceof Error,
+        message: error instanceof Error ? error.message : String(error),
+        name: error instanceof Error ? error.name : 'Unknown',
+        stack: error instanceof Error ? error.stack : undefined,
+        // For Supabase errors, include additional details
+        ...(error && typeof error === 'object' && 'code' in error ? {
+          code: (error as any).code,
+          details: (error as any).details,
+          hint: (error as any).hint
+        } : {})
+      })
+
+      // Re-throw the original error with its message if it's an Error instance
+      if (error instanceof Error) {
+        throw error
+      }
       throw new Error('환자 정보 수정에 실패했습니다')
     }
   },

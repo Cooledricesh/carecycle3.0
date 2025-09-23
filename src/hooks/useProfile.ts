@@ -8,8 +8,8 @@ export interface Profile {
   id: string;
   email: string;
   name: string;
-  role: 'admin' | 'nurse';
-  department: string | null;
+  role: 'admin' | 'nurse' | 'doctor';
+  care_type: string | null;
   phone?: string | null;
   is_active?: boolean;
   created_at: string;

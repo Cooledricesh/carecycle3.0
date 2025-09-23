@@ -14,6 +14,7 @@ import type { Schedule, ScheduleWithDetails } from '@/types/schedule'
 import { toCamelCase as snakeToCamel, toSnakeCase as camelToSnake } from '@/lib/database-utils'
 import { format, addDays } from 'date-fns'
 import { addWeeks } from '@/lib/utils/date'
+import type { ScheduleFilter } from '@/lib/filters/filter-types'
 
 export const scheduleService = {
   async create(input: ScheduleCreateInput, supabase?: SupabaseClient): Promise<Schedule> {
@@ -217,12 +218,12 @@ export const scheduleService = {
     }
   },
 
-  async getTodayChecklist(supabase?: SupabaseClient): Promise<ScheduleWithDetails[]> {
+  async getTodayChecklist(filters?: ScheduleFilter, supabase?: SupabaseClient): Promise<ScheduleWithDetails[]> {
     const client = supabase || createClient()
-    
+
     const executeQuery = async (retryCount = 0): Promise<ScheduleWithDetails[]> => {
       try {
-        console.log('[scheduleService.getTodayChecklist] Fetching... (attempt:', retryCount + 1, ')')
+        console.log('[scheduleService.getTodayChecklist] Fetching with filters:', filters, '(attempt:', retryCount + 1, ')')
         const today = format(new Date(), 'yyyy-MM-dd')
         
         const { data, error } = await client
@@ -251,7 +252,7 @@ export const scheduleService = {
           throw error
         }
         
-        const schedules = (data || []).map(item => {
+        let schedules = (data || []).map(item => {
           const schedule = snakeToCamel(item) as any
           return {
             ...schedule,
@@ -259,8 +260,36 @@ export const scheduleService = {
             item: (item as any).items ? snakeToCamel((item as any).items) : null
           } as ScheduleWithDetails
         })
-        
-        console.log(`[scheduleService.getTodayChecklist] Fetched ${schedules.length} schedules`)
+
+        // Apply client-side filters for nested patient data
+        if (filters) {
+          // Filter by care types
+          if (filters.careTypes && filters.careTypes.length > 0) {
+            schedules = schedules.filter(schedule => {
+              const careType = schedule.patient_care_type || (schedule as any).patient?.careType
+              return careType && filters.careTypes.includes(careType as any)
+            })
+          }
+
+          // Filter by department
+          if (filters.department) {
+            schedules = schedules.filter(schedule => {
+              const department = (schedule as any).patient?.department
+              return department === filters.department
+            })
+          }
+
+          // Filter by doctor (for "my patients" view)
+          if (filters.doctorId) {
+            schedules = schedules.filter(schedule => {
+              // Access doctor_id from the flattened schedule or from nested patient
+              const doctorId = schedule.doctor_id || (schedule as any).patient?.doctorId
+              return doctorId === filters.doctorId
+            })
+          }
+        }
+
+        console.log(`[scheduleService.getTodayChecklist] Fetched ${schedules.length} schedules (after filters)`)
         return schedules
       } catch (error) {
         console.error('Error fetching today checklist:', error)
@@ -271,12 +300,12 @@ export const scheduleService = {
     return executeQuery()
   },
 
-  async getUpcomingSchedules(daysAhead: number = 7, supabase?: SupabaseClient): Promise<ScheduleWithDetails[]> {
+  async getUpcomingSchedules(daysAhead: number = 7, filters?: ScheduleFilter, supabase?: SupabaseClient): Promise<ScheduleWithDetails[]> {
     const client = supabase || createClient()
-    
+
     const executeQuery = async (retryCount = 0): Promise<ScheduleWithDetails[]> => {
       try {
-        console.log('[scheduleService.getUpcomingSchedules] Fetching... (attempt:', retryCount + 1, ')')
+        console.log('[scheduleService.getUpcomingSchedules] Fetching with filters:', filters, '(attempt:', retryCount + 1, ')')
         const today = new Date()
         const futureDate = format(addDays(today, daysAhead), 'yyyy-MM-dd')
         // Include schedules from 7 days before their due date
@@ -308,7 +337,7 @@ export const scheduleService = {
           throw error
         }
         
-        const schedules = (data || []).map(item => {
+        let schedules = (data || []).map(item => {
           const schedule = snakeToCamel(item) as any
           return {
             ...schedule,
@@ -316,8 +345,36 @@ export const scheduleService = {
             item: (item as any).items ? snakeToCamel((item as any).items) : null
           } as ScheduleWithDetails
         })
-        
-        console.log(`[scheduleService.getUpcomingSchedules] Fetched ${schedules.length} schedules`)
+
+        // Apply client-side filters for nested patient data
+        if (filters) {
+          // Filter by care types
+          if (filters.careTypes && filters.careTypes.length > 0) {
+            schedules = schedules.filter(schedule => {
+              const careType = schedule.patient_care_type || (schedule as any).patient?.careType
+              return careType && filters.careTypes.includes(careType as any)
+            })
+          }
+
+          // Filter by department
+          if (filters.department) {
+            schedules = schedules.filter(schedule => {
+              const department = (schedule as any).patient?.department
+              return department === filters.department
+            })
+          }
+
+          // Filter by doctor (for "my patients" view)
+          if (filters.doctorId) {
+            schedules = schedules.filter(schedule => {
+              // Access doctor_id from the flattened schedule or from nested patient
+              const doctorId = schedule.doctor_id || (schedule as any).patient?.doctorId
+              return doctorId === filters.doctorId
+            })
+          }
+        }
+
+        console.log(`[scheduleService.getUpcomingSchedules] Fetched ${schedules.length} schedules (after filters)`)
         return schedules
       } catch (error) {
         console.error('Error fetching upcoming schedules:', error)
@@ -530,14 +587,14 @@ export const scheduleService = {
     }
   },
 
-  async getAllSchedules(supabase?: SupabaseClient): Promise<ScheduleWithDetails[]> {
+  async getAllSchedules(filters?: ScheduleFilter, supabase?: SupabaseClient): Promise<ScheduleWithDetails[]> {
     const client = supabase || createClient()
-    
+
     const executeQuery = async (retryCount = 0): Promise<ScheduleWithDetails[]> => {
       try {
-        console.log('[scheduleService.getAllSchedules] Fetching... (attempt:', retryCount + 1, ')')
-        
-        const { data, error } = await client
+        console.log('[scheduleService.getAllSchedules] Fetching with filters:', filters, '(attempt:', retryCount + 1, ')')
+
+        let query = client
           .from('schedules')
           .select(`
             *,
@@ -545,7 +602,17 @@ export const scheduleService = {
             items (*)
           `)
           .in('status', ['active', 'paused'])  // Only show active and paused schedules, exclude cancelled and deleted
-          .order('next_due_date', { ascending: true })
+
+        // Apply filters
+        if (filters) {
+          // Filter by care types - need to filter through patients
+          // Note: We can't directly filter on nested fields, so we'll filter in memory
+          // For optimal performance, this could be replaced with a view or function in the database
+        }
+
+        query = query.order('next_due_date', { ascending: true })
+
+        const { data, error } = await query
         
         if (error) {
           console.error('[scheduleService.getAllSchedules] Error:', {
@@ -567,7 +634,7 @@ export const scheduleService = {
           throw error
         }
         
-        const schedules = (data || []).map(item => {
+        let schedules = (data || []).map(item => {
           const schedule = snakeToCamel(item) as any
           return {
             ...schedule,
@@ -575,8 +642,43 @@ export const scheduleService = {
             item: (item as any).items ? snakeToCamel((item as any).items) : null
           } as ScheduleWithDetails
         })
-        
-        console.log(`[scheduleService.getAllSchedules] Fetched ${schedules.length} schedules`)
+
+        // Apply client-side filters for nested patient data
+        if (filters) {
+          // Filter by care types
+          if (filters.careTypes && filters.careTypes.length > 0) {
+            schedules = schedules.filter(schedule => {
+              const careType = schedule.patient_care_type || (schedule as any).patient?.careType
+              return careType && filters.careTypes.includes(careType as any)
+            })
+          }
+
+          // Filter by department
+          if (filters.department) {
+            schedules = schedules.filter(schedule => {
+              const department = (schedule as any).patient?.department
+              return department === filters.department
+            })
+          }
+
+          // Filter by date range
+          if (filters.dateRange) {
+            schedules = schedules.filter(schedule => {
+              if (!schedule.next_due_date) return false
+              return schedule.next_due_date >= filters.dateRange!.start &&
+                     schedule.next_due_date <= filters.dateRange!.end
+            })
+          }
+
+          // Note: Doctor filter will be applied when doctor field is added to patient table
+          // if (filters.doctorId) {
+          //   schedules = schedules.filter(schedule =>
+          //     schedule.patient?.doctorId === filters.doctorId
+          //   )
+          // }
+        }
+
+        console.log(`[scheduleService.getAllSchedules] Fetched ${schedules.length} schedules (after filters)`)
         return schedules
         
       } catch (error) {
