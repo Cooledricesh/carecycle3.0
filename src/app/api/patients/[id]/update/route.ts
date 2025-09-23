@@ -304,6 +304,10 @@ export async function PUT(
           )
         }
 
+        // Ensure we always return valid JSON
+        if (!serviceData) {
+          return NextResponse.json({ error: '환자 정보를 찾을 수 없습니다' }, { status: 404 })
+        }
         return NextResponse.json(serviceData)
       } else {
         // Other database error
@@ -315,6 +319,10 @@ export async function PUT(
       }
     }
 
+    // Ensure we always return valid JSON
+    if (!data) {
+      return NextResponse.json({ error: '환자 정보를 찾을 수 없습니다' }, { status: 404 })
+    }
     return NextResponse.json(data)
   } catch (error) {
     console.error('[API] Unexpected error:', error)

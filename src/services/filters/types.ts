@@ -10,10 +10,13 @@ export interface UserContext {
 export interface FilterOptions {
   showAll?: boolean
   careTypes?: string[]
+  doctorId?: string | null
+  department?: string | null
   dateRange?: {
     start: string
     end: string
-  }
+  } | null
+  includeInactive?: boolean
   urgencyLevel?: 'all' | 'urgent' | 'normal'
 }
 

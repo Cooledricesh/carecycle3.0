@@ -27,7 +27,8 @@ export function usePatients() {
         const userContext = profile ? {
           role: profile.role,
           careType: profile.care_type,
-          showAll: filters.showAll || false
+          showAll: filters.showAll || false,
+          userId: profile.id
         } : undefined
 
         return await patientService.getAll(supabase, userContext)

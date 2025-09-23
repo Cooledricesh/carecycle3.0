@@ -58,10 +58,11 @@ export function useScheduleCompletion(): UseScheduleCompletionReturn {
 
       // Reset state and close dialog
       reset()
-      
-      // Invalidate all queries for immediate update
-      await queryClient.invalidateQueries()
-      
+
+      // 단순한 키로 모든 스케줄 관련 쿼리 무효화
+      await queryClient.invalidateQueries({ queryKey: ['schedules'] })
+      await queryClient.invalidateQueries({ queryKey: ['executions'] })
+
     } catch (error) {
       console.error('Failed to mark schedule as completed:', error)
       toast({

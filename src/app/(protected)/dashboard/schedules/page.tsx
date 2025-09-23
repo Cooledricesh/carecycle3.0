@@ -31,17 +31,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { touchTarget, responsiveText, responsivePadding, cn } from "@/lib/utils";
 import { FilterProvider } from "@/providers/filter-provider";
 import { SimpleFilterToggle } from "@/components/filters/SimpleFilterToggle";
 import { useProfile } from "@/hooks/useProfile";
+import { useFilterContext } from "@/lib/filters/filter-context";
+import { useAuth } from "@/providers/auth-provider-simple";
 
 // Schedule type used in this component that supports both snake_case and camelCase
 // Represents the transformed data from useFilteredSchedules
@@ -111,13 +107,17 @@ function SchedulesContent() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const isMobile = useIsMobile();
-  
+  const { data: profile } = useProfile();
+  const { filters } = useFilterContext();
+  const { user } = useAuth();
+
   const { schedules, isLoading: schedulesLoading, error: schedulesError, refetch: refetchSchedules } = useFilteredSchedules();
   const { data: overdueSchedules = [], isLoading: overdueLoading, error: overdueError, refetch: refetchOverdue } = useOverdueSchedules();
-  
+
+
   const loading = schedulesLoading || overdueLoading;
   const error = schedulesError || overdueError;
-  
+
   const refetchAll = () => {
     refetchSchedules();
     refetchOverdue();
@@ -125,13 +125,14 @@ function SchedulesContent() {
 
   const deleteMutation = useMutation({
     mutationFn: scheduleService.delete,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['schedules'] });
-      queryClient.invalidateQueries({ queryKey: ['overdueSchedules'] });
+    onSuccess: async () => {
       toast({
         title: "성공",
         description: "스케줄이 삭제되었습니다.",
       });
+
+      // 단순한 키로 무효화
+      await queryClient.invalidateQueries({ queryKey: ['schedules'] });
     },
     onError: (error) => {
       const message = mapErrorToUserMessage(error);
@@ -151,17 +152,18 @@ function SchedulesContent() {
   };
 
   const statusMutation = useMutation({
-    mutationFn: ({ id, status }: { id: string; status: 'active' | 'paused' }) => 
+    mutationFn: ({ id, status }: { id: string; status: 'active' | 'paused' }) =>
       scheduleService.updateStatus(id, status),
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['schedules'] });
-      queryClient.invalidateQueries({ queryKey: ['overdueSchedules'] });
+    onSuccess: async (_, variables) => {
       toast({
         title: "성공",
-        description: variables.status === 'paused' 
+        description: variables.status === 'paused'
           ? "스케줄이 일시중지되었습니다."
           : "스케줄이 재개되었습니다.",
       });
+
+      // 단순한 키로 무효화
+      await queryClient.invalidateQueries({ queryKey: ['schedules'] });
     },
     onError: (error) => {
       const message = mapErrorToUserMessage(error);
@@ -190,14 +192,17 @@ function SchedulesContent() {
 
     try {
       await scheduleService.resumeSchedule(selectedScheduleForResume.id, options);
-      queryClient.invalidateQueries({ queryKey: ['schedules'] });
-      queryClient.invalidateQueries({ queryKey: ['overdueSchedules'] });
+
       toast({
         title: "성공",
         description: "스케줄이 재개되었습니다.",
       });
+
       setResumeDialogOpen(false);
       setSelectedScheduleForResume(null);
+
+      // 단순한 키로 무효화
+      await queryClient.invalidateQueries({ queryKey: ['schedules'] });
     } catch (error) {
       toast({
         title: "오류",
