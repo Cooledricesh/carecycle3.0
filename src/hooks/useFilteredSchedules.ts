@@ -22,7 +22,7 @@ export function useFilteredSchedules() {
 
 
   const query = useQuery({
-    queryKey: ['schedules'], // Simplified key for proper invalidation
+    queryKey: ['schedules', user?.id, profile?.role, filters.showAll], // Include filter state in key
     queryFn: async () => {
       try {
         // Always try to get schedules, even without full profile
@@ -97,7 +97,7 @@ export function useFilteredTodayChecklist() {
   const supabase = createClient()
 
   return useQuery({
-    queryKey: ['schedules', 'today'], // Simplified key
+    queryKey: ['schedules', 'today', filters.showAll], // Include filter state in key
     queryFn: async () => {
       try {
         // Use enhanced service for today's checklist
@@ -141,7 +141,7 @@ export function useFilteredUpcomingSchedules(daysAhead: number = 7) {
   const supabase = createClient()
 
   return useQuery({
-    queryKey: ['schedules', 'upcoming', daysAhead], // Simplified key
+    queryKey: ['schedules', 'upcoming', daysAhead, filters.showAll], // Include filter state in key
     queryFn: async () => {
       try {
         if (!profile || !user) {

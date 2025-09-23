@@ -6,6 +6,7 @@ import { useProfile } from '@/hooks/useProfile'
 import { Users, User, AlertCircle } from 'lucide-react'
 import { useFilteredPatientCount } from '@/hooks/useFilteredPatientCount'
 import { useFilterStatistics } from '@/hooks/useFilterStatistics'
+import { scheduleServiceEnhanced } from '@/services/scheduleServiceEnhanced'
 
 interface SimpleFilterToggleProps {
   className?: string
@@ -32,6 +33,9 @@ export function SimpleFilterToggle({ className, onToggle }: SimpleFilterTogglePr
   }
 
   const handleToggle = (showAll: boolean) => {
+    // Clear cache when toggling to ensure fresh data
+    scheduleServiceEnhanced.clearCache()
+
     updateFilters({ showAll })
     onToggle?.(showAll)
   }
@@ -162,6 +166,9 @@ export function SimpleFilterToggleMobile({ className, onToggle }: SimpleFilterTo
   }
 
   const handleToggle = (showAll: boolean) => {
+    // Clear cache when toggling to ensure fresh data
+    scheduleServiceEnhanced.clearCache()
+
     updateFilters({ showAll })
     onToggle?.(showAll)
   }

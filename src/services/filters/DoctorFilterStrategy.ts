@@ -23,14 +23,15 @@ export class DoctorFilterStrategy implements FilterStrategy {
       p_show_all: filters.showAll || false,
       p_care_types: filters.careTypes?.length ? filters.careTypes : null,
       p_date_start: filters.dateRange?.start || null,
-      p_date_end: filters.dateRange?.end || null,
-      p_urgency_level: filters.urgencyLevel && filters.urgencyLevel !== 'all' ? filters.urgencyLevel : null
+      p_date_end: filters.dateRange?.end || null
     })
 
     // If RPC succeeded, return the data
     if (!error && data) {
       console.log('[DoctorFilterStrategy] RPC successful:', {
-        dataLength: data.length || 0
+        dataLength: data.length || 0,
+        showAll: filters.showAll,
+        userId: userContext.userId
       })
       return {
         data: data as ScheduleWithDetails[],
@@ -55,9 +56,11 @@ export class DoctorFilterStrategy implements FilterStrategy {
         created_at,
         updated_at,
         patients:patient_id (
+          id,
           name,
           care_type,
-          patient_number
+          patient_number,
+          doctor_id
         ),
         items:item_id (
           name,
@@ -68,7 +71,8 @@ export class DoctorFilterStrategy implements FilterStrategy {
 
     // Apply doctor filtering (only show assigned patients unless showAll is true)
     if (!filters.showAll) {
-      query = query.eq('patients.doctor_id', userContext.userId)
+      // First get all schedules, then filter in memory since nested filter syntax is complex
+      // We'll filter after fetching the data
     }
 
     // Apply care type filter if specified
@@ -102,14 +106,27 @@ export class DoctorFilterStrategy implements FilterStrategy {
       return { data: null, error: queryError }
     }
 
+    // Filter schedules based on doctor_id if showAll is false
+    let filteredSchedules = schedules || []
+    if (!filters.showAll) {
+      filteredSchedules = filteredSchedules.filter(s =>
+        s.patients?.doctor_id === userContext.userId
+      )
+      console.log('[DoctorFilterStrategy] Filtered by doctor_id:', {
+        originalCount: schedules?.length || 0,
+        filteredCount: filteredSchedules.length,
+        doctorId: userContext.userId
+      })
+    }
+
     // Transform the data to match ScheduleWithDetails format
-    const transformedData = (schedules || []).map(s => ({
+    const transformedData = filteredSchedules.map(s => ({
       schedule_id: s.id,
       patient_id: s.patient_id,
       patient_name: s.patients?.name || '',
       patient_care_type: s.patients?.care_type || '',
       patient_number: s.patients?.patient_number || '',
-      doctor_id: null, // Not available in current schema
+      doctor_id: s.patients?.doctor_id || null,
       doctor_name: '',
       item_id: s.item_id,
       item_name: s.items?.name || '',
@@ -159,8 +176,8 @@ export class DoctorFilterStrategy implements FilterStrategy {
   }
 
   getCacheTTL(): number {
-    // 5 minutes cache for doctor queries
-    return 300
+    // Disable cache for now to ensure filter changes are immediately reflected
+    return 0
   }
 
   getQueryName(): string {

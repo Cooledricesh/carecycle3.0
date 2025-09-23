@@ -88,7 +88,9 @@ export function CalendarView({ className }: CalendarViewProps) {
 
     setIsSubmitting(true);
     try {
-      await scheduleService.markAsCompleted(selectedSchedule.schedule_id, {
+      // Resolve schedule identifier with fallback
+      const scheduleId = (selectedSchedule as any).schedule_id ?? (selectedSchedule as any).id;
+      await scheduleService.markAsCompleted(scheduleId, {
         executedDate: executionDate,
         notes: executionNotes,
         executedBy: profile.id
@@ -324,7 +326,9 @@ export function CalendarView({ className }: CalendarViewProps) {
     if (!selectedScheduleForResume) return;
 
     try {
-      await scheduleService.resumeSchedule(selectedScheduleForResume.schedule_id, options);
+      // Use id fallback to handle objects with either id or schedule_id
+      const scheduleId = (selectedScheduleForResume as any).id || (selectedScheduleForResume as any).schedule_id;
+      await scheduleService.resumeSchedule(scheduleId, options);
 
       toast({
         title: "성공",
@@ -711,7 +715,7 @@ export function CalendarView({ className }: CalendarViewProps) {
         const calculator = new ScheduleDateCalculator();
         // Transform ScheduleWithDetails to Schedule format
         const scheduleForCalculation: Schedule = {
-          id: selectedScheduleForResume.schedule_id,
+          id: (selectedScheduleForResume as any).id || (selectedScheduleForResume as any).schedule_id,
           patientId: selectedScheduleForResume.patient_id,
           itemId: selectedScheduleForResume.item_id,
           intervalWeeks: selectedScheduleForResume.interval_weeks,

@@ -134,7 +134,7 @@ export const patientService = {
     }
   },
 
-  async getAll(supabase?: SupabaseClient, userContext?: { role?: string; careType?: string | null; showAll?: boolean }): Promise<Patient[]> {
+  async getAll(supabase?: SupabaseClient, userContext?: { role?: string; careType?: string | null; showAll?: boolean; userId?: string }): Promise<Patient[]> {
     const client = supabase || createClient()
 
     // Helper function to execute query with retry on auth failure
@@ -152,11 +152,18 @@ export const patientService = {
 
         // Apply role-based filtering for nurse and doctor
         if (userContext) {
-          if ((userContext.role === 'nurse' || userContext.role === 'doctor') && !userContext.showAll) {
-            if (userContext.careType) {
-              console.log('[patientService.getAll] Filtering by care_type:', userContext.careType)
+          // Only apply filters when showAll is false (or undefined)
+          if (!userContext.showAll) {
+            if (userContext.role === 'doctor' && userContext.userId) {
+              // Doctor filter: filter by doctor_id using current user's ID
+              console.log('[patientService.getAll] Doctor filtering by doctor_id:', userContext.userId)
+              query = query.eq('doctor_id', userContext.userId)
+            } else if (userContext.role === 'nurse' && userContext.careType) {
+              console.log('[patientService.getAll] Nurse filtering by care_type:', userContext.careType)
               query = query.eq('care_type', userContext.careType)
             }
+          } else {
+            console.log('[patientService.getAll] Showing all patients (showAll: true)')
           }
         }
 
