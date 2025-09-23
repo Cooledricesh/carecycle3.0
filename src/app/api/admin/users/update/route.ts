@@ -1,5 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient, createServiceClient } from '@/lib/supabase/server';
+import { z } from 'zod';
+
+// Define validation schema for user updates
+const UserUpdateSchema = z.object({
+  userId: z.string().uuid('Invalid user ID format'),
+  role: z.enum(['admin', 'nurse', 'doctor'], {
+    errorMap: () => ({ message: 'Role must be admin, nurse, or doctor' })
+  }).optional(),
+  care_type: z.enum(['외래', '입원', '낮병원'], {
+    errorMap: () => ({ message: 'Care type must be 외래, 입원, or 낮병원' })
+  }).nullable().optional()
+});
 
 export async function POST(request: NextRequest) {
   try {
@@ -22,12 +34,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
 
-    // Parse the request body
-    const { userId, role, care_type } = await request.json();
+    // Parse and validate the request body
+    const body = await request.json();
+    const validationResult = UserUpdateSchema.safeParse(body);
 
-    if (!userId) {
-      return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
+    if (!validationResult.success) {
+      return NextResponse.json(
+        {
+          error: 'Invalid input data',
+          details: validationResult.error.flatten()
+        },
+        { status: 400 }
+      );
     }
+
+    const { userId, role, care_type } = validationResult.data;
 
     // Prevent admins from changing their own role
     if (userId === user.id && role !== undefined) {

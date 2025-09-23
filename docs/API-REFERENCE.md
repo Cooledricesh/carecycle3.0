@@ -157,7 +157,7 @@ Content-Type: application/json
 
 - **Doctors**:
   - Can only update patients assigned to them (`doctor_id`)
-  - Limited fields: `metadata`, `notes`
+  - Limited fields: `metadata`
 
 - **Nurses**:
   - Can update `careType`
@@ -173,7 +173,7 @@ Content-Type: application/json
   "name": "John Doe Jr.",
   "patientNumber": "P12345",
   "doctorId": "doctor-uuid",
-  "careType": "Chemotherapy",
+  "careType": "외래",
   "isActive": true,
   "metadata": {
     "roomNumber": "205B",

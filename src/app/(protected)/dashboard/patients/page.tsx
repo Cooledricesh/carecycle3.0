@@ -44,7 +44,11 @@ import { FilterProvider } from '@/providers/filter-provider'
 import { SimpleFilterToggle } from '@/components/filters/SimpleFilterToggle'
 import { useProfile } from '@/hooks/useProfile'
 
-function PatientsContent() {
+interface PatientsContentProps {
+  userRole?: string
+}
+
+function PatientsContent({ userRole }: PatientsContentProps) {
   const { patients, isLoading, error, refetch, deletePatient, isDeleting } = usePatients()
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const [isRefreshing, setIsRefreshing] = useState(false)
@@ -263,14 +267,16 @@ function PatientsContent() {
                               compact={true}
                             />
                           </div>
-                          <div className="flex justify-between items-center">
-                            <span className={`${responsiveText.small} text-muted-foreground`}>주치의</span>
-                            <PatientDoctorSelect
-                              patient={patient}
-                              onSuccess={() => refetch()}
-                              compact={true}
-                            />
-                          </div>
+                          {userRole === 'admin' && (
+                            <div className="flex justify-between items-center">
+                              <span className={`${responsiveText.small} text-muted-foreground`}>주치의</span>
+                              <PatientDoctorSelect
+                                patient={patient}
+                                onSuccess={() => refetch()}
+                                compact={true}
+                              />
+                            </div>
+                          )}
                         </div>
                         
                         {/* Action Buttons */}
@@ -305,7 +311,7 @@ function PatientsContent() {
                         <TableHead>환자번호</TableHead>
                         <TableHead>환자명</TableHead>
                         <TableHead>진료구분</TableHead>
-                        <TableHead>주치의</TableHead>
+                        {userRole === 'admin' && <TableHead>주치의</TableHead>}
                         <TableHead className="text-right">작업</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -322,12 +328,14 @@ function PatientsContent() {
                               onSuccess={() => refetch()}
                             />
                           </TableCell>
-                          <TableCell>
-                            <PatientDoctorSelect
-                              patient={patient}
-                              onSuccess={() => refetch()}
-                            />
-                          </TableCell>
+                          {userRole === 'admin' && (
+                            <TableCell>
+                              <PatientDoctorSelect
+                                patient={patient}
+                                onSuccess={() => refetch()}
+                              />
+                            </TableCell>
+                          )}
                           <TableCell className="text-right">
                             <div className="flex items-center justify-end gap-2">
                               <ScheduleCreateModal
@@ -438,7 +446,7 @@ export default function PatientsPage() {
           </div>
         )}
 
-        <PatientsContent />
+        <PatientsContent userRole={profile?.role} />
       </div>
     </FilterProvider>
   )

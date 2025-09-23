@@ -34,8 +34,14 @@ const BasePatientUpdateSchema = z.object({
     .optional(),
 })
 
-// Nurse/Admin can update all fields
-const NurseAdminUpdateSchema = BasePatientUpdateSchema.extend({
+// Nurse can update care-related fields but not doctor assignment
+const NurseUpdateSchema = BasePatientUpdateSchema.extend({
+  careType: CareTypeEnum.nullable().optional(),
+  department: z.string().max(50, '부서명은 50자 이내로 입력해주세요').nullable().optional(),
+})
+
+// Admin can update all fields including doctor assignment
+const AdminUpdateSchema = BasePatientUpdateSchema.extend({
   doctorId: z.string().uuid('올바른 의사 ID를 선택해주세요').nullable().optional(),
   careType: CareTypeEnum.nullable().optional(),
   department: z.string().max(50, '부서명은 50자 이내로 입력해주세요').nullable().optional(),
@@ -46,7 +52,15 @@ const DoctorUpdateSchema = BasePatientUpdateSchema
 
 // Define strict whitelists for each role
 const DOCTOR_ALLOWED_FIELDS = new Set(['name', 'patientNumber', 'isActive', 'metadata'])
-const NURSE_ADMIN_ALLOWED_FIELDS = new Set([
+const NURSE_ALLOWED_FIELDS = new Set([
+  'name',
+  'patientNumber',
+  'isActive',
+  'metadata',
+  'careType',
+  'department'
+])
+const ADMIN_ALLOWED_FIELDS = new Set([
   'name',
   'patientNumber',
   'isActive',
@@ -58,7 +72,7 @@ const NURSE_ADMIN_ALLOWED_FIELDS = new Set([
 
 // Type-safe field mapping utility with role-based filtering
 const mapValidatedFields = (
-  validatedData: z.infer<typeof NurseAdminUpdateSchema>,
+  validatedData: z.infer<typeof AdminUpdateSchema>,
   userRole: string
 ) => {
   const updateData: Record<string, any> = {
@@ -66,9 +80,20 @@ const mapValidatedFields = (
   }
 
   // Choose whitelist based on role
-  const allowedFields = userRole === 'doctor'
-    ? DOCTOR_ALLOWED_FIELDS
-    : NURSE_ADMIN_ALLOWED_FIELDS
+  let allowedFields: Set<string>
+  switch (userRole) {
+    case 'doctor':
+      allowedFields = DOCTOR_ALLOWED_FIELDS
+      break
+    case 'nurse':
+      allowedFields = NURSE_ALLOWED_FIELDS
+      break
+    case 'admin':
+      allowedFields = ADMIN_ALLOWED_FIELDS
+      break
+    default:
+      allowedFields = new Set()
+  }
 
   // Map validated fields with explicit type checking and role-based filtering
   const fieldMappings: Record<string, string> = {
@@ -106,12 +131,12 @@ const mapValidatedFields = (
   return updateData
 }
 
-export async function POST(
+export async function PUT(
   request: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
-    const { id } = await params
+    const { id } = params
     const updates = await request.json()
 
     // First verify the user is authenticated and has permission
@@ -125,10 +150,10 @@ export async function POST(
       )
     }
 
-    // Check user role
+    // Check user role and care_type for nurses
     const { data: profile, error: profileError } = await userClient
       .from('profiles')
-      .select('role')
+      .select('role, care_type')
       .eq('id', user.id)
       .single()
 
@@ -150,7 +175,23 @@ export async function POST(
     }
 
     // Validate input based on user role
-    const schema = profile.role === 'doctor' ? DoctorUpdateSchema : NurseAdminUpdateSchema
+    let schema: typeof DoctorUpdateSchema | typeof NurseUpdateSchema | typeof AdminUpdateSchema
+    switch (profile.role) {
+      case 'doctor':
+        schema = DoctorUpdateSchema
+        break
+      case 'nurse':
+        schema = NurseUpdateSchema
+        break
+      case 'admin':
+        schema = AdminUpdateSchema
+        break
+      default:
+        return NextResponse.json(
+          { error: '권한이 없습니다' },
+          { status: 403 }
+        )
+    }
     const validationResult = schema.safeParse(updates)
 
     if (!validationResult.success) {
@@ -163,8 +204,9 @@ export async function POST(
       )
     }
 
-    // If user is a doctor, verify they're assigned to this patient
+    // Role-specific validation
     if (profile.role === 'doctor') {
+      // Doctors can only update their assigned patients
       const { data: patient, error: patientError } = await userClient
         .from('patients')
         .select('doctor_id')
@@ -185,16 +227,55 @@ export async function POST(
           { status: 403 }
         )
       }
-    }
+    } else if (profile.role === 'nurse') {
+      // Nurses can only update patients in their care_type
+      // Using service client here to ensure we can read the patient even if RLS would block it
+      const serviceClient = await createServiceClient()
+      const { data: patient, error: patientError } = await serviceClient
+        .from('patients')
+        .select('care_type')
+        .eq('id', id)
+        .single()
 
-    // Use service client to bypass RLS for the update
-    const serviceClient = await createServiceClient()
+      if (patientError || !patient) {
+        return NextResponse.json(
+          { error: '환자를 찾을 수 없습니다' },
+          { status: 404 }
+        )
+      }
+
+      // Check if nurse's care_type matches patient's care_type
+      if (patient.care_type !== profile.care_type) {
+        return NextResponse.json(
+          { error: '담당 진료 구분의 환자만 수정할 수 있습니다' },
+          { status: 403 }
+        )
+      }
+    }
 
     // Map validated fields to database columns using the secure mapping utility with role checking
     const updateData = mapValidatedFields(validationResult.data, profile.role)
 
-    // Update the patient
-    const { data, error } = await serviceClient
+    // Check if there are any actual changes to make
+    // Remove updated_at to check if there are real field changes
+    const { updated_at, ...actualChanges } = updateData
+    if (Object.keys(actualChanges).length === 0) {
+      // No actual changes, return early with success
+      // Fetch current data to return
+      const { data: currentPatient } = await userClient
+        .from('patients')
+        .select()
+        .eq('id', id)
+        .single()
+
+      return NextResponse.json(
+        currentPatient || { id, message: 'No changes to update' },
+        { status: 200 }
+      )
+    }
+
+    // First, try to update using the user's authenticated client (respects RLS)
+    const { data, error } = await userClient
       .from('patients')
       .update(updateData)
       .eq('id', id)
@@ -202,11 +283,36 @@ export async function POST(
       .single()
 
     if (error) {
-      console.error('[API] Error updating patient:', error)
-      return NextResponse.json(
-        { error: `환자 정보 수정 실패: ${error.message}` },
-        { status: 400 }
-      )
+      // Check if it's an RLS policy violation (SQLSTATE 42501)
+      if (error.code === '42501') {
+        console.log('[API] RLS denied update, retrying with service client for authorized operation')
+
+        // Retry with service client (bypasses RLS) - this is safe because we've already validated permissions above
+        const serviceClient = await createServiceClient()
+        const { data: serviceData, error: serviceError } = await serviceClient
+          .from('patients')
+          .update(updateData)
+          .eq('id', id)
+          .select()
+          .single()
+
+        if (serviceError) {
+          console.error('[API] Error updating patient with service client:', serviceError)
+          return NextResponse.json(
+            { error: `환자 정보 수정 실패: ${serviceError.message}` },
+            { status: 400 }
+          )
+        }
+
+        return NextResponse.json(serviceData)
+      } else {
+        // Other database error
+        console.error('[API] Error updating patient:', error)
+        return NextResponse.json(
+          { error: `환자 정보 수정 실패: ${error.message}` },
+          { status: 400 }
+        )
+      }
     }
 
     return NextResponse.json(data)

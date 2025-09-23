@@ -55,6 +55,7 @@ export interface ScheduleWithDetails {
   next_due_date: string
   status: string
   interval_weeks: number
+  priority?: number
   created_at: string
   updated_at: string
   notes?: string | null

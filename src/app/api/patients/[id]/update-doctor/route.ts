@@ -35,10 +35,10 @@ export async function POST(
       )
     }
 
-    // Only nurses and admins can change doctor assignments
-    if (profile.role !== 'nurse' && profile.role !== 'admin') {
+    // Only admins can change doctor assignments
+    if (profile.role !== 'admin') {
       return NextResponse.json(
-        { error: '주치의 변경 권한이 없습니다' },
+        { error: '주치의 변경 권한이 없습니다. 관리자 권한이 필요합니다.' },
         { status: 403 }
       )
     }

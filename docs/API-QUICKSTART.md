@@ -89,7 +89,7 @@ const response = await fetch('http://localhost:3000/api/patients/patient-uuid/up
     'Content-Type': 'application/json'
   },
   body: JSON.stringify({
-    careType: 'Chemotherapy',
+    careType: '입원',
     metadata: {
       notes: 'Updated care instructions'
     }

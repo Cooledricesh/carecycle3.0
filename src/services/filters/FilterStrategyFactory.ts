@@ -1,3 +1,5 @@
+'use client'
+
 import { FilterStrategy, UserContext } from './types'
 import { DoctorFilterStrategy } from './DoctorFilterStrategy'
 import { NurseFilterStrategy } from './NurseFilterStrategy'

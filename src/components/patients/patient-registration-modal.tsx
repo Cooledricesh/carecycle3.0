@@ -36,6 +36,7 @@ import { createClient } from '@/lib/supabase/client'
 import { usePatientRestoration } from '@/hooks/usePatientRestoration'
 import { PatientRestorationDialog } from './patient-restoration-dialog'
 import { useDoctors } from '@/hooks/useDoctors'
+import { useProfile } from '@/hooks/useProfile'
 
 const PatientRegistrationSchema = z.object({
   name: z
@@ -80,6 +81,7 @@ export function PatientRegistrationModal({
 
   const restoration = usePatientRestoration()
   const { data: doctors, isLoading: isLoadingDoctors } = useDoctors()
+  const { data: profile } = useProfile()
 
   const form = useForm<PatientRegistrationFormData>({
     resolver: zodResolver(PatientRegistrationSchema),
@@ -162,7 +164,7 @@ export function PatientRegistrationModal({
         name: data.name,
         patientNumber: data.patientNumber,
         careType: data.careType,
-        doctorId: data.doctorId,
+        doctorId: profile?.role === 'admin' ? data.doctorId : null,
         isActive: true,
       }, supabase)
       
@@ -222,7 +224,7 @@ export function PatientRegistrationModal({
         updateInfo: {
           name: formData.name,
           careType: formData.careType,
-          doctorId: formData.doctorId
+          doctorId: profile?.role === 'admin' ? formData.doctorId : null
         }
       })
 
@@ -268,7 +270,7 @@ export function PatientRegistrationModal({
       await restoration.createWithArchive(formData.patientNumber, {
         name: formData.name,
         careType: formData.careType,
-        doctorId: formData.doctorId,
+        doctorId: profile?.role === 'admin' ? formData.doctorId : null,
         metadata: {}
       })
 
@@ -388,35 +390,37 @@ export function PatientRegistrationModal({
                 </FormItem>
               )}
             />
-            <FormField
-              control={form.control}
-              name="doctorId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>주치의</FormLabel>
-                  <Select
-                    onValueChange={(value) => field.onChange(value === 'none' ? null : value)}
-                    value={field.value || 'none'}
-                    disabled={isSubmitting || isLoadingDoctors}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="주치의를 선택하세요 (선택사항)" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="none">선택 안함</SelectItem>
-                      {doctors?.map((doctor) => (
-                        <SelectItem key={doctor.id} value={doctor.id}>
-                          {doctor.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            {profile?.role === 'admin' && (
+              <FormField
+                control={form.control}
+                name="doctorId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>주치의</FormLabel>
+                    <Select
+                      onValueChange={(value) => field.onChange(value === 'none' ? null : value)}
+                      value={field.value || 'none'}
+                      disabled={isSubmitting || isLoadingDoctors}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="주치의를 선택하세요 (선택사항)" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="none">선택 안함</SelectItem>
+                        {doctors?.map((doctor) => (
+                          <SelectItem key={doctor.id} value={doctor.id}>
+                            {doctor.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
             <div className="flex justify-end space-x-2 pt-4">
               <Button
                 type="button"

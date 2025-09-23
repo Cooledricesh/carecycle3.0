@@ -1,5 +1,3 @@
-'use client'
-
 // Export all types
 export * from './types'
 

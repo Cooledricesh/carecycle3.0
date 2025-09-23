@@ -18,7 +18,8 @@ export class AdminFilterStrategy implements FilterStrategy {
       p_show_all: true, // Admin always has full access
       p_care_types: filters.careTypes?.length ? filters.careTypes : null,
       p_date_start: filters.dateRange?.start || null,
-      p_date_end: filters.dateRange?.end || null
+      p_date_end: filters.dateRange?.end || null,
+      p_urgency_level: filters.urgencyLevel && filters.urgencyLevel !== 'all' ? filters.urgencyLevel : null
     })
 
     if (!error && data) {
@@ -42,6 +43,7 @@ export class AdminFilterStrategy implements FilterStrategy {
         interval_weeks,
         status,
         notes,
+        priority,
         created_at,
         updated_at,
         patients!inner (
@@ -71,6 +73,15 @@ export class AdminFilterStrategy implements FilterStrategy {
       }
     }
 
+    // Apply urgency level filter if specified
+    if (filters.urgencyLevel && filters.urgencyLevel !== 'all') {
+      if (filters.urgencyLevel === 'urgent') {
+        query = query.gte('priority', 7)
+      } else if (filters.urgencyLevel === 'normal') {
+        query = query.lt('priority', 7)
+      }
+    }
+
     const { data: schedules, error: queryError } = await query
 
     if (queryError) {
@@ -91,6 +102,7 @@ export class AdminFilterStrategy implements FilterStrategy {
       item_category: s.items?.category || '',
       next_due_date: s.next_due_date,
       interval_weeks: s.interval_weeks || 1,
+      priority: s.priority ?? 0,
       status: s.status,
       created_at: s.created_at,
       updated_at: s.updated_at,
