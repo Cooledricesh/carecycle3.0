@@ -67,15 +67,19 @@ export function useFilteredSchedules() {
     enabled: !!user && !authLoading
   })
 
-  const refetch = () => {
-    // 정확한 queryKey로 invalidate
-    queryClient.invalidateQueries({
-      queryKey: ['schedules', user?.id, filters, profile?.role, profile?.care_type]
-    })
-    // 다른 관련 쿼리들도 무효화
-    queryClient.invalidateQueries({ queryKey: ['schedules'] })
+  const refetch = async () => {
+    // 캐시 완전히 제거
+    scheduleServiceEnhanced.clearCache();
+
+    // 모든 schedules 관련 쿼리 무효화
+    await queryClient.invalidateQueries({ queryKey: ['schedules'] });
+    await queryClient.invalidateQueries({ queryKey: ['executions'] });
+
     // 강제 refetch
-    query.refetch()
+    await query.refetch();
+
+    // 그래도 안되면 확실한 새로고침
+    return true;
   }
 
   return {

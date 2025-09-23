@@ -155,6 +155,12 @@ export class ScheduleServiceEnhanced {
           createdAt: s.created_at,   // camelCase
           updated_at: s.updated_at,  // snake_case
           updatedAt: s.updated_at,   // camelCase
+          // Add flat fields for backward compatibility with CalendarDayCard
+          patient_name: s.patient_name || '',
+          patient_care_type: s.patient_care_type || '',
+          patient_number: s.patient_number || '',
+          item_name: s.item_name || '',
+          item_category: s.item_category || '',
           // Create nested patient object
           patient: s.patient_name ? {
             id: s.patient_id,

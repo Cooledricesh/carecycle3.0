@@ -58,10 +58,15 @@ export function useScheduleCompletion(): UseScheduleCompletionReturn {
 
       // Reset state and close dialog
       reset()
-      
+
       // Invalidate all queries for immediate update
       await queryClient.invalidateQueries()
-      
+
+      // 강제 새로고침으로 모든 탭에서 확실한 업데이트 보장
+      setTimeout(() => {
+        window.location.reload()
+      }, 100)
+
     } catch (error) {
       console.error('Failed to mark schedule as completed:', error)
       toast({

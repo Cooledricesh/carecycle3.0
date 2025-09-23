@@ -28,7 +28,6 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useFilteredSchedules } from '@/hooks/useFilteredSchedules';
-import { useScheduleCompletion } from '@/hooks/useScheduleCompletion';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { CalendarDayCard } from '@/components/calendar/calendar-day-card';
 import { ScheduleCompletionDialog } from '@/components/schedules/schedule-completion-dialog';
@@ -70,27 +69,74 @@ export function CalendarView({ className }: CalendarViewProps) {
   // 모든 스케줄 데이터 가져오기
   const { schedules = [], isLoading, refetch } = useFilteredSchedules();
 
-  // 디버깅: 스케줄 데이터 확인
-  console.log('[CalendarView] Schedules received:', {
-    count: schedules.length,
-    firstSchedule: schedules[0],
-    hasNextDueDate: schedules[0]?.next_due_date,
-    hasNextDueDateCamel: schedules[0]?.nextDueDate
-  });
-  
-  // 완료 처리 훅 사용
-  const {
-    selectedSchedule,
-    executionDate,
-    executionNotes,
-    isSubmitting,
-    isDialogOpen,
-    handleComplete,
-    handleSubmit,
-    setExecutionDate,
-    setExecutionNotes,
-    setDialogOpen
-  } = useScheduleCompletion();
+  // 완료 처리를 위한 상태 관리 (useScheduleCompletion 훅 대신 직접 관리)
+  const [selectedSchedule, setSelectedSchedule] = useState<ScheduleWithDetails | null>(null);
+  const [executionDate, setExecutionDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [executionNotes, setExecutionNotes] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+
+  const handleComplete = (schedule: ScheduleWithDetails) => {
+    setSelectedSchedule(schedule);
+    setExecutionDate(format(new Date(), 'yyyy-MM-dd'));
+    setExecutionNotes('');
+    setIsDialogOpen(true);
+  };
+
+  const handleSubmit = async () => {
+    if (!selectedSchedule || !profile) return;
+
+    setIsSubmitting(true);
+    try {
+      await scheduleService.markAsCompleted(selectedSchedule.id || selectedSchedule.schedule_id, {
+        executedDate: executionDate,
+        notes: executionNotes,
+        executedBy: profile.id
+      });
+
+      toast({
+        title: "완료 처리 성공",
+        description: `${selectedSchedule.patient_name}님의 ${selectedSchedule.item_name} 일정이 완료 처리되었습니다.`,
+      });
+
+      // 상태 초기화
+      setSelectedSchedule(null);
+      setExecutionNotes('');
+      setIsDialogOpen(false);
+
+      // 캐시 클리어 및 데이터 새로고침
+      scheduleServiceEnhanced.clearCache();
+
+      // 모든 관련 쿼리 무효화
+      await queryClient.invalidateQueries();
+
+      // refetch를 await로 호출
+      await refetch();
+
+      // 그래도 업데이트가 안되면 강제 새로고침
+      setTimeout(() => {
+        window.location.reload();
+      }, 100);
+
+    } catch (error) {
+      console.error('Failed to mark schedule as completed:', error);
+      toast({
+        title: "오류",
+        description: "완료 처리 중 오류가 발생했습니다.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const setDialogOpen = (open: boolean) => {
+    setIsDialogOpen(open);
+    if (!open) {
+      setSelectedSchedule(null);
+      setExecutionNotes('');
+    }
+  };
 
 
   // 캘린더 날짜 계산
@@ -109,14 +155,10 @@ export function CalendarView({ className }: CalendarViewProps) {
         // 두 가지 형식 모두 확인
         const dueDateValue = schedule.next_due_date || schedule.nextDueDate;
         if (!dueDateValue) {
-          console.log('[CalendarView] Schedule missing date:', schedule);
           return false;
         }
         const scheduleDate = safeParse(dueDateValue);
         const isMatch = scheduleDate && isSameDay(scheduleDate, currentDay);
-        if (isMatch && currentDay.getDate() === 23) {
-          console.log('[CalendarView] Found schedule for 23rd:', schedule);
-        }
         return isMatch;
       });
 
@@ -231,16 +273,18 @@ export function CalendarView({ className }: CalendarViewProps) {
   const statusMutation = useMutation({
     mutationFn: ({ id, status }: { id: string; status: 'active' | 'paused' }) =>
       scheduleService.updateStatus(id, status),
-    onSuccess: (_, variables) => {
-      // scheduleServiceEnhanced 캐시 클리어
-      scheduleServiceEnhanced.clearCache();
-      queryClient.invalidateQueries({ queryKey: ['schedules'] });
+    onSuccess: async (_, variables) => {
       toast({
         title: "성공",
         description: variables.status === 'paused'
           ? "스케줄이 일시중지되었습니다."
           : "스케줄이 재개되었습니다.",
       });
+
+      // 강제 새로고침으로 확실한 업데이트
+      setTimeout(() => {
+        window.location.reload();
+      }, 100);
     },
     onError: (error) => {
       const message = mapErrorToUserMessage(error);
@@ -254,13 +298,16 @@ export function CalendarView({ className }: CalendarViewProps) {
 
   const deleteMutation = useMutation({
     mutationFn: scheduleService.delete,
-    onSuccess: () => {
-      scheduleServiceEnhanced.clearCache();
-      queryClient.invalidateQueries({ queryKey: ['schedules'] });
+    onSuccess: async () => {
       toast({
         title: "성공",
         description: "스케줄이 삭제되었습니다.",
       });
+
+      // 강제 새로고침으로 확실한 업데이트
+      setTimeout(() => {
+        window.location.reload();
+      }, 100);
     },
     onError: (error) => {
       const message = mapErrorToUserMessage(error);
@@ -289,14 +336,19 @@ export function CalendarView({ className }: CalendarViewProps) {
 
     try {
       await scheduleService.resumeSchedule(selectedScheduleForResume.id, options);
-      scheduleServiceEnhanced.clearCache();
-      queryClient.invalidateQueries({ queryKey: ['schedules'] });
+
       toast({
         title: "성공",
         description: "스케줄이 재개되었습니다.",
       });
+
       setResumeDialogOpen(false);
       setSelectedScheduleForResume(null);
+
+      // 강제 새로고침으로 확실한 업데이트
+      setTimeout(() => {
+        window.location.reload();
+      }, 100);
     } catch (error) {
       toast({
         title: "오류",
