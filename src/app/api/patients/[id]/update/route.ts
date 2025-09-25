@@ -283,32 +283,86 @@ export async function PUT(
       .single()
 
     if (error) {
-      // Check if it's an RLS policy violation (SQLSTATE 42501)
-      if (error.code === '42501') {
-        console.log('[API] RLS denied update, retrying with service client for authorized operation')
+      // Check if it's an RLS policy violation or ambiguous policy error
+      const shouldUseFallback = error.code === '42501' || error.code === '42P17' || error.code === '42703'
 
-        // Retry with service client (bypasses RLS) - this is safe because we've already validated permissions above
-        const serviceClient = await createServiceClient()
-        const { data: serviceData, error: serviceError } = await serviceClient
-          .from('patients')
-          .update(updateData)
-          .eq('id', id)
-          .select()
-          .single()
+      if (shouldUseFallback) {
+        console.log(`[API] Database error (${error.code}), using function-based update fallback`)
 
-        if (serviceError) {
-          console.error('[API] Error updating patient with service client:', serviceError)
-          return NextResponse.json(
-            { error: `환자 정보 수정 실패: ${serviceError.message}` },
-            { status: 400 }
-          )
+        try {
+          // Try using the secure function approach first
+          // Convert snake_case updateData to camelCase for JSON
+          const jsonUpdates: Record<string, any> = {}
+          if ('name' in updateData) jsonUpdates.name = updateData.name
+          if ('patient_number' in updateData) jsonUpdates.patient_number = updateData.patient_number
+          if ('care_type' in updateData) jsonUpdates.care_type = updateData.care_type
+          if ('doctor_id' in updateData) jsonUpdates.doctor_id = updateData.doctor_id
+          if ('is_active' in updateData) jsonUpdates.is_active = updateData.is_active
+          if ('metadata' in updateData) jsonUpdates.metadata = updateData.metadata
+
+          const { data: functionData, error: functionError } = await userClient
+            .rpc('update_patient_with_role_check', {
+              p_patient_id: id,
+              p_updates: jsonUpdates
+            })
+
+          if (functionError) {
+            console.log('[API] Function-based update failed, falling back to service client', functionError)
+
+            // Last resort: use service client (bypasses RLS)
+            const serviceClient = await createServiceClient()
+            const { data: serviceData, error: serviceError } = await serviceClient
+              .from('patients')
+              .update(updateData)
+              .eq('id', id)
+              .select()
+              .single()
+
+            if (serviceError) {
+              console.error('[API] Error updating patient with service client:', serviceError)
+              return NextResponse.json(
+                { error: `환자 정보 수정 실패: ${serviceError.message}` },
+                { status: 400 }
+              )
+            }
+
+            if (!serviceData) {
+              return NextResponse.json({ error: '환자 정보를 찾을 수 없습니다' }, { status: 404 })
+            }
+            return NextResponse.json(serviceData)
+          }
+
+          // Function call succeeded
+          if (!functionData) {
+            return NextResponse.json({ error: '환자 정보를 찾을 수 없습니다' }, { status: 404 })
+          }
+          return NextResponse.json(functionData)
+
+        } catch (fallbackError) {
+          console.error('[API] Fallback failed:', fallbackError)
+
+          // Last attempt with service client
+          const serviceClient = await createServiceClient()
+          const { data: serviceData, error: serviceError } = await serviceClient
+            .from('patients')
+            .update(updateData)
+            .eq('id', id)
+            .select()
+            .single()
+
+          if (serviceError) {
+            console.error('[API] Final service client attempt failed:', serviceError)
+            return NextResponse.json(
+              { error: `환자 정보 수정 실패: ${serviceError.message}` },
+              { status: 400 }
+            )
+          }
+
+          if (!serviceData) {
+            return NextResponse.json({ error: '환자 정보를 찾을 수 없습니다' }, { status: 404 })
+          }
+          return NextResponse.json(serviceData)
         }
-
-        // Ensure we always return valid JSON
-        if (!serviceData) {
-          return NextResponse.json({ error: '환자 정보를 찾을 수 없습니다' }, { status: 404 })
-        }
-        return NextResponse.json(serviceData)
       } else {
         // Other database error
         console.error('[API] Error updating patient:', error)
