@@ -699,17 +699,27 @@ export function CalendarView({ className }: CalendarViewProps) {
               </div>
             ) : (
               <div className={`space-y-3 ${isMobile ? 'max-h-[60vh] overflow-y-auto' : ''}`}>
-                {selectedDateSchedules.map((schedule) => (
-                  <CalendarDayCard
-                    key={schedule.id || schedule.schedule_id || `schedule-${schedule.patient_id}-${schedule.item_id}`}
-                    schedule={schedule}
-                    onComplete={() => handleComplete(schedule)}
-                    onPause={() => handlePauseSchedule(schedule.id || schedule.schedule_id)}
-                    onResume={() => handleResumeSchedule(schedule)}
-                    onDelete={() => handleDeleteSchedule(schedule.id || schedule.schedule_id)}
-                    onRefresh={refreshData}
-                  />
-                ))}
+                {selectedDateSchedules.map((schedule, index) => {
+                  const displayType = (schedule as any).display_type || 'scheduled';
+                  const executionId = (schedule as any).execution_id;
+                  const scheduleId = schedule.id || schedule.schedule_id;
+                  // Create unique key based on display type and relevant ID
+                  const uniqueKey = displayType === 'completed' && executionId
+                    ? `execution-${executionId}`
+                    : `schedule-${scheduleId}-${index}`;
+
+                  return (
+                    <CalendarDayCard
+                      key={uniqueKey}
+                      schedule={schedule}
+                      onComplete={() => handleComplete(schedule)}
+                      onPause={() => handlePauseSchedule(scheduleId)}
+                      onResume={() => handleResumeSchedule(schedule)}
+                      onDelete={() => handleDeleteSchedule(scheduleId)}
+                      onRefresh={refreshData}
+                    />
+                  );
+                })}
               </div>
             )}
           </CardContent>
