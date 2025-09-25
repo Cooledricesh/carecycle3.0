@@ -829,7 +829,7 @@ export const scheduleService = {
         .select('*, items(*)')
         .eq('id', scheduleId)
         .single()
-      
+
       if (scheduleError) throw scheduleError
       if (!schedule) throw new Error('스케줄을 찾을 수 없습니다')
 
@@ -845,12 +845,12 @@ export const scheduleService = {
             p_executed_by: input.executedBy,
             p_notes: input.notes || null
           })
-        
+
         if (rpcError) {
           // RPC 함수가 없으면 기존 방식으로 fallback
           if (rpcError.message?.includes('function') || rpcError.message?.includes('does not exist')) {
             console.log('RPC function not found, using fallback method')
-            
+
             // 기존 INSERT 방식 (중복 시 실패할 수 있음)
             const { error: executionError } = await client
               .from('schedule_executions')
@@ -863,7 +863,7 @@ export const scheduleService = {
                 executed_by: input.executedBy,
                 notes: input.notes || null
               })
-            
+
             if (executionError) {
               // 중복 키 에러인 경우 UPDATE 시도
               if (executionError.code === '23505') {
@@ -879,7 +879,7 @@ export const scheduleService = {
                   })
                   .eq('schedule_id', scheduleId)
                   .eq('planned_date', schedule.next_due_date)
-                
+
                 if (updateError) {
                   console.error('Execution update error:', updateError)
                   throw updateError
@@ -914,11 +914,11 @@ export const scheduleService = {
       // 3. 다음 예정일 계산 (실행일 기준으로, 주 단위)
       const executedDate = new Date(input.executedDate)
       const nextDueDate = addWeeks(executedDate, schedule.interval_weeks || 0)
-      
+
       if (!nextDueDate) {
         throw new Error('다음 예정일 계산에 실패했습니다')
       }
-      
+
       // 4. schedules 테이블의 next_due_date와 last_executed_date 업데이트
       const { error: updateError } = await client
         .from('schedules')
@@ -927,7 +927,7 @@ export const scheduleService = {
           last_executed_date: input.executedDate
         })
         .eq('id', scheduleId)
-      
+
       if (updateError) {
         console.error('Schedule update error:', updateError)
         throw updateError
@@ -935,6 +935,91 @@ export const scheduleService = {
     } catch (error) {
       console.error('Error marking schedule as completed:', error)
       throw new Error('일정 완료 처리에 실패했습니다')
+    }
+  },
+
+  async getCalendarSchedules(startDate: string, endDate: string, filters?: ScheduleFilter, supabase?: SupabaseClient): Promise<ScheduleWithDetails[]> {
+    const client = supabase || createClient()
+
+    try {
+      // Use the new database function for optimized calendar queries
+      const { data, error } = await client.rpc('get_calendar_schedules', {
+        p_start_date: startDate,
+        p_end_date: endDate,
+        p_user_id: null // Can be enhanced to pass user ID for role-based filtering
+      })
+
+      if (error) {
+        console.error('Error fetching calendar schedules:', error)
+        throw error
+      }
+
+      // Transform the data to ScheduleWithDetails format
+      let schedules = (data || []).map(item => {
+        const schedule = {
+          id: item.schedule_id,
+          schedule_id: item.schedule_id,
+          patient_id: item.patient_id,
+          item_id: item.item_id,
+          patient_name: item.patient_name,
+          item_name: item.item_name,
+          item_category: item.item_category,
+          interval_weeks: item.interval_weeks,
+          priority: item.priority,
+          next_due_date: item.display_date,
+          status: item.schedule_status,
+          display_type: item.display_type,
+          execution_id: item.execution_id,
+          executed_by: item.executed_by,
+          notes: item.execution_notes,
+          // Add placeholder fields that might be needed
+          patient: {
+            id: item.patient_id,
+            name: item.patient_name,
+            careType: null,
+            department: null
+          },
+          item: {
+            id: item.item_id,
+            name: item.item_name,
+            category: item.item_category
+          }
+        } as any
+
+        return schedule as ScheduleWithDetails
+      })
+
+      // Apply client-side filters if provided
+      if (filters) {
+        // Filter by care types
+        if (filters.careTypes && filters.careTypes.length > 0) {
+          schedules = schedules.filter(schedule => {
+            const careType = schedule.patient_care_type || (schedule as any).patient?.careType
+            return careType && filters.careTypes.includes(careType as any)
+          })
+        }
+
+        // Filter by department
+        if (filters.department) {
+          schedules = schedules.filter(schedule => {
+            const department = (schedule as any).patient?.department
+            return department === filters.department
+          })
+        }
+
+        // Filter by doctor
+        if (filters.doctorId) {
+          schedules = schedules.filter(schedule => {
+            const doctorId = schedule.doctor_id || (schedule as any).patient?.doctorId
+            return doctorId === filters.doctorId
+          })
+        }
+      }
+
+      return schedules
+    } catch (error) {
+      console.error('Error fetching calendar schedules:', error)
+      throw new Error('캘린더 일정 조회에 실패했습니다')
     }
   }
 }
