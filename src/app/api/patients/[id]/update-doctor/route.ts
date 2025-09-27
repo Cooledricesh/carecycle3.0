@@ -10,10 +10,10 @@ const updateDoctorSchema = z.object({
 
 export async function POST(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params
+    const { id } = await params
 
     // Parse and validate request body
     const body = await request.json()

@@ -155,6 +155,10 @@ export class ScheduleServiceEnhanced {
           createdAt: s.created_at,   // camelCase
           updated_at: s.updated_at,  // snake_case
           updatedAt: s.updated_at,   // camelCase
+          // IMPORTANT: Preserve display_type for completed schedule UI
+          display_type: s.display_type || 'scheduled',
+          execution_id: s.execution_id,
+          executed_by: s.executed_by,
           // Add flat fields for backward compatibility with CalendarDayCard
           patient_name: s.patient_name || '',
           patient_care_type: s.patient_care_type || '',

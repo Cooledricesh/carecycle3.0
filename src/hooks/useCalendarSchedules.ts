@@ -1,14 +1,16 @@
 'use client'
 
 import { useQuery } from '@tanstack/react-query'
-import { scheduleService } from '@/services/scheduleService'
+import { scheduleServiceEnhanced } from '@/services/scheduleServiceEnhanced'
 import { useFilterContext } from '@/lib/filters/filter-context'
 import { useAuth } from '@/providers/auth-provider-simple'
+import { useProfile } from '@/hooks/useProfile'
 import { useToast } from '@/hooks/use-toast'
 import { mapErrorToUserMessage } from '@/lib/error-mapper'
 import { createClient } from '@/lib/supabase/client'
 import { format, startOfMonth, endOfMonth } from 'date-fns'
 import type { ScheduleWithDetails } from '@/types/schedule'
+import type { UserContext } from '@/services/filters'
 
 interface CalendarSchedule extends ScheduleWithDetails {
   display_type?: 'scheduled' | 'completed'
@@ -18,6 +20,7 @@ interface CalendarSchedule extends ScheduleWithDetails {
 export function useCalendarSchedules(currentDate: Date) {
   const { toast } = useToast()
   const { user, loading: authLoading } = useAuth()
+  const { data: profile, isLoading: profileLoading } = useProfile()
   const { filters } = useFilterContext()
   const supabase = createClient()
 
@@ -26,23 +29,39 @@ export function useCalendarSchedules(currentDate: Date) {
   const monthEnd = format(endOfMonth(currentDate), 'yyyy-MM-dd')
 
   return useQuery({
-    queryKey: ['calendar-schedules', monthStart, monthEnd, user?.id, filters],
+    queryKey: ['calendar-schedules', monthStart, monthEnd, user?.id, profile?.role, profile?.care_type, filters],
     queryFn: async () => {
       try {
-        if (!user) {
+        if (!user || !profile) {
           return []
         }
 
-        // Use the new getCalendarSchedules method that includes execution history
-        const schedules = await scheduleService.getCalendarSchedules(
-          monthStart,
-          monthEnd,
-          filters,
+        // Create user context for role-based filtering
+        const userContext: UserContext = {
+          userId: user.id,
+          role: profile.role,
+          careType: profile.care_type
+        }
+
+        // Use enhanced service with proper role-based filtering
+        // The new RPC function returns both scheduled and completed items
+        const result = await scheduleServiceEnhanced.getFilteredSchedules(
+          {
+            ...filters,
+            dateRange: {
+              start: monthStart,
+              end: monthEnd
+            }
+          },
+          userContext,
           supabase
         )
 
+        // The RPC function now returns both scheduled and completed items with proper filtering
+        const allSchedules = result.schedules || []
+
         // Transform schedules to include display_type for UI rendering
-        return schedules.map(schedule => ({
+        return allSchedules.map(schedule => ({
           ...schedule,
           // Add display_type if not already present
           display_type: (schedule as any).display_type || 'scheduled'
@@ -58,7 +77,7 @@ export function useCalendarSchedules(currentDate: Date) {
         throw error
       }
     },
-    enabled: !!user && !authLoading,
+    enabled: !!user && !authLoading && !!profile && !profileLoading,
     staleTime: 30000, // Cache for 30 seconds
     refetchInterval: 60000 // Refresh every minute
   })

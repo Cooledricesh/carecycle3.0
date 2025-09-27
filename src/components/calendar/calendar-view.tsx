@@ -36,7 +36,7 @@ import type { ScheduleWithDetails, Schedule } from '@/types/schedule';
 import type { ScheduleStatus } from '@/lib/database.types';
 import { safeFormatDate, safeParse } from '@/lib/utils/date';
 import { scheduleService } from '@/services/scheduleService';
-import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
 import { mapErrorToUserMessage } from '@/lib/error-mapper';
 import { createClient } from '@/lib/supabase/client';
@@ -235,24 +235,24 @@ export function CalendarView({ className }: CalendarViewProps) {
     };
   }, [currentDate, schedules, calendarDays]);
 
-  // 이번달 완료 횟수 쿼리
-  const { data: monthlyExecutions = 0 } = useQuery({
-    queryKey: ['executions', format(currentDate, 'yyyy-MM')], // Simplified key
-    queryFn: async () => {
-      const monthStart = startOfMonth(currentDate);
-      const monthEnd = endOfMonth(currentDate);
+  // 이번달 완료 횟수 - 이미 가져온 schedules 데이터에서 계산
+  const monthlyExecutions = useMemo(() => {
+    const monthStart = startOfMonth(currentDate);
+    const monthEnd = endOfMonth(currentDate);
 
-      const { count } = await supabase
-        .from('schedule_executions')
-        .select('*', { count: 'exact', head: true })
-        .eq('status', 'completed')
-        .gte('executed_date', format(monthStart, 'yyyy-MM-dd'))
-        .lte('executed_date', format(monthEnd, 'yyyy-MM-dd'));
+    // RPC 함수에서 이미 가져온 데이터에서 completed 타입만 필터링
+    const completedSchedules = schedules.filter(schedule => {
+      const displayType = (schedule as any).display_type;
+      const dueDateValue = schedule.next_due_date || schedule.nextDueDate;
 
-      return count || 0;
-    },
-    enabled: !!supabase
-  });
+      if (!dueDateValue || displayType !== 'completed') return false;
+
+      const scheduleDate = safeParse(dueDateValue);
+      return scheduleDate && scheduleDate >= monthStart && scheduleDate <= monthEnd;
+    });
+
+    return completedSchedules.length;
+  }, [currentDate, schedules]);
 
   const navigateMonth = (direction: 'prev' | 'next') => {
     setCurrentDate(prev => 
@@ -564,7 +564,7 @@ export function CalendarView({ className }: CalendarViewProps) {
               );
               const hasOverdueSchedules = day.schedules.some(s => {
                 const statusInfo = getScheduleStatusLabel(s);
-                return statusInfo.variant === 'overdue' && (s as any).display_type !== 'completed';
+                return statusInfo.variant === 'overdue' && (s as any).display_type !== 'completed' && s.status === 'active';
               });
               
               return (
