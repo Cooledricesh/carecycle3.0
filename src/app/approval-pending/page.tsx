@@ -34,7 +34,7 @@ function ApprovalPendingPageContent() {
         const { data: { user } } = await supabase.auth.getUser()
         
         if (!user) {
-          router.push('/auth/login')
+          router.push('/auth/signin')
           return
         }
 
@@ -102,7 +102,7 @@ function ApprovalPendingPageContent() {
   const handleSignOut = async () => {
     try {
       await supabase.auth.signOut()
-      router.push('/auth/login')
+      router.push('/auth/signin')
     } catch (error) {
       console.error('Error signing out:', error)
     }

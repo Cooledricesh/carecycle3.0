@@ -323,15 +323,18 @@ export default function DashboardContent() {
                         </h4>
                         {isMobile && daysUntil !== null && (
                           <span className={`px-2 py-1 text-xs rounded shrink-0 ml-2 ${
-                            daysUntil < 0
+                            schedule.status === 'paused'
+                              ? 'bg-gray-100 text-gray-600'
+                              : daysUntil < 0
                               ? 'bg-blue-100 text-blue-700'
-                              : daysUntil === 0 
+                              : daysUntil === 0
                               ? 'bg-orange-100 text-orange-700'
                               : daysUntil <= 3
                               ? 'bg-yellow-100 text-yellow-700'
                               : 'bg-green-100 text-green-700'
                           }`}>
                             {daysUntil < 0 ? `${Math.abs(daysUntil)}일 전` : daysUntil === 0 ? '오늘' : daysUntil === 1 ? '내일' : `${daysUntil}일 후`}
+                            {schedule.status === 'paused' && ' (일시중지)'}
                           </span>
                         )}
                       </div>
@@ -371,6 +374,18 @@ export default function DashboardContent() {
                         onSuccess={refreshData}
                       />
                       {!isMobile && (() => {
+                        if (schedule.status === 'paused') {
+                          return (
+                            <Badge className="bg-gray-100 text-gray-600">
+                              {daysUntil !== null && (
+                                <>
+                                  {daysUntil < 0 ? `${Math.abs(daysUntil)}일 전` : daysUntil === 0 ? '오늘' : daysUntil === 1 ? '내일' : `${daysUntil}일 후`}
+                                  {' (일시중지)'}
+                                </>
+                              )}
+                            </Badge>
+                          );
+                        }
                         const statusInfo = getScheduleStatusLabel(schedule);
                         return (
                           <Badge className={getStatusBadgeClass(statusInfo.variant)}>

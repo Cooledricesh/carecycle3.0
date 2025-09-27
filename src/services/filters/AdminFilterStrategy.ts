@@ -13,13 +13,65 @@ export class AdminFilterStrategy implements FilterStrategy {
     // Admin always sees all data, showAll flag is ignored
     console.log('[AdminFilterStrategy] Attempting RPC call')
 
+    // For calendar views with date range, use the calendar-specific function
+    if (filters.dateRange?.start && filters.dateRange?.end) {
+      const { data: calendarData, error: calendarError } = await supabase.rpc('get_calendar_schedules_filtered', {
+        p_start_date: filters.dateRange.start,
+        p_end_date: filters.dateRange.end,
+        p_user_id: userContext.userId,
+        p_show_all: true, // Admin always has full access
+        p_care_types: filters.careTypes?.length ? filters.careTypes : null
+      })
+
+      if (calendarError) {
+        console.error('[AdminFilterStrategy] Calendar RPC error:', calendarError)
+      }
+
+      if (!calendarError && calendarData) {
+        console.log('[AdminFilterStrategy] Calendar RPC successful:', {
+          dataLength: calendarData.length || 0,
+          dateRange: filters.dateRange,
+          hasCompletedItems: calendarData.some((item: any) => item.display_type === 'completed')
+        })
+
+        // Transform calendar data to ScheduleWithDetails format
+        const transformedData = calendarData.map((item: any) => ({
+          schedule_id: item.schedule_id,
+          patient_id: item.patient_id,
+          patient_name: item.patient_name,
+          patient_care_type: item.care_type,
+          patient_number: '',
+          doctor_id: item.doctor_id,
+          doctor_name: '',
+          item_id: item.item_id,
+          item_name: item.item_name,
+          item_category: item.item_category,
+          next_due_date: item.display_date,
+          interval_weeks: item.interval_weeks,
+          priority: item.priority,
+          status: item.schedule_status,
+          display_type: item.display_type,
+          execution_id: item.execution_id,
+          executed_by: item.executed_by,
+          notes: item.execution_notes,
+          doctor_id_at_completion: item.doctor_id_at_completion,
+          care_type_at_completion: item.care_type_at_completion
+        }))
+
+        return {
+          data: transformedData,
+          error: null
+        }
+      }
+    }
+
+    // Try regular RPC for non-calendar views
     const { data, error } = await supabase.rpc('get_filtered_schedules', {
       p_user_id: userContext.userId,
       p_show_all: true, // Admin always has full access
       p_care_types: filters.careTypes?.length ? filters.careTypes : null,
       p_date_start: filters.dateRange?.start || null,
-      p_date_end: filters.dateRange?.end || null,
-      p_urgency_level: filters.urgencyLevel && filters.urgencyLevel !== 'all' ? filters.urgencyLevel : null
+      p_date_end: filters.dateRange?.end || null
     })
 
     if (!error && data) {
@@ -56,7 +108,7 @@ export class AdminFilterStrategy implements FilterStrategy {
           category
         )
       `)
-      .eq('status', 'active')
+      .in('status', ['active', 'paused'])
 
     // Admin can filter by care types if specified
     if (filters.careTypes?.length) {

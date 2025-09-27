@@ -267,7 +267,7 @@ function PatientsContent({ userRole }: PatientsContentProps) {
                               compact={true}
                             />
                           </div>
-                          {userRole === 'admin' && (
+                          {(userRole === 'admin' || userRole === 'doctor' || userRole === 'nurse') && (
                             <div className="flex justify-between items-center">
                               <span className={`${responsiveText.small} text-muted-foreground`}>주치의</span>
                               <PatientDoctorSelect
@@ -311,7 +311,7 @@ function PatientsContent({ userRole }: PatientsContentProps) {
                         <TableHead>환자번호</TableHead>
                         <TableHead>환자명</TableHead>
                         <TableHead>진료구분</TableHead>
-                        {userRole === 'admin' && <TableHead>주치의</TableHead>}
+                        {(userRole === 'admin' || userRole === 'doctor' || userRole === 'nurse') && <TableHead>주치의</TableHead>}
                         <TableHead className="text-right">작업</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -328,7 +328,7 @@ function PatientsContent({ userRole }: PatientsContentProps) {
                               onSuccess={() => refetch()}
                             />
                           </TableCell>
-                          {userRole === 'admin' && (
+                          {(userRole === 'admin' || userRole === 'doctor' || userRole === 'nurse') && (
                             <TableCell>
                               <PatientDoctorSelect
                                 patient={patient}

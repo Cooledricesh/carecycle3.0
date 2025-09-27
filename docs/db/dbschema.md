@@ -680,9 +680,16 @@ CREATE TYPE appointment_type AS ENUM ('consultation', 'treatment', 'follow_up', 
 - **Performance Indexes**: Added multiple indexes for filtering optimization
 - **Materialized View**: dashboard_schedule_summary for performance
 
-**Total Migrations**: 24+ applied migrations
-**Current Status**: Production-ready with complete role-based filtering and schedule management
-**Database Verification**: Direct verification performed on 2025-09-22
+### Phase 6: Schedule History Preservation (December 25, 2025)
+- **Calendar History Function**: Added get_calendar_schedules for combined schedule/execution views
+- **Performance Indexes**: Added idx_executions_for_calendar, idx_executions_calendar_range
+- **Statistics Function**: Added get_schedule_statistics for execution analytics
+- **Monthly Summary View**: Added calendar_monthly_summary for dashboard metrics
+- **UI Enhancement**: Visual distinction for completed schedules in calendar
+
+**Total Migrations**: 25+ applied migrations
+**Current Status**: Production-ready with complete history preservation and calendar integration
+**Database Verification**: Direct verification performed on 2025-09-22, History feature added 2025-12-25
 
 ---
 
