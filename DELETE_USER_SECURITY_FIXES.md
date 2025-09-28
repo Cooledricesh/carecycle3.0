@@ -146,7 +146,7 @@ UPDATE audit_logs
 SET
   user_id = NULL,
   user_email = 'deleted-user@system.local',
-  user_display_name = 'Deleted User'
+  user_role = 'deleted'
 WHERE user_id = p_user_id;
 ```
 

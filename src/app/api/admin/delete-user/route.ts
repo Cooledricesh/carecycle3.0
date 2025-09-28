@@ -25,16 +25,32 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Build expected origin for comparison
-    const expectedOrigin = process.env.NEXT_PUBLIC_APP_URL ||
-                          `${request.headers.get("x-forwarded-proto") || "http"}://${request.headers.get("host")}`;
+    // Build expected origin for comparison and normalize with URL API
+    const expectedOriginString = process.env.NEXT_PUBLIC_APP_URL ||
+                                 `${request.headers.get("x-forwarded-proto") || "http"}://${request.headers.get("host")}`;
 
     // Only compare if we have an actual origin
-    if (actualOrigin && !actualOrigin.startsWith(expectedOrigin)) {
-      return NextResponse.json(
-        { error: "Invalid origin" },
-        { status: 403 }
-      );
+    if (actualOrigin) {
+      try {
+        // Normalize both origins using URL API for strict comparison
+        const actualOriginNormalized = new URL(actualOrigin).origin;
+        const expectedOriginNormalized = new URL(expectedOriginString).origin;
+
+        // Strict equality check prevents prefix-based bypasses
+        if (actualOriginNormalized !== expectedOriginNormalized) {
+          return NextResponse.json(
+            { error: "Invalid origin" },
+            { status: 403 }
+          );
+        }
+      } catch (urlError) {
+        // Failed to parse origins, treat as invalid
+        console.error("Origin parsing error:", urlError);
+        return NextResponse.json(
+          { error: "Invalid origin format" },
+          { status: 403 }
+        );
+      }
     }
 
     // 2. Verify admin permission
@@ -116,8 +132,10 @@ export async function POST(request: NextRequest) {
     }
 
     // 6. Prevent deleting the last admin
+    let adminCount: number | null = null;
+
     if (targetProfile.role === "admin") {
-      const { count: adminCount, error: countError } = await serviceClient
+      const { count, error: countError } = await serviceClient
         .from("profiles")
         .select("*", { count: "exact", head: true })
         .eq("role", "admin");
@@ -130,6 +148,8 @@ export async function POST(request: NextRequest) {
         );
       }
 
+      adminCount = count;
+
       if (adminCount && adminCount <= 1) {
         return NextResponse.json(
           { error: "Cannot delete the last remaining admin" },
@@ -138,7 +158,12 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 7. Delete auth user FIRST (triggers CASCADE to profiles)
+    // 7. Calculate remaining admin count (for deletion guard in RPC)
+    const remainingAdmins = targetProfile.role === "admin"
+      ? ((adminCount ?? 0) - 1)
+      : 0;
+
+    // 8. Delete auth user FIRST (triggers CASCADE to profiles)
     const { error: authError } = await serviceClient.auth.admin.deleteUser(
       userId
     );
@@ -151,12 +176,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 8. Clean up related data AFTER user deletion (non-critical operation)
-    const { data: cleanupResult, error: cleanupError } = await serviceClient
-      .rpc("admin_delete_user", { p_user_id: userId });
+    // 9. Clean up related data AFTER user deletion with pre-calculated params
+    const { error: cleanupError } = await serviceClient
+      .rpc("admin_delete_user", {
+        p_user_id: userId,
+        p_target_role: targetProfile.role,
+        p_remaining_admins: remainingAdmins,
+      });
 
     if (cleanupError) {
-      console.error("User data cleanup error:", cleanupError);
+      console.error("CRITICAL: User data cleanup failed for user", userId, "Error:", cleanupError);
+      return NextResponse.json(
+        { error: "Failed to clean up user data. Manual recovery required." },
+        { status: 500 }
+      );
     }
 
     return NextResponse.json({

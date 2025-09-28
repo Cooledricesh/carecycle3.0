@@ -3,7 +3,11 @@
 -- Date: 2025-09-28
 
 -- Create function for atomic user deletion
-CREATE OR REPLACE FUNCTION admin_delete_user(p_user_id uuid)
+CREATE OR REPLACE FUNCTION admin_delete_user(
+  p_user_id uuid,
+  p_target_role text,
+  p_remaining_admins integer
+)
 RETURNS json
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -11,25 +15,20 @@ SET search_path = public
 AS $$
 DECLARE
   v_target_role text;
-  v_admin_count integer;
-  v_deleted_rows json;
 BEGIN
-  -- Check if target user exists and get their role
+  -- Try to get role from profiles (may be NULL if already CASCADE deleted)
   SELECT role INTO v_target_role
   FROM profiles
   WHERE id = p_user_id;
 
+  -- If profile already deleted, use the passed parameter
   IF v_target_role IS NULL THEN
-    RAISE EXCEPTION 'User not found';
+    v_target_role := p_target_role;
   END IF;
 
-  -- Prevent deleting the last admin
+  -- Prevent deleting the last admin using pre-calculated count
   IF v_target_role = 'admin' THEN
-    SELECT COUNT(*) INTO v_admin_count
-    FROM profiles
-    WHERE role = 'admin';
-
-    IF v_admin_count <= 1 THEN
+    IF p_remaining_admins <= 0 THEN
       RAISE EXCEPTION 'Cannot delete the last remaining admin';
     END IF;
   END IF;
@@ -108,8 +107,8 @@ END;
 $$;
 
 -- Grant execute permission to service role
-GRANT EXECUTE ON FUNCTION admin_delete_user(uuid) TO service_role;
+GRANT EXECUTE ON FUNCTION admin_delete_user(uuid, text, integer) TO service_role;
 
 -- Add comment for documentation
-COMMENT ON FUNCTION admin_delete_user(uuid) IS
-  'Atomically deletes user data with audit trail preservation. Prevents deletion of last admin. Must be called by service role.';
+COMMENT ON FUNCTION admin_delete_user(uuid, text, integer) IS
+  'Atomically deletes user data with audit trail preservation. Prevents deletion of last admin. Must be called by service role. Accepts pre-calculated role and admin count to handle CASCADE deletion.';
