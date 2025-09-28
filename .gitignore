@@ -140,6 +140,11 @@ kill-*.sh
 **/debug-*.*
 test-helpers.*
 
+# Local test/check scripts (NEVER COMMIT - may contain hardcoded credentials)
+check_*.mjs
+check-*.mjs
+test_*.mjs
+
 # Test artifacts and screenshots only (not all PNGs)
 .playwright-mcp/**/*.png
 tests/**/screenshots/*.png

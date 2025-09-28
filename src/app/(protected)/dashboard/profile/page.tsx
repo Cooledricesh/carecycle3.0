@@ -313,7 +313,7 @@ export default function ProfilePage() {
                             setFormData({ ...formData, care_type: value })
                           }
                         >
-                          <SelectTrigger className={`pl-10 ${touchTarget.input}`}>
+                          <SelectTrigger id="care_type" className={`pl-10 ${touchTarget.input}`}>
                             <SelectValue placeholder="진료 유형 선택" />
                           </SelectTrigger>
                           <SelectContent>
