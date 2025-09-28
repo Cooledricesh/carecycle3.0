@@ -120,7 +120,6 @@ BEGIN
                 safe_old_record := jsonb_build_object(
                     'id', OLD.id,
                     'patient_number', OLD.patient_number,
-                    'name', OLD.name,
                     'care_type', OLD.care_type,
                     'is_active', OLD.is_active,
                     'archived', OLD.archived,
@@ -134,7 +133,6 @@ BEGIN
                 safe_new_record := jsonb_build_object(
                     'id', NEW.id,
                     'patient_number', NEW.patient_number,
-                    'name', NEW.name,
                     'care_type', NEW.care_type,
                     'is_active', NEW.is_active,
                     'archived', NEW.archived,
@@ -150,7 +148,6 @@ BEGIN
                 safe_old_record := jsonb_build_object(
                     'id', OLD.id,
                     'email', OLD.email,
-                    'name', OLD.name,
                     'role', OLD.role,
                     'care_type', OLD.care_type,
                     'is_active', OLD.is_active,
@@ -162,7 +159,6 @@ BEGIN
                 safe_new_record := jsonb_build_object(
                     'id', NEW.id,
                     'email', NEW.email,
-                    'name', NEW.name,
                     'role', NEW.role,
                     'care_type', NEW.care_type,
                     'is_active', NEW.is_active,
@@ -188,12 +184,10 @@ BEGIN
                     'updated_at', OLD.updated_at
                 );
 
-                SELECT name INTO patient_name FROM patients WHERE id = OLD.patient_id;
                 SELECT name INTO item_name FROM items WHERE id = OLD.item_id;
 
-                IF patient_name IS NOT NULL OR item_name IS NOT NULL THEN
+                IF item_name IS NOT NULL THEN
                     safe_old_record := safe_old_record || jsonb_build_object(
-                        '_patient_name', patient_name,
                         '_item_name', item_name
                     );
                 END IF;
@@ -215,23 +209,30 @@ BEGIN
                     'updated_at', NEW.updated_at
                 );
 
-                SELECT name INTO patient_name FROM patients WHERE id = NEW.patient_id;
                 SELECT name INTO item_name FROM items WHERE id = NEW.item_id;
 
-                IF patient_name IS NOT NULL OR item_name IS NOT NULL THEN
+                IF item_name IS NOT NULL THEN
                     safe_new_record := safe_new_record || jsonb_build_object(
-                        '_patient_name', patient_name,
                         '_item_name', item_name
                     );
                 END IF;
             END IF;
 
         ELSE
+            -- For unwhitelisted tables, use empty jsonb to prevent PHI/PII exposure
             IF TG_OP IN ('DELETE', 'UPDATE') THEN
-                safe_old_record := to_jsonb(OLD) - 'created_at' - 'updated_at';
+                safe_old_record := jsonb_build_object(
+                    'id', OLD.id,
+                    '_table', TG_TABLE_NAME,
+                    '_warning', 'Table not whitelisted for audit details'
+                );
             END IF;
             IF TG_OP IN ('INSERT', 'UPDATE') THEN
-                safe_new_record := to_jsonb(NEW) - 'created_at' - 'updated_at';
+                safe_new_record := jsonb_build_object(
+                    'id', NEW.id,
+                    '_table', TG_TABLE_NAME,
+                    '_warning', 'Table not whitelisted for audit details'
+                );
             END IF;
     END CASE;
 

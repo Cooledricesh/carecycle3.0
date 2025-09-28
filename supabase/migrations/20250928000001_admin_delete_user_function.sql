@@ -41,7 +41,7 @@ BEGIN
   SET
     user_id = NULL,
     user_email = 'deleted-user@system.local',
-    user_display_name = 'Deleted User'
+    user_name = 'Deleted User'
   WHERE user_id = p_user_id;
 
   -- 2. Delete notification records (not audit-critical)

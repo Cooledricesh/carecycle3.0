@@ -159,14 +159,21 @@ const { data: cleanupResult, error: cleanupError } = await serviceClient
   .rpc("admin_delete_user", { p_user_id: userId });
 
 if (cleanupError) {
-  return NextResponse.json(
-    {
-      error: "Failed to clean up user data",
-      details: cleanupError.message
-    },
-    { status: 500 }
-  );
+  console.error("User data cleanup error:", cleanupError);
+  console.error("Cleanup error details:", {
+    userId,
+    message: cleanupError.message,
+    code: cleanupError.code
+  });
+  // Non-critical error: user is already deleted from auth
+  // Log for manual cleanup but don't fail the request
 }
+
+// Return success response (user authentication is already deleted)
+return NextResponse.json(
+  { success: true, message: "User deleted successfully" },
+  { status: 200 }
+);
 ```
 
 ## Database Function: `admin_delete_user`

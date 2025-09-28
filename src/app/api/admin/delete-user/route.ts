@@ -9,14 +9,28 @@ const DeleteUserSchema = z.object({
 export async function POST(request: NextRequest) {
   try {
     // 1. CSRF Protection: Verify same-origin request
-    const origin = request.headers.get("origin") ||
-                   request.headers.get("referer") ||
-                   request.headers.get("host");
+    let actualOrigin: string | null = request.headers.get("origin");
 
+    // If Origin header is missing, try to parse origin from Referer
+    if (!actualOrigin) {
+      const referer = request.headers.get("referer");
+      if (referer) {
+        try {
+          const refererUrl = new URL(referer);
+          actualOrigin = refererUrl.origin;
+        } catch {
+          // Failed to parse referer, treat as no origin present
+          actualOrigin = null;
+        }
+      }
+    }
+
+    // Build expected origin for comparison
     const expectedOrigin = process.env.NEXT_PUBLIC_APP_URL ||
                           `${request.headers.get("x-forwarded-proto") || "http"}://${request.headers.get("host")}`;
 
-    if (origin && !origin.startsWith(expectedOrigin)) {
+    // Only compare if we have an actual origin
+    if (actualOrigin && !actualOrigin.startsWith(expectedOrigin)) {
       return NextResponse.json(
         { error: "Invalid origin" },
         { status: 403 }

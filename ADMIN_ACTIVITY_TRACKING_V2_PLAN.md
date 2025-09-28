@@ -1233,7 +1233,7 @@ export async function GET(request: NextRequest) {
       limit: parseInt(searchParams.get('limit') ?? '20'),
     }
 
-    // 3. 로그 조회
+    // 3. 로그 조회 (supabase 인스턴스를 두 번째 파라미터로 전달)
     const logs = await activityService.getAuditLogs(filters, supabase)
 
     return NextResponse.json(logs)
