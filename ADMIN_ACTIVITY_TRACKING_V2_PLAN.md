@@ -1234,7 +1234,7 @@ export async function GET(request: NextRequest) {
     }
 
     // 3. 로그 조회
-    const logs = await activityService.getAuditLogs(supabase, filters)
+    const logs = await activityService.getAuditLogs(filters, supabase)
 
     return NextResponse.json(logs)
   } catch (error) {

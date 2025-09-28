@@ -177,8 +177,13 @@ BEGIN
                     'id', OLD.id,
                     'patient_id', OLD.patient_id,
                     'item_id', OLD.item_id,
-                    'scheduled_time', OLD.scheduled_time,
+                    'last_executed_date', OLD.last_executed_date,
+                    'next_due_date', OLD.next_due_date,
+                    'interval_weeks', OLD.interval_weeks,
+                    'start_date', OLD.start_date,
+                    'end_date', OLD.end_date,
                     'status', OLD.status,
+                    'assigned_nurse_id', OLD.assigned_nurse_id,
                     'created_at', OLD.created_at,
                     'updated_at', OLD.updated_at
                 );
@@ -199,8 +204,13 @@ BEGIN
                     'id', NEW.id,
                     'patient_id', NEW.patient_id,
                     'item_id', NEW.item_id,
-                    'scheduled_time', NEW.scheduled_time,
+                    'last_executed_date', NEW.last_executed_date,
+                    'next_due_date', NEW.next_due_date,
+                    'interval_weeks', NEW.interval_weeks,
+                    'start_date', NEW.start_date,
+                    'end_date', NEW.end_date,
                     'status', NEW.status,
+                    'assigned_nurse_id', NEW.assigned_nurse_id,
                     'created_at', NEW.created_at,
                     'updated_at', NEW.updated_at
                 );

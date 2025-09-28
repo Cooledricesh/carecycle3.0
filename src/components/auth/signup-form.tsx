@@ -48,11 +48,15 @@ export function SignUpForm({
       return;
     }
 
-    if (!name.trim()) {
+    const trimmedName = name.trim();
+
+    if (!trimmedName) {
       setError("이름을 입력해주세요.");
       setIsLoading(false);
       return;
     }
+
+    setName(trimmedName);
 
     try {
       const response = await fetch("/api/auth/signup", {
@@ -63,7 +67,7 @@ export function SignUpForm({
         body: JSON.stringify({
           email,
           password,
-          name,
+          name: trimmedName,
           role,
         }),
       });

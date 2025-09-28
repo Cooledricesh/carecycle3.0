@@ -228,7 +228,7 @@ function isScheduleDateUpdate(log: AuditLog): boolean {
 
 ## 5. Required Code Changes
 
-### File: `/Users/seunghyun/Project/src/services/activityService.ts`
+### File: `src/services/activityService.ts`
 
 **Lines 228-233: Replace completion detection logic**
 
@@ -413,7 +413,7 @@ After implementing the fix, verify:
 
 ### 🔧 Implementation File
 
-**File to modify:** `/Users/seunghyun/Project/src/services/activityService.ts`
+**File to modify:** `src/services/activityService.ts`
 **Lines to change:** 228-233
 **Change type:** Replace conditional logic
 **Testing required:** Manual testing through admin UI
