@@ -78,7 +78,7 @@ export function useCalendarSchedules(currentDate: Date) {
       }
     },
     enabled: !!user && !authLoading && !!profile && !profileLoading,
-    staleTime: 30000, // Cache for 30 seconds
+    staleTime: 0, // Immediate refetch on invalidation
     refetchInterval: 60000 // Refresh every minute
   })
 }

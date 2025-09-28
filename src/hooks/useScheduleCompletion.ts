@@ -44,6 +44,17 @@ export function useScheduleCompletion(): UseScheduleCompletionReturn {
     if (!selectedSchedule || !user) return
 
     setIsSubmitting(true)
+
+    // Optimistic update: immediately remove from UI
+    const scheduleId = selectedSchedule.id
+    queryClient.setQueriesData({ queryKey: ['schedules'] }, (old: any) => {
+      if (!old) return old
+      if (Array.isArray(old)) {
+        return old.filter((s: any) => s.id !== scheduleId)
+      }
+      return old
+    })
+
     try {
       await scheduleService.markAsCompleted(selectedSchedule.id, {
         executedDate: executionDate,
@@ -59,12 +70,16 @@ export function useScheduleCompletion(): UseScheduleCompletionReturn {
       // Reset state and close dialog
       reset()
 
-      // 단순한 키로 모든 스케줄 관련 쿼리 무효화
+      // Invalidate to fetch fresh data from server
       await queryClient.invalidateQueries({ queryKey: ['schedules'] })
       await queryClient.invalidateQueries({ queryKey: ['executions'] })
 
     } catch (error) {
       console.error('Failed to mark schedule as completed:', error)
+
+      // Rollback on error: re-fetch to restore original state
+      await queryClient.invalidateQueries({ queryKey: ['schedules'] })
+
       toast({
         title: "오류",
         description: "완료 처리 중 오류가 발생했습니다.",
