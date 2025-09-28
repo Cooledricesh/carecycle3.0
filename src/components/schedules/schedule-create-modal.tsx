@@ -180,6 +180,12 @@ export function ScheduleCreateModal({
         notes: data.notes || null
       })
 
+      // Clear cache and emit event for real-time updates
+      const { scheduleServiceEnhanced } = require('@/services/scheduleServiceEnhanced')
+      const { eventManager } = require('@/lib/events/schedule-event-manager')
+      scheduleServiceEnhanced.clearCache()
+      eventManager.emitScheduleChange()
+
       toast({
         title: '성공',
         description: '스케줄이 추가되었습니다.',

@@ -10,6 +10,8 @@ import { useAuth } from '@/providers/auth-provider-simple'
 import { createClient } from '@/lib/supabase/client'
 import { useProfile } from '@/hooks/useProfile'
 import { useFilterContext } from '@/lib/filters/filter-context'
+import { scheduleServiceEnhanced } from '@/services/scheduleServiceEnhanced'
+import { eventManager } from '@/lib/events/schedule-event-manager'
 // Removed complex query keys - using simple invalidation
 
 export function usePatients() {
@@ -60,7 +62,8 @@ export function usePatients() {
       })
     },
     onSuccess: () => {
-      // Invalidate ALL queries to ensure consistency
+      scheduleServiceEnhanced.clearCache()
+      eventManager.emitPatientChange()
       queryClient.invalidateQueries()
       toast({
         title: '성공',
@@ -82,7 +85,8 @@ export function usePatients() {
       })
     },
     onSuccess: () => {
-      // Invalidate ALL queries to ensure consistency
+      scheduleServiceEnhanced.clearCache()
+      eventManager.emitPatientChange()
       queryClient.invalidateQueries()
       toast({
         title: '성공',

@@ -31,7 +31,8 @@ export function useSchedules() {
         throw error
       }
     },
-    enabled: !!user && !loading
+    enabled: !!user && !loading,
+    staleTime: 0 // Immediate refetch on invalidation
   })
 
   const createMutation = useMutation({
@@ -115,7 +116,8 @@ export function useTodayChecklist() {
         throw error
       }
     },
-    enabled: !!user && !loading
+    enabled: !!user && !loading,
+    staleTime: 0 // Immediate refetch on invalidation
   })
 }
 
@@ -139,7 +141,8 @@ export function useUpcomingSchedules(daysAhead: number = 7) {
         throw error
       }
     },
-    enabled: !!user && !loading
+    enabled: !!user && !loading,
+    staleTime: 0 // Immediate refetch on invalidation
   })
 }
 
@@ -187,6 +190,7 @@ export function useOverdueSchedules() {
         throw error
       }
     },
-    enabled: !!user && !loading
+    enabled: !!user && !loading,
+    staleTime: 0 // Immediate refetch on invalidation
   })
 }

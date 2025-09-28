@@ -64,7 +64,8 @@ export function useFilteredSchedules() {
       }
     },
     // Temporarily relaxed condition for debugging
-    enabled: !!user && !authLoading
+    enabled: !!user && !authLoading,
+    staleTime: 0 // Immediate refetch on invalidation
   })
 
   const refetch = async () => {
@@ -129,7 +130,8 @@ export function useFilteredTodayChecklist() {
         throw error
       }
     },
-    enabled: !!user && !authLoading && !!profile && !profileLoading
+    enabled: !!user && !authLoading && !!profile && !profileLoading,
+    staleTime: 0 // Immediate refetch on invalidation
   })
 }
 
@@ -186,6 +188,7 @@ export function useFilteredUpcomingSchedules(daysAhead: number = 7) {
         throw error
       }
     },
-    enabled: !!user && !authLoading && !!profile && !profileLoading
+    enabled: !!user && !authLoading && !!profile && !profileLoading,
+    staleTime: 0 // Immediate refetch on invalidation
   })
 }

@@ -7,6 +7,8 @@ import { useAuth } from '@/providers/auth-provider-simple'
 import { scheduleService } from '@/services/scheduleService'
 import type { ScheduleWithDetails } from '@/types/schedule'
 import { format } from 'date-fns'
+import { eventManager } from '@/lib/events/schedule-event-manager'
+import { scheduleServiceEnhanced } from '@/services/scheduleServiceEnhanced'
 
 interface UseScheduleCompletionReturn {
   selectedSchedule: ScheduleWithDetails | null
@@ -44,6 +46,18 @@ export function useScheduleCompletion(): UseScheduleCompletionReturn {
     if (!selectedSchedule || !user) return
 
     setIsSubmitting(true)
+
+    // Optimistic update: immediately remove from schedule list UI
+    // Note: Calendar view shows both scheduled and completed items, so we skip optimistic update there
+    const scheduleId = selectedSchedule.id
+    queryClient.setQueriesData({ queryKey: ['schedules'] }, (old: any) => {
+      if (!old) return old
+      if (Array.isArray(old)) {
+        return old.filter((s: any) => s.id !== scheduleId)
+      }
+      return old
+    })
+
     try {
       await scheduleService.markAsCompleted(selectedSchedule.id, {
         executedDate: executionDate,
@@ -56,15 +70,17 @@ export function useScheduleCompletion(): UseScheduleCompletionReturn {
         description: `${selectedSchedule.patient?.name}님의 ${selectedSchedule.item?.name} 일정이 완료 처리되었습니다.`,
       })
 
-      // Reset state and close dialog
       reset()
 
-      // 단순한 키로 모든 스케줄 관련 쿼리 무효화
-      await queryClient.invalidateQueries({ queryKey: ['schedules'] })
-      await queryClient.invalidateQueries({ queryKey: ['executions'] })
+      scheduleServiceEnhanced.clearCache()
+      eventManager.emitScheduleChange()
 
     } catch (error) {
       console.error('Failed to mark schedule as completed:', error)
+
+      // Rollback on error: re-fetch to restore original state
+      await queryClient.invalidateQueries({ queryKey: ['schedules'] })
+
       toast({
         title: "오류",
         description: "완료 처리 중 오류가 발생했습니다.",
