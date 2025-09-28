@@ -79,7 +79,7 @@ export function useCalendarSchedules(currentDate: Date) {
     },
     enabled: !!user && !authLoading && !!profile && !profileLoading,
     staleTime: 0, // Immediate refetch on invalidation
-    refetchInterval: 60000 // Refresh every minute
+    refetchOnMount: 'always' // Always refetch when component mounts (for cross-page updates)
   })
 }
 

@@ -23,6 +23,7 @@ import type { ResumeOptions } from '@/lib/schedule-management/schedule-state-man
 import { ScheduleDateCalculator } from '@/lib/schedule-management/schedule-date-calculator';
 import { ChevronLeft, ChevronRight, Calendar, Clock, AlertCircle, ChevronUp, ChevronDown, Users, User } from 'lucide-react';
 import { useProfile } from '@/hooks/useProfile';
+import { useScheduleCompletion } from '@/hooks/useScheduleCompletion';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -70,68 +71,26 @@ export function CalendarView({ className }: CalendarViewProps) {
   // 캘린더용 스케줄 데이터 가져오기 (완료 이력 포함)
   const { data: schedules = [], isLoading, refetch } = useCalendarSchedules(currentDate);
 
-  // 완료 처리를 위한 상태 관리 (useScheduleCompletion 훅 대신 직접 관리)
-  const [selectedSchedule, setSelectedSchedule] = useState<ScheduleWithDetails | null>(null);
-  const [executionDate, setExecutionDate] = useState(format(new Date(), 'yyyy-MM-dd'));
-  const [executionNotes, setExecutionNotes] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  // 완료 처리 훅 사용
+  const {
+    selectedSchedule,
+    executionDate,
+    executionNotes,
+    isSubmitting,
+    isDialogOpen,
+    handleComplete,
+    handleSubmit: originalHandleSubmit,
+    setExecutionDate,
+    setExecutionNotes,
+    setDialogOpen
+  } = useScheduleCompletion();
 
-  const handleComplete = (schedule: ScheduleWithDetails) => {
-    setSelectedSchedule(schedule);
-    setExecutionDate(format(new Date(), 'yyyy-MM-dd'));
-    setExecutionNotes('');
-    setIsDialogOpen(true);
-  };
-
+  // Wrap handleSubmit to reload page after completion
+  // See: /docs/CALENDAR-REALTIME-UPDATE-SOLUTION.md for why we use window.location.reload()
   const handleSubmit = async () => {
-    if (!selectedSchedule || !profile) return;
-
-    setIsSubmitting(true);
-    try {
-      // Resolve schedule identifier with fallback
-      const scheduleId = (selectedSchedule as any).schedule_id ?? (selectedSchedule as any).id;
-      await scheduleService.markAsCompleted(scheduleId, {
-        executedDate: executionDate,
-        notes: executionNotes,
-        executedBy: profile.id
-      });
-
-      toast({
-        title: "완료 처리 성공",
-        description: `${selectedSchedule.patient_name}님의 ${selectedSchedule.item_name} 일정이 완료 처리되었습니다.`,
-      });
-
-      // 상태 초기화
-      setSelectedSchedule(null);
-      setExecutionNotes('');
-      setIsDialogOpen(false);
-
-      // 캐시 클리어 및 데이터 새로고침
-      scheduleServiceEnhanced.clearCache();
-
-      // 단순한 키로 모든 스케줄 관련 쿼리 무효화
-      await queryClient.invalidateQueries({ queryKey: ['schedules'] });
-      await queryClient.invalidateQueries({ queryKey: ['executions'] });
-
-    } catch (error) {
-      console.error('Failed to mark schedule as completed:', error);
-      toast({
-        title: "오류",
-        description: "완료 처리 중 오류가 발생했습니다.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const setDialogOpen = (open: boolean) => {
-    setIsDialogOpen(open);
-    if (!open) {
-      setSelectedSchedule(null);
-      setExecutionNotes('');
-    }
+    await originalHandleSubmit();
+    // Reload page to ensure fresh data (simple and reliable)
+    window.location.reload();
   };
 
 
@@ -277,8 +236,8 @@ export function CalendarView({ className }: CalendarViewProps) {
           : "스케줄이 재개되었습니다.",
       });
 
-      // 단순한 키로 무효화
-      await queryClient.invalidateQueries({ queryKey: ['schedules'] });
+      // Reload page to ensure fresh data (see: /docs/CALENDAR-REALTIME-UPDATE-SOLUTION.md)
+      window.location.reload();
     },
     onError: (error) => {
       const message = mapErrorToUserMessage(error);
@@ -298,8 +257,8 @@ export function CalendarView({ className }: CalendarViewProps) {
         description: "스케줄이 삭제되었습니다.",
       });
 
-      // 단순한 키로 무효화
-      await queryClient.invalidateQueries({ queryKey: ['schedules'] });
+      // Reload page to ensure fresh data (see: /docs/CALENDAR-REALTIME-UPDATE-SOLUTION.md)
+      window.location.reload();
     },
     onError: (error) => {
       const message = mapErrorToUserMessage(error);
@@ -339,8 +298,8 @@ export function CalendarView({ className }: CalendarViewProps) {
       setResumeDialogOpen(false);
       setSelectedScheduleForResume(null);
 
-      // 단순한 키로 무효화
-      await queryClient.invalidateQueries({ queryKey: ['schedules'] });
+      // Reload page to ensure fresh data (see: /docs/CALENDAR-REALTIME-UPDATE-SOLUTION.md)
+      window.location.reload();
     } catch (error) {
       toast({
         title: "오류",
@@ -360,6 +319,7 @@ export function CalendarView({ className }: CalendarViewProps) {
   // Refresh data function - 스케줄 관련 쿼리만 무효화
   const refreshData = () => {
     queryClient.invalidateQueries({ queryKey: ['schedules'] });
+    queryClient.invalidateQueries({ queryKey: ['calendar-schedules'] });
   };
 
 

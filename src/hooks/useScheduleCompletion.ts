@@ -45,7 +45,8 @@ export function useScheduleCompletion(): UseScheduleCompletionReturn {
 
     setIsSubmitting(true)
 
-    // Optimistic update: immediately remove from UI
+    // Optimistic update: immediately remove from schedule list UI
+    // Note: Calendar view shows both scheduled and completed items, so we skip optimistic update there
     const scheduleId = selectedSchedule.id
     queryClient.setQueriesData({ queryKey: ['schedules'] }, (old: any) => {
       if (!old) return old
@@ -71,8 +72,19 @@ export function useScheduleCompletion(): UseScheduleCompletionReturn {
       reset()
 
       // Invalidate to fetch fresh data from server
-      await queryClient.invalidateQueries({ queryKey: ['schedules'] })
-      await queryClient.invalidateQueries({ queryKey: ['executions'] })
+      // Use refetchType: 'all' to force refetch even for inactive queries
+      await queryClient.invalidateQueries({
+        queryKey: ['schedules'],
+        refetchType: 'all'
+      })
+      await queryClient.invalidateQueries({
+        queryKey: ['calendar-schedules'],
+        refetchType: 'all'
+      })
+      await queryClient.invalidateQueries({
+        queryKey: ['executions'],
+        refetchType: 'all'
+      })
 
     } catch (error) {
       console.error('Failed to mark schedule as completed:', error)
