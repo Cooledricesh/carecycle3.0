@@ -13,6 +13,13 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -24,13 +31,14 @@ export function SignUpForm({
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [repeatPassword, setRepeatPassword] = useState("");
+  const [name, setName] = useState("");
+  const [role, setRole] = useState<"nurse" | "doctor">("nurse");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
-    const supabase = createClient();
     setIsLoading(true);
     setError(null);
 
@@ -40,16 +48,32 @@ export function SignUpForm({
       return;
     }
 
+    if (!name.trim()) {
+      setError("이름을 입력해주세요.");
+      setIsLoading(false);
+      return;
+    }
+
     try {
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL || window.location.origin;
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: `${appUrl}/dashboard`,
+      const response = await fetch("/api/auth/signup", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
         },
+        body: JSON.stringify({
+          email,
+          password,
+          name,
+          role,
+        }),
       });
-      if (error) throw error;
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "회원가입 중 오류가 발생했습니다.");
+      }
+
       router.push("/auth/signup-success");
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : "회원가입 중 오류가 발생했습니다.");
@@ -74,6 +98,17 @@ export function SignUpForm({
           <form onSubmit={handleSignUp}>
             <div className="flex flex-col gap-6">
               <div className="grid gap-2">
+                <Label htmlFor="name">이름</Label>
+                <Input
+                  id="name"
+                  type="text"
+                  placeholder="홍길동"
+                  required
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                />
+              </div>
+              <div className="grid gap-2">
                 <Label htmlFor="email">이메일</Label>
                 <Input
                   id="email"
@@ -83,6 +118,18 @@ export function SignUpForm({
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                 />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="role">직군</Label>
+                <Select value={role} onValueChange={(value: "nurse" | "doctor") => setRole(value)}>
+                  <SelectTrigger id="role">
+                    <SelectValue placeholder="직군을 선택하세요" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="nurse">스텝</SelectItem>
+                    <SelectItem value="doctor">의사</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div className="grid gap-2">
                 <div className="flex items-center">
