@@ -44,6 +44,8 @@ import { createClient } from '@/lib/supabase/client';
 import { scheduleServiceEnhanced } from '@/services/scheduleServiceEnhanced';
 import { useFilterContext } from '@/lib/filters/filter-context';
 import { Check } from 'lucide-react';
+import { useScheduleRefetch } from '@/hooks/useScheduleRefetch';
+import { eventManager } from '@/lib/events/schedule-event-manager';
 
 interface CalendarViewProps {
   className?: string;
@@ -68,6 +70,8 @@ export function CalendarView({ className }: CalendarViewProps) {
   const { filters } = useFilterContext();
   const { data: profile } = useProfile();
 
+  useScheduleRefetch();
+
   // 캘린더용 스케줄 데이터 가져오기 (완료 이력 포함)
   const { data: schedules = [], isLoading, refetch } = useCalendarSchedules(currentDate);
 
@@ -85,12 +89,10 @@ export function CalendarView({ className }: CalendarViewProps) {
     setDialogOpen
   } = useScheduleCompletion();
 
-  // Wrap handleSubmit to reload page after completion
-  // See: /docs/CALENDAR-REALTIME-UPDATE-SOLUTION.md for why we use window.location.reload()
   const handleSubmit = async () => {
     await originalHandleSubmit();
-    // Reload page to ensure fresh data (simple and reliable)
-    window.location.reload();
+    scheduleServiceEnhanced.clearCache();
+    eventManager.emitScheduleChange();
   };
 
 
@@ -236,8 +238,8 @@ export function CalendarView({ className }: CalendarViewProps) {
           : "스케줄이 재개되었습니다.",
       });
 
-      // Reload page to ensure fresh data (see: /docs/CALENDAR-REALTIME-UPDATE-SOLUTION.md)
-      window.location.reload();
+      scheduleServiceEnhanced.clearCache();
+      eventManager.emitScheduleChange();
     },
     onError: (error) => {
       const message = mapErrorToUserMessage(error);
@@ -257,8 +259,8 @@ export function CalendarView({ className }: CalendarViewProps) {
         description: "스케줄이 삭제되었습니다.",
       });
 
-      // Reload page to ensure fresh data (see: /docs/CALENDAR-REALTIME-UPDATE-SOLUTION.md)
-      window.location.reload();
+      scheduleServiceEnhanced.clearCache();
+      eventManager.emitScheduleChange();
     },
     onError: (error) => {
       const message = mapErrorToUserMessage(error);
@@ -298,8 +300,8 @@ export function CalendarView({ className }: CalendarViewProps) {
       setResumeDialogOpen(false);
       setSelectedScheduleForResume(null);
 
-      // Reload page to ensure fresh data (see: /docs/CALENDAR-REALTIME-UPDATE-SOLUTION.md)
-      window.location.reload();
+      scheduleServiceEnhanced.clearCache();
+      eventManager.emitScheduleChange();
     } catch (error) {
       toast({
         title: "오류",

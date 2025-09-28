@@ -7,6 +7,8 @@ import { useAuth } from '@/providers/auth-provider-simple'
 import { scheduleService } from '@/services/scheduleService'
 import type { ScheduleWithDetails } from '@/types/schedule'
 import { format } from 'date-fns'
+import { eventManager } from '@/lib/events/schedule-event-manager'
+import { scheduleServiceEnhanced } from '@/services/scheduleServiceEnhanced'
 
 interface UseScheduleCompletionReturn {
   selectedSchedule: ScheduleWithDetails | null
@@ -68,23 +70,10 @@ export function useScheduleCompletion(): UseScheduleCompletionReturn {
         description: `${selectedSchedule.patient?.name}님의 ${selectedSchedule.item?.name} 일정이 완료 처리되었습니다.`,
       })
 
-      // Reset state and close dialog
       reset()
 
-      // Invalidate to fetch fresh data from server
-      // Use refetchType: 'all' to force refetch even for inactive queries
-      await queryClient.invalidateQueries({
-        queryKey: ['schedules'],
-        refetchType: 'all'
-      })
-      await queryClient.invalidateQueries({
-        queryKey: ['calendar-schedules'],
-        refetchType: 'all'
-      })
-      await queryClient.invalidateQueries({
-        queryKey: ['executions'],
-        refetchType: 'all'
-      })
+      scheduleServiceEnhanced.clearCache()
+      eventManager.emitScheduleChange()
 
     } catch (error) {
       console.error('Failed to mark schedule as completed:', error)

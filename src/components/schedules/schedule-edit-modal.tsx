@@ -133,9 +133,11 @@ export function ScheduleEditModal({
   const editMutation = useMutation({
     mutationFn: (data: ScheduleEditInput) => scheduleService.editSchedule(schedule.id, data),
     onSuccess: () => {
-      // scheduleServiceEnhanced의 캐시도 클리어
+      // scheduleServiceEnhanced의 캐시도 클리어하고 이벤트 발행
       const { scheduleServiceEnhanced } = require('@/services/scheduleServiceEnhanced')
+      const { eventManager } = require('@/lib/events/schedule-event-manager')
       scheduleServiceEnhanced.clearCache()
+      eventManager.emitScheduleChange()
 
       queryClient.invalidateQueries({ queryKey: ['schedules'] })
       queryClient.invalidateQueries({ queryKey: ['overdueSchedules'] })

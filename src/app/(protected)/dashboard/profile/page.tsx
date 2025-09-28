@@ -76,16 +76,35 @@ export default function ProfilePage() {
         throw new Error("프로필 정보를 찾을 수 없습니다");
       }
 
+      const updateData: {
+        name: string;
+        phone: string;
+        care_type?: string | null;
+      } = {
+        name: formData.name,
+        phone: formData.phone,
+      };
+
+      if (profile.role === 'nurse') {
+        updateData.care_type = formData.care_type || null;
+      } else {
+        updateData.care_type = null;
+      }
+
       const { error } = await supabase
         .from("profiles")
-        .update({
-          name: formData.name,
-          phone: formData.phone,
-          care_type: formData.care_type,
-        })
+        .update(updateData)
         .eq("id", profile.id);
-      
-      if (error) throw error;
+
+      if (error) {
+        console.error("Profile update Supabase error:", {
+          code: error.code,
+          message: error.message,
+          details: error.details,
+          hint: error.hint
+        });
+        throw new Error(error.message || "프로필 업데이트에 실패했습니다.");
+      }
 
       // Refresh profile data
       const { data: updatedProfile } = await supabase
@@ -94,16 +113,17 @@ export default function ProfilePage() {
         .eq('id', user?.id)
         .single();
       if (updatedProfile) setProfile(updatedProfile);
-      
+
       toast({
         title: "프로필 업데이트 완료",
         description: "프로필 정보가 성공적으로 업데이트되었습니다.",
       });
     } catch (error) {
       console.error("Profile update error:", error);
+      const message = error instanceof Error ? error.message : "프로필 업데이트 중 오류가 발생했습니다.";
       toast({
         title: "업데이트 실패",
-        description: "프로필 업데이트 중 오류가 발생했습니다.",
+        description: message,
         variant: "destructive",
       });
     } finally {
@@ -282,21 +302,29 @@ export default function ProfilePage() {
                     </div>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="care_type">진료 유형</Label>
-                    <div className="relative">
-                      <Building className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                      <Input
-                        id="care_type"
-                        value={formData.care_type}
-                        onChange={(e) =>
-                          setFormData({ ...formData, care_type: e.target.value })
-                        }
-                        className={`pl-10 ${touchTarget.input}`}
-                        placeholder="진료 유형"
-                      />
+                  {profile.role === 'nurse' && (
+                    <div className="space-y-2">
+                      <Label htmlFor="care_type">진료 유형</Label>
+                      <div className="relative">
+                        <Building className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                        <Select
+                          value={formData.care_type}
+                          onValueChange={(value) =>
+                            setFormData({ ...formData, care_type: value })
+                          }
+                        >
+                          <SelectTrigger className={`pl-10 ${touchTarget.input}`}>
+                            <SelectValue placeholder="진료 유형 선택" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="외래">외래</SelectItem>
+                            <SelectItem value="입원">입원</SelectItem>
+                            <SelectItem value="낮병원">낮병원</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
 
                 <div className={`flex ${isMobile ? 'w-full' : 'justify-end'}`}>

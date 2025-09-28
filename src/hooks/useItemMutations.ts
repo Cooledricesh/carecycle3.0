@@ -10,6 +10,8 @@ import {
 } from '@/lib/api/items'
 import type { Item, ItemInsert } from '@/lib/database.types'
 import { mapErrorToUserMessage } from '@/lib/error-mapper'
+import { scheduleServiceEnhanced } from '@/services/scheduleServiceEnhanced'
+import { eventManager } from '@/lib/events/schedule-event-manager'
 
 export function useItemMutations() {
   const queryClient = useQueryClient()
@@ -22,6 +24,8 @@ export function useItemMutations() {
     mutationFn: (data: Omit<ItemInsert, 'id' | 'created_at' | 'updated_at' | 'code'>) =>
       createItem(data),
     onSuccess: () => {
+      scheduleServiceEnhanced.clearCache()
+      eventManager.emitScheduleChange()
       queryClient.invalidateQueries({ queryKey: ['items'] })
       toast({
         title: '항목 추가 완료',
@@ -61,6 +65,8 @@ export function useItemMutations() {
       return { previousItems }
     },
     onSuccess: () => {
+      scheduleServiceEnhanced.clearCache()
+      eventManager.emitScheduleChange()
       queryClient.invalidateQueries({ queryKey: ['items'] })
       toast({
         title: '항목 수정 완료',
@@ -102,6 +108,8 @@ export function useItemMutations() {
       return { previousItems }
     },
     onSuccess: () => {
+      scheduleServiceEnhanced.clearCache()
+      eventManager.emitScheduleChange()
       queryClient.invalidateQueries({ queryKey: ['items'] })
       toast({
         title: '항목 삭제 완료',
@@ -146,6 +154,8 @@ export function useItemMutations() {
       return { previousItems }
     },
     onSuccess: (_, variables) => {
+      scheduleServiceEnhanced.clearCache()
+      eventManager.emitScheduleChange()
       queryClient.invalidateQueries({ queryKey: ['items'] })
       toast({
         title: '상태 변경 완료',

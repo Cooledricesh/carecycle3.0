@@ -6,6 +6,8 @@ import { useToast } from '@/hooks/use-toast'
 import { ScheduleStateManager, type PauseOptions, type ResumeOptions } from '@/lib/schedule-management/schedule-state-manager'
 import { ScheduleStateValidator } from '@/lib/schedule-management/schedule-state-validator'
 import type { Schedule } from '@/types/schedule'
+import { scheduleServiceEnhanced } from '@/services/scheduleServiceEnhanced'
+import { eventManager } from '@/lib/events/schedule-event-manager'
 
 export interface UseScheduleStateReturn {
   isPausing: boolean
@@ -69,7 +71,8 @@ export function useScheduleState(schedule: Schedule | null): UseScheduleStateRet
       await stateManager.pauseSchedule(id, options)
     },
     onSuccess: (_, variables) => {
-      // Invalidate related queries
+      scheduleServiceEnhanced.clearCache()
+      eventManager.emitScheduleChange()
       queryClient.invalidateQueries({ queryKey: ['schedules'] })
       queryClient.invalidateQueries({ queryKey: ['schedule', variables.id] })
       queryClient.invalidateQueries({ queryKey: ['schedule-executions'] })
@@ -99,7 +102,8 @@ export function useScheduleState(schedule: Schedule | null): UseScheduleStateRet
       await stateManager.resumeSchedule(id, options)
     },
     onSuccess: (_, variables) => {
-      // Invalidate related queries
+      scheduleServiceEnhanced.clearCache()
+      eventManager.emitScheduleChange()
       queryClient.invalidateQueries({ queryKey: ['schedules'] })
       queryClient.invalidateQueries({ queryKey: ['schedule', variables.id] })
       queryClient.invalidateQueries({ queryKey: ['schedule-executions'] })
@@ -196,6 +200,8 @@ export function useBulkScheduleState() {
       return { succeeded, failed, total: scheduleIds.length }
     },
     onSuccess: (data) => {
+      scheduleServiceEnhanced.clearCache()
+      eventManager.emitScheduleChange()
       queryClient.invalidateQueries({ queryKey: ['schedules'] })
 
       toast({
@@ -224,6 +230,8 @@ export function useBulkScheduleState() {
       return { succeeded, failed, total: items.length }
     },
     onSuccess: (data) => {
+      scheduleServiceEnhanced.clearCache()
+      eventManager.emitScheduleChange()
       queryClient.invalidateQueries({ queryKey: ['schedules'] })
 
       toast({

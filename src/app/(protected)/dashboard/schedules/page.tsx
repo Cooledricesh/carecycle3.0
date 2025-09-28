@@ -38,6 +38,8 @@ import { SimpleFilterToggle } from "@/components/filters/SimpleFilterToggle";
 import { useProfile } from "@/hooks/useProfile";
 import { useFilterContext } from "@/lib/filters/filter-context";
 import { useAuth } from "@/providers/auth-provider-simple";
+import { scheduleServiceEnhanced } from "@/services/scheduleServiceEnhanced";
+import { eventManager } from "@/lib/events/schedule-event-manager";
 
 // Schedule type used in this component that supports both snake_case and camelCase
 // Represents the transformed data from useFilteredSchedules
@@ -118,20 +120,17 @@ function SchedulesContent() {
   const loading = schedulesLoading || overdueLoading;
   const error = schedulesError || overdueError;
 
-  const refetchAll = () => {
-    refetchSchedules();
-    refetchOverdue();
-  };
-
   const deleteMutation = useMutation({
     mutationFn: scheduleService.delete,
     onSuccess: async () => {
+      scheduleServiceEnhanced.clearCache();
+      eventManager.emitScheduleChange();
+
       toast({
         title: "성공",
         description: "스케줄이 삭제되었습니다.",
       });
 
-      // 단순한 키로 무효화
       await queryClient.invalidateQueries({ queryKey: ['schedules'] });
     },
     onError: (error) => {
@@ -155,6 +154,9 @@ function SchedulesContent() {
     mutationFn: ({ id, status }: { id: string; status: 'active' | 'paused' }) =>
       scheduleService.updateStatus(id, status),
     onSuccess: async (_, variables) => {
+      scheduleServiceEnhanced.clearCache();
+      eventManager.emitScheduleChange();
+
       toast({
         title: "성공",
         description: variables.status === 'paused'
@@ -162,7 +164,6 @@ function SchedulesContent() {
           : "스케줄이 재개되었습니다.",
       });
 
-      // 단순한 키로 무효화
       await queryClient.invalidateQueries({ queryKey: ['schedules'] });
     },
     onError: (error) => {
@@ -193,6 +194,9 @@ function SchedulesContent() {
     try {
       await scheduleService.resumeSchedule(selectedScheduleForResume.id, options);
 
+      scheduleServiceEnhanced.clearCache();
+      eventManager.emitScheduleChange();
+
       toast({
         title: "성공",
         description: "스케줄이 재개되었습니다.",
@@ -201,7 +205,6 @@ function SchedulesContent() {
       setResumeDialogOpen(false);
       setSelectedScheduleForResume(null);
 
-      // 단순한 키로 무효화
       await queryClient.invalidateQueries({ queryKey: ['schedules'] });
     } catch (error) {
       toast({
@@ -254,8 +257,7 @@ function SchedulesContent() {
           </p>
         </div>
         <div className={isMobile ? 'w-full' : ''}>
-          <ScheduleCreateModal 
-            onSuccess={refetchAll}
+          <ScheduleCreateModal
             triggerClassName={`${isMobile ? 'w-full' : ''}`}
           />
         </div>
@@ -346,7 +348,11 @@ function SchedulesContent() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={refetchAll}
+                      onClick={() => {
+                        scheduleServiceEnhanced.clearCache();
+                        refetchSchedules();
+                        refetchOverdue();
+                      }}
                       className="ml-4"
                     >
                       <RefreshCw className="h-4 w-4 mr-2" />
@@ -437,7 +443,6 @@ function SchedulesContent() {
                               ) : null}
                               <ScheduleEditModal
                                 schedule={scheduleItem as any}
-                                onSuccess={refetchAll}
                                 triggerButton={
                                   <Button
                                     size="default"
@@ -530,7 +535,6 @@ function SchedulesContent() {
                                 ) : null}
                                 <ScheduleEditModal
                                   schedule={scheduleItem as any}
-                                  onSuccess={refetchAll}
                                   triggerButton={
                                     <Button
                                       size="sm"

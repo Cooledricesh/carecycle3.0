@@ -7,6 +7,8 @@ import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import type { Profile } from '@/lib/database.types';
 import { useToast } from '@/hooks/use-toast';
+import { eventManager } from '@/lib/events/schedule-event-manager';
+import { useQueryClient } from '@tanstack/react-query';
 
 export default function DebugProfilePage() {
   const { user, loading } = useAuth();
@@ -14,6 +16,7 @@ export default function DebugProfilePage() {
   const [creating, setCreating] = useState(false);
   const supabase = createClient();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   
   useEffect(() => {
     if (user) {
@@ -60,12 +63,15 @@ export default function DebugProfilePage() {
 
       toast({
         title: '성공',
-        description: '프로필이 생성되었습니다. 페이지를 새로고침합니다.',
+        description: '프로필이 생성되었습니다.',
       });
 
+      eventManager.emitProfileChange();
+      queryClient.invalidateQueries({ queryKey: ['profile'] });
+
       setTimeout(() => {
-        window.location.reload();
-      }, 1500);
+        setProfile(data);
+      }, 500);
     } catch (error) {
       console.error('Profile creation error:', error);
       toast({

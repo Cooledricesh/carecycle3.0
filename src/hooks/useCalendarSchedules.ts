@@ -1,6 +1,7 @@
 'use client'
 
 import { useQuery } from '@tanstack/react-query'
+import { useEffect } from 'react'
 import { scheduleServiceEnhanced } from '@/services/scheduleServiceEnhanced'
 import { useFilterContext } from '@/lib/filters/filter-context'
 import { useAuth } from '@/providers/auth-provider-simple'
@@ -27,6 +28,11 @@ export function useCalendarSchedules(currentDate: Date) {
   // Calculate date range for the month
   const monthStart = format(startOfMonth(currentDate), 'yyyy-MM-dd')
   const monthEnd = format(endOfMonth(currentDate), 'yyyy-MM-dd')
+
+  // Clear scheduleServiceEnhanced cache on mount to ensure fresh data
+  useEffect(() => {
+    scheduleServiceEnhanced.clearCache()
+  }, [monthStart, monthEnd])
 
   return useQuery({
     queryKey: ['calendar-schedules', monthStart, monthEnd, user?.id, profile?.role, profile?.care_type, filters],
@@ -78,8 +84,8 @@ export function useCalendarSchedules(currentDate: Date) {
       }
     },
     enabled: !!user && !authLoading && !!profile && !profileLoading,
-    staleTime: 0, // Immediate refetch on invalidation
-    refetchOnMount: 'always' // Always refetch when component mounts (for cross-page updates)
+    staleTime: 0,
+    refetchOnMount: 'always'
   })
 }
 
