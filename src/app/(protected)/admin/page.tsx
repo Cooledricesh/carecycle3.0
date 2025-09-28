@@ -1,16 +1,21 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { ActivityStatsCards } from '@/components/admin/activity-stats-cards'
 import { ActivityFeed } from '@/components/admin/activity-feed'
 import { useActivityStats } from '@/hooks/useActivityStats'
+import type { ActivityFilters } from '@/types/activity'
 
 export default function AdminPage() {
   const router = useRouter()
   const supabase = createClient()
   const { data: stats, isLoading } = useActivityStats()
+  const [filters, setFilters] = useState<ActivityFilters>({
+    page: 1,
+    limit: 20,
+  })
 
   useEffect(() => {
     async function checkAuth() {
@@ -50,7 +55,7 @@ export default function AdminPage() {
 
       <div>
         <h2 className="text-2xl font-semibold mb-4">활동 로그</h2>
-        <ActivityFeed />
+        <ActivityFeed filters={filters} onFiltersChange={setFilters} />
       </div>
     </div>
   )
