@@ -70,19 +70,17 @@ export function FilterProviderEnhanced({
     // 1. Try URL params first (highest priority)
     if (persistToUrl) {
       const careTypesParam = searchParams.get('careTypes')
-      const departmentParam = searchParams.get('department')
       const doctorIdParam = searchParams.get('doctorId')
       const showAllParam = searchParams.get('showAll')
       const viewModeParam = searchParams.get('viewMode')
 
-      if (careTypesParam || departmentParam || doctorIdParam || showAllParam) {
+      if (careTypesParam || doctorIdParam || showAllParam) {
         return {
           ...defaultFilters,
           careTypes: careTypesParam
             ? (careTypesParam.split(',').filter(t =>
                 ['외래', '입원', '낮병원'].includes(t)) as CareType[])
             : [],
-          department: departmentParam || null,
           doctorId: doctorIdParam || null,
           showAll: showAllParam === 'true',
           viewMode: (viewModeParam as 'my' | 'all') || 'my'
@@ -170,12 +168,6 @@ export function FilterProviderEnhanced({
         params.set('careTypes', filters.careTypes.join(','))
       } else {
         params.delete('careTypes')
-      }
-
-      if (filters.department) {
-        params.set('department', filters.department)
-      } else {
-        params.delete('department')
       }
 
       if (filters.doctorId) {

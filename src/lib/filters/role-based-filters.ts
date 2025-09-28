@@ -139,8 +139,6 @@ export class RoleBasedFilterManager {
       case 'nurse':
         if (filters.showAll) {
           parts.push('전체 환자')
-        } else if (filters.department) {
-          parts.push(`${filters.department} 환자`)
         } else {
           parts.push('소속 부서 환자')
         }

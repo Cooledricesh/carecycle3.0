@@ -10,9 +10,6 @@ export interface ScheduleFilter {
   // 주치의 필터 (향후 구현 대비)
   doctorId?: string | null
 
-  // 부서 필터 (선택적)
-  department?: string | null
-
   // 날짜 범위 필터 (선택적)
   dateRange?: {
     start: string // yyyy-MM-dd format
@@ -38,7 +35,6 @@ export interface FilterState {
 export const defaultFilters: ScheduleFilter = {
   careTypes: [], // 빈 배열 = 모든 타입 표시
   doctorId: null,
-  department: null,
   dateRange: null,
   includeInactive: false,
   showAll: false, // 기본적으로 역할 기반 필터 적용
@@ -50,7 +46,6 @@ export const hasActiveFilters = (filters: ScheduleFilter): boolean => {
   return (
     filters.careTypes.length > 0 ||
     filters.doctorId !== null ||
-    filters.department !== null ||
     filters.dateRange !== null ||
     filters.includeInactive === true ||
     filters.showAll === true ||

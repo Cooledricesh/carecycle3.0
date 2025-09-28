@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from "react"
-import { Clock, AlertCircle } from "lucide-react"
+import { Clock, AlertCircle, Check, PauseCircle } from "lucide-react"
 import { getScheduleCategoryIcon, getScheduleCategoryColor, getScheduleCategoryBgColor, getScheduleCategoryLabel, getScheduleCardBgColor } from '@/lib/utils/schedule-category'
 import { Badge } from "@/components/ui/badge"
 import { useIsMobile } from "@/hooks/useIsMobile"
@@ -36,6 +36,8 @@ export function CalendarDayCard({
   const statusInfo = getScheduleStatusLabel(schedule)
   const isOverdue = statusInfo.variant === 'overdue'
   const isToday = statusInfo.variant === 'today'
+  const isCompleted = (schedule as any).display_type === 'completed'
+  const isPaused = schedule.status === 'paused'
 
   useEffect(() => {
     if (editModalOpen && triggerRef.current) {
@@ -51,10 +53,15 @@ export function CalendarDayCard({
     <div
       className={`
         ${isMobile ? 'p-3' : 'p-4'} border rounded-lg transition-all hover:shadow-sm
-        ${getScheduleCardBgColor(category)}
-        ${isOverdue ? 'border-red-200' :
+        ${isCompleted ? 'bg-gray-50 opacity-75' :
+          isPaused ? 'bg-gray-50 opacity-75' :
+          getScheduleCardBgColor(category)}
+        ${isCompleted ? 'border-gray-300' :
+          isPaused ? 'border-gray-300 border-dashed' :
+          isOverdue ? 'border-red-200' :
           isToday ? 'border-orange-200' :
           'border-gray-200 hover:border-gray-300'}
+        ${isPaused ? 'scale-95' : ''}
       `}
     >
       <div className={`flex flex-col gap-3`}>
@@ -63,15 +70,27 @@ export function CalendarDayCard({
           <div className={`space-y-1 flex-1`}>
             {/* 환자명과 상태 배지 */}
             <div className={`flex items-center gap-2 ${isMobile ? 'flex-wrap' : ''}`}>
-              <h4 className={`font-semibold text-gray-900 ${isMobile ? 'text-sm' : ''}`}>
+              <h4 className={`font-semibold ${isCompleted ? 'text-gray-600 line-through' : 'text-gray-900'} ${isMobile ? 'text-sm' : ''}`}>
                 {schedule.patient_name || '환자 정보 없음'}
               </h4>
-              <Badge className={`text-xs ${getStatusBadgeClass(statusInfo.variant)}`}>
-                {statusInfo.variant === 'overdue' && (
-                  <AlertCircle className={`${isMobile ? 'h-2.5 w-2.5' : 'h-3 w-3'} mr-1`} />
-                )}
-                {statusInfo.label}
-              </Badge>
+              {isCompleted ? (
+                <Badge className="text-xs bg-gray-200 text-gray-600">
+                  <Check className={`${isMobile ? 'h-2.5 w-2.5' : 'h-3 w-3'} mr-1`} />
+                  완료됨
+                </Badge>
+              ) : isPaused ? (
+                <Badge className="text-xs bg-gray-200 text-gray-600">
+                  <PauseCircle className={`${isMobile ? 'h-2.5 w-2.5' : 'h-3 w-3'} mr-1`} />
+                  일시중지
+                </Badge>
+              ) : (
+                <Badge className={`text-xs ${getStatusBadgeClass(statusInfo.variant)}`}>
+                  {statusInfo.variant === 'overdue' && (
+                    <AlertCircle className={`${isMobile ? 'h-2.5 w-2.5' : 'h-3 w-3'} mr-1`} />
+                  )}
+                  {statusInfo.label}
+                </Badge>
+              )}
             </div>
 
             {/* 검사/주사 정보 */}
@@ -84,7 +103,7 @@ export function CalendarDayCard({
                   <IconComponent className={`h-4 w-4 ${getScheduleCategoryColor(category)}`} />
                 ) : null;
               })()}
-              <span className="font-medium">{schedule.item_name || '항목 정보 없음'}</span>
+              <span className={`font-medium ${isPaused ? 'text-gray-500' : ''}`}>{schedule.item_name || '항목 정보 없음'}</span>
               {category && (
                 <span className={`px-2 py-0.5 rounded-full text-xs ${getScheduleCategoryBgColor(category)} ${getScheduleCategoryColor(category)}`}>
                   {getScheduleCategoryLabel(category)}
@@ -116,30 +135,32 @@ export function CalendarDayCard({
           </div>
         )}
         
-        {/* 액션 버튼들 */}
-        <div className="pt-2 border-t">
-          <ScheduleActionButtons
-            schedule={schedule}
-            variant={isMobile ? 'default' : 'compact'}
-            showStatus={false}
-            onComplete={onComplete}
-            onPause={onPause}
-            onResume={onResume}
-            onEdit={() => setEditModalOpen(true)}
-            onDelete={onDelete}
-          />
-          <ScheduleEditModal
-            schedule={schedule}
-            onSuccess={onRefresh}
-            triggerButton={
-              <button
-                ref={triggerRef}
-                style={{ display: 'none' }}
-                aria-hidden="true"
-              />
-            }
-          />
-        </div>
+        {/* 액션 버튼들 - 완료된 항목은 버튼 숨기기 */}
+        {!isCompleted && (
+          <div className="pt-2 border-t">
+            <ScheduleActionButtons
+              schedule={schedule}
+              variant={isMobile ? 'default' : 'compact'}
+              showStatus={false}
+              onComplete={onComplete}
+              onPause={onPause}
+              onResume={onResume}
+              onEdit={() => setEditModalOpen(true)}
+              onDelete={onDelete}
+            />
+            <ScheduleEditModal
+              schedule={schedule}
+              onSuccess={onRefresh}
+              triggerButton={
+                <button
+                  ref={triggerRef}
+                  style={{ display: 'none' }}
+                  aria-hidden="true"
+                />
+              }
+            />
+          </div>
+        )}
       </div>
     </div>
   )

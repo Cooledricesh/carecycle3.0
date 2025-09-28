@@ -26,7 +26,7 @@ import { useProfile } from '@/hooks/useProfile';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { useFilteredSchedules } from '@/hooks/useFilteredSchedules';
+import { useCalendarSchedules } from '@/hooks/useCalendarSchedules';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { CalendarDayCard } from '@/components/calendar/calendar-day-card';
 import { ScheduleCompletionDialog } from '@/components/schedules/schedule-completion-dialog';
@@ -36,12 +36,13 @@ import type { ScheduleWithDetails, Schedule } from '@/types/schedule';
 import type { ScheduleStatus } from '@/lib/database.types';
 import { safeFormatDate, safeParse } from '@/lib/utils/date';
 import { scheduleService } from '@/services/scheduleService';
-import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
 import { mapErrorToUserMessage } from '@/lib/error-mapper';
 import { createClient } from '@/lib/supabase/client';
 import { scheduleServiceEnhanced } from '@/services/scheduleServiceEnhanced';
 import { useFilterContext } from '@/lib/filters/filter-context';
+import { Check } from 'lucide-react';
 
 interface CalendarViewProps {
   className?: string;
@@ -66,8 +67,8 @@ export function CalendarView({ className }: CalendarViewProps) {
   const { filters } = useFilterContext();
   const { data: profile } = useProfile();
 
-  // 모든 스케줄 데이터 가져오기
-  const { schedules = [], isLoading, refetch } = useFilteredSchedules();
+  // 캘린더용 스케줄 데이터 가져오기 (완료 이력 포함)
+  const { data: schedules = [], isLoading, refetch } = useCalendarSchedules(currentDate);
 
   // 완료 처리를 위한 상태 관리 (useScheduleCompletion 훅 대신 직접 관리)
   const [selectedSchedule, setSelectedSchedule] = useState<ScheduleWithDetails | null>(null);
@@ -234,24 +235,24 @@ export function CalendarView({ className }: CalendarViewProps) {
     };
   }, [currentDate, schedules, calendarDays]);
 
-  // 이번달 완료 횟수 쿼리
-  const { data: monthlyExecutions = 0 } = useQuery({
-    queryKey: ['executions', format(currentDate, 'yyyy-MM')], // Simplified key
-    queryFn: async () => {
-      const monthStart = startOfMonth(currentDate);
-      const monthEnd = endOfMonth(currentDate);
+  // 이번달 완료 횟수 - 이미 가져온 schedules 데이터에서 계산
+  const monthlyExecutions = useMemo(() => {
+    const monthStart = startOfMonth(currentDate);
+    const monthEnd = endOfMonth(currentDate);
 
-      const { count } = await supabase
-        .from('schedule_executions')
-        .select('*', { count: 'exact', head: true })
-        .eq('status', 'completed')
-        .gte('executed_date', format(monthStart, 'yyyy-MM-dd'))
-        .lte('executed_date', format(monthEnd, 'yyyy-MM-dd'));
+    // RPC 함수에서 이미 가져온 데이터에서 completed 타입만 필터링
+    const completedSchedules = schedules.filter(schedule => {
+      const displayType = (schedule as any).display_type;
+      const dueDateValue = schedule.next_due_date || schedule.nextDueDate;
 
-      return count || 0;
-    },
-    enabled: !!supabase
-  });
+      if (!dueDateValue || displayType !== 'completed') return false;
+
+      const scheduleDate = safeParse(dueDateValue);
+      return scheduleDate && scheduleDate >= monthStart && scheduleDate <= monthEnd;
+    });
+
+    return completedSchedules.length;
+  }, [currentDate, schedules]);
 
   const navigateMonth = (direction: 'prev' | 'next') => {
     setCurrentDate(prev => 
@@ -558,9 +559,12 @@ export function CalendarView({ className }: CalendarViewProps) {
             {calendarDays.map((day) => {
               const dayScheduleCount = day.schedules.length;
               const hasActiveSchedules = day.schedules.some(s => s.status === 'active');
+              const hasCompletedSchedules = day.schedules.some(s =>
+                (s as any).display_type === 'completed' || s.status === 'completed'
+              );
               const hasOverdueSchedules = day.schedules.some(s => {
                 const statusInfo = getScheduleStatusLabel(s);
-                return statusInfo.variant === 'overdue';
+                return statusInfo.variant === 'overdue' && (s as any).display_type !== 'completed' && s.status === 'active';
               });
               
               return (
@@ -610,14 +614,21 @@ export function CalendarView({ className }: CalendarViewProps) {
                   {/* 스케줄 유형별 카운트 - 모바일에서 더 컴팩트하게 */}
                   <div className={`flex flex-wrap ${isMobile ? 'gap-0.5' : 'gap-1'}`}>
                     {(() => {
-                      const injectionCount = day.schedules.filter(s => {
+                      const activeSchedules = day.schedules.filter(s =>
+                        (s as any).display_type !== 'completed'
+                      );
+                      const completedSchedules = day.schedules.filter(s =>
+                        (s as any).display_type === 'completed'
+                      );
+                      const injectionCount = activeSchedules.filter(s => {
                         const category = s.item_category;
                         return category === 'injection';
                       }).length;
-                      const testCount = day.schedules.filter(s => {
+                      const testCount = activeSchedules.filter(s => {
                         const category = s.item_category;
                         return category === 'test';
                       }).length;
+                      const completedCount = completedSchedules.length;
 
                       return (
                         <>
@@ -635,6 +646,15 @@ export function CalendarView({ className }: CalendarViewProps) {
                               rounded-full bg-emerald-100 text-emerald-700 font-medium border border-emerald-200
                             `}>
                               {isMobile ? `검${testCount}` : `검사 ${testCount}`}
+                            </div>
+                          )}
+                          {completedCount > 0 && (
+                            <div className={`
+                              ${isMobile ? 'text-xs px-1 py-0.5' : 'text-xs px-2 py-1'}
+                              rounded-full bg-gray-100 text-gray-600 font-medium border border-gray-200 flex items-center gap-0.5
+                            `}>
+                              <Check className={`${isMobile ? 'h-2 w-2' : 'h-2.5 w-2.5'}`} />
+                              {completedCount}
                             </div>
                           )}
                         </>
@@ -679,17 +699,27 @@ export function CalendarView({ className }: CalendarViewProps) {
               </div>
             ) : (
               <div className={`space-y-3 ${isMobile ? 'max-h-[60vh] overflow-y-auto' : ''}`}>
-                {selectedDateSchedules.map((schedule) => (
-                  <CalendarDayCard
-                    key={schedule.id || schedule.schedule_id || `schedule-${schedule.patient_id}-${schedule.item_id}`}
-                    schedule={schedule}
-                    onComplete={() => handleComplete(schedule)}
-                    onPause={() => handlePauseSchedule(schedule.id || schedule.schedule_id)}
-                    onResume={() => handleResumeSchedule(schedule)}
-                    onDelete={() => handleDeleteSchedule(schedule.id || schedule.schedule_id)}
-                    onRefresh={refreshData}
-                  />
-                ))}
+                {selectedDateSchedules.map((schedule, index) => {
+                  const displayType = (schedule as any).display_type || 'scheduled';
+                  const executionId = (schedule as any).execution_id;
+                  const scheduleId = schedule.id || schedule.schedule_id;
+                  // Create unique key based on display type and relevant ID
+                  const uniqueKey = displayType === 'completed' && executionId
+                    ? `execution-${executionId}`
+                    : `schedule-${scheduleId}-${index}`;
+
+                  return (
+                    <CalendarDayCard
+                      key={uniqueKey}
+                      schedule={schedule}
+                      onComplete={() => handleComplete(schedule)}
+                      onPause={() => handlePauseSchedule(scheduleId)}
+                      onResume={() => handleResumeSchedule(schedule)}
+                      onDelete={() => handleDeleteSchedule(scheduleId)}
+                      onRefresh={refreshData}
+                    />
+                  );
+                })}
               </div>
             )}
           </CardContent>

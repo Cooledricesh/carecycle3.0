@@ -229,7 +229,6 @@ export class FilterRecoveryManager {
 
     // Check field types
     if (filters.doctorId !== null && typeof filters.doctorId !== 'string') return false
-    if (filters.department !== null && typeof filters.department !== 'string') return false
 
     // Check boolean fields
     if (typeof filters.includeInactive !== 'boolean') return false
