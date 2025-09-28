@@ -383,8 +383,8 @@ CREATE INDEX IF NOT EXISTS idx_profiles_approved_by ON profiles (approved_by);
 CREATE INDEX IF NOT EXISTS idx_profiles_id_role_care_type ON profiles (id, role, care_type);
 
 -- Schedules indexes
-CREATE INDEX IF NOT EXISTS idx_schedules_patient ON schedules (patient_id);
-CREATE INDEX IF NOT EXISTS idx_schedules_item ON schedules (item_id);
+CREATE INDEX IF NOT EXISTS idx_schedules_patient_id ON schedules (patient_id);
+CREATE INDEX IF NOT EXISTS idx_schedules_item_id ON schedules (item_id);
 CREATE INDEX IF NOT EXISTS idx_schedules_status ON schedules (status);
 CREATE INDEX IF NOT EXISTS idx_schedules_next_due ON schedules (next_due_date) WHERE (status = 'active'::schedule_status);
 CREATE INDEX IF NOT EXISTS idx_schedules_active_due_date ON schedules (status, next_due_date) WHERE (status = 'active'::schedule_status);
@@ -396,8 +396,6 @@ CREATE INDEX IF NOT EXISTS idx_schedules_notification ON schedules (next_due_dat
 CREATE INDEX IF NOT EXISTS idx_schedules_composite ON schedules (patient_id, next_due_date, status);
 CREATE INDEX IF NOT EXISTS idx_schedules_interval ON schedules (interval_weeks);
 CREATE INDEX IF NOT EXISTS idx_schedules_created_by ON schedules (created_by);
-CREATE INDEX IF NOT EXISTS idx_schedules_patient_id ON schedules (patient_id);
-CREATE INDEX IF NOT EXISTS idx_schedules_item_id ON schedules (item_id);
 
 -- Schedule executions indexes
 CREATE INDEX IF NOT EXISTS idx_executions_schedule ON schedule_executions (schedule_id);
@@ -422,10 +420,9 @@ CREATE INDEX IF NOT EXISTS idx_notifications_pending_ready ON notifications (sta
 CREATE INDEX IF NOT EXISTS idx_notifications_schedule_state ON notifications (schedule_id, state) WHERE (state = ANY (ARRAY['pending'::notification_state, 'ready'::notification_state]));
 
 -- Schedule logs indexes
-CREATE INDEX IF NOT EXISTS idx_schedule_logs_schedule ON schedule_logs (schedule_id);
+CREATE INDEX IF NOT EXISTS idx_schedule_logs_schedule_id ON schedule_logs (schedule_id);
 CREATE INDEX IF NOT EXISTS idx_schedule_logs_changed_at ON schedule_logs (changed_at);
 CREATE INDEX IF NOT EXISTS idx_schedule_logs_changed_by ON schedule_logs (changed_by);
-CREATE INDEX IF NOT EXISTS idx_schedule_logs_schedule_id ON schedule_logs (schedule_id);
 CREATE INDEX IF NOT EXISTS idx_schedule_logs_schedule_action ON schedule_logs (schedule_id, action) WHERE (action = 'status_change'::text);
 
 -- Patient schedules indexes
@@ -713,6 +710,8 @@ $$;
 CREATE OR REPLACE FUNCTION capture_assignment_at_completion()
 RETURNS trigger
 LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'public'
 AS $$
 BEGIN
   -- Only capture on completion
