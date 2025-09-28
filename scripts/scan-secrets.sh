@@ -6,7 +6,7 @@ echo ""
 PATTERNS=(
   'sb_secret_[a-zA-Z0-9_]+'
   'sb_publishable_[a-zA-Z0-9_]+'
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9'
+  'eyJhbGci[A-Za-z0-9+/=]+'
 )
 
 EXCLUDE_DIRS=(
