@@ -960,6 +960,10 @@ export const scheduleService = {
           id: item.schedule_id,
           schedule_id: item.schedule_id,
           patient_id: item.patient_id,
+          patient_care_type: item.care_type ?? null,
+          patient_number: item.patient_number ?? '',
+          doctor_id: item.doctor_id ?? null,
+          doctor_name: item.doctor_name ?? '',
           item_id: item.item_id,
           patient_name: item.patient_name,
           item_name: item.item_name,
@@ -972,11 +976,10 @@ export const scheduleService = {
           execution_id: item.execution_id,
           executed_by: item.executed_by,
           notes: item.execution_notes,
-          // Add placeholder fields that might be needed
           patient: {
             id: item.patient_id,
             name: item.patient_name,
-            careType: null,
+            careType: item.care_type ?? null,
             department: null
           },
           item: {

@@ -296,6 +296,7 @@ export async function PUT(
           if ('name' in updateData) jsonUpdates.name = updateData.name
           if ('patient_number' in updateData) jsonUpdates.patient_number = updateData.patient_number
           if ('care_type' in updateData) jsonUpdates.care_type = updateData.care_type
+          if ('department' in updateData) jsonUpdates.department = updateData.department
           if ('doctor_id' in updateData) jsonUpdates.doctor_id = updateData.doctor_id
           if ('is_active' in updateData) jsonUpdates.is_active = updateData.is_active
           if ('metadata' in updateData) jsonUpdates.metadata = updateData.metadata
