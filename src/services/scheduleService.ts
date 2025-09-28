@@ -271,14 +271,6 @@ export const scheduleService = {
             })
           }
 
-          // Filter by department
-          if (filters.department) {
-            schedules = schedules.filter(schedule => {
-              const department = (schedule as any).patient?.department
-              return department === filters.department
-            })
-          }
-
           // Filter by doctor (for "my patients" view)
           if (filters.doctorId) {
             schedules = schedules.filter(schedule => {
@@ -353,14 +345,6 @@ export const scheduleService = {
             schedules = schedules.filter(schedule => {
               const careType = schedule.patient_care_type || (schedule as any).patient?.careType
               return careType && filters.careTypes.includes(careType as any)
-            })
-          }
-
-          // Filter by department
-          if (filters.department) {
-            schedules = schedules.filter(schedule => {
-              const department = (schedule as any).patient?.department
-              return department === filters.department
             })
           }
 
@@ -979,8 +963,7 @@ export const scheduleService = {
           patient: {
             id: item.patient_id,
             name: item.patient_name,
-            careType: item.care_type ?? null,
-            department: null
+            careType: item.care_type ?? null
           },
           item: {
             id: item.item_id,
@@ -999,14 +982,6 @@ export const scheduleService = {
           schedules = schedules.filter(schedule => {
             const careType = schedule.patient_care_type || (schedule as any).patient?.careType
             return careType && filters.careTypes.includes(careType as any)
-          })
-        }
-
-        // Filter by department
-        if (filters.department) {
-          schedules = schedules.filter(schedule => {
-            const department = (schedule as any).patient?.department
-            return department === filters.department
           })
         }
 

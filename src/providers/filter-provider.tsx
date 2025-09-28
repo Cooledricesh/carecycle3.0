@@ -28,7 +28,6 @@ export function FilterProvider({
     if (!persistToUrl) return defaultFilters
 
     const careTypesParam = searchParams.get('careTypes')
-    const departmentParam = searchParams.get('department')
     const doctorIdParam = searchParams.get('doctorId')
 
     return {
@@ -37,7 +36,6 @@ export function FilterProvider({
         ? (careTypesParam.split(',').filter(t =>
             ['외래', '입원', '낮병원'].includes(t)) as CareType[])
         : [],
-      department: departmentParam || null,
       doctorId: doctorIdParam || null,
     }
   }
@@ -56,12 +54,6 @@ export function FilterProvider({
       params.set('careTypes', filters.careTypes.join(','))
     } else {
       params.delete('careTypes')
-    }
-
-    if (filters.department) {
-      params.set('department', filters.department)
-    } else {
-      params.delete('department')
     }
 
     if (filters.doctorId) {

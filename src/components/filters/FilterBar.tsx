@@ -34,7 +34,6 @@ export function FilterBar({
 
   const activeFilterCount =
     filters.careTypes.length +
-    (filters.department ? 1 : 0) +
     (filters.doctorId ? 1 : 0) +
     (filters.dateRange ? 1 : 0) +
     (filters.showAll ? 1 : 0)
