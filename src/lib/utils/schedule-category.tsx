@@ -69,6 +69,8 @@ export function getScheduleCategoryLabel(category: ItemCategory | undefined): st
       return '검사'
     case 'injection':
       return '주사'
+    case 'other':
+      return '기타'
     default:
       return category || ''
   }

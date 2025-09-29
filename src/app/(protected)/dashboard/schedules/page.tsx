@@ -46,8 +46,12 @@ import { eventManager } from "@/lib/events/schedule-event-manager";
 interface ScheduleItem {
   id: string;
   status: 'active' | 'paused' | 'completed' | 'cancelled';
+  patientId?: string;  // Top-level patient ID for easy access
+  itemId?: string;     // Top-level item ID for easy access
   patient?: {
     id?: string;
+    patientId?: string;
+    patient_id?: string;
     name?: string;
     careType?: string;
     care_type?: string;
@@ -58,6 +62,8 @@ interface ScheduleItem {
   } | null;
   item?: {
     id?: string;
+    itemId?: string;
+    item_id?: string;
     name?: string;
     category?: string;
   } | null;
@@ -90,6 +96,7 @@ function mapScheduleWithDetailsToItem(schedule: ScheduleWithDetails, index?: num
   };
 
   // Handle both flat structure (from scheduleServiceEnhanced) and nested structure (from scheduleService)
+  const patientId = schedule.patient_id || schedule.patient?.id || schedule.patient?.patientId || schedule.patient?.patient_id;
   const patientName = schedule.patient_name || schedule.patient?.name || '환자 정보 없음';
   const patientCareType = schedule.patient_care_type || schedule.patient?.careType || schedule.patient?.care_type;
   const patientNumber = schedule.patient_number || schedule.patient?.patientNumber || schedule.patient?.patient_number;
@@ -108,6 +115,9 @@ function mapScheduleWithDetailsToItem(schedule: ScheduleWithDetails, index?: num
     id: generateId(),
     status: (schedule.status as any) || 'active',
     patient: {
+      id: patientId,
+      patientId: patientId,
+      patient_id: patientId,
       name: patientName,
       careType: patientCareType,
       care_type: patientCareType,
@@ -118,9 +128,13 @@ function mapScheduleWithDetailsToItem(schedule: ScheduleWithDetails, index?: num
     },
     item: {
       id: itemId,
+      itemId: itemId,
+      item_id: itemId,
       name: itemName,
       category: itemCategory as ItemCategory
     },
+    patientId: patientId,
+    itemId: itemId,
     intervalWeeks: intervalWeeks,
     interval_weeks: intervalWeeks,
     nextDueDate: nextDueDate,
@@ -632,8 +646,8 @@ function SchedulesContent() {
         <ScheduleResumeDialog
           schedule={{
             id: selectedScheduleForResume.id,
-            patientId: selectedScheduleForResume.patient?.id || '',
-            itemId: selectedScheduleForResume.item?.id || '',
+            patientId: selectedScheduleForResume.patientId || selectedScheduleForResume.patient?.id || selectedScheduleForResume.patient?.patientId || selectedScheduleForResume.patient?.patient_id || '',
+            itemId: selectedScheduleForResume.itemId || selectedScheduleForResume.item?.id || selectedScheduleForResume.item?.itemId || selectedScheduleForResume.item?.item_id || '',
             intervalWeeks: selectedScheduleForResume.intervalWeeks,
             startDate: '',
             nextDueDate: selectedScheduleForResume.nextDueDate,

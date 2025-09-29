@@ -436,7 +436,23 @@ export function ScheduleCreateModal({
                         max="30"
                         placeholder="7"
                         {...field}
-                        onChange={e => field.onChange(parseInt(e.target.value) || 7)}
+                        onChange={e => {
+                          const value = e.target.value
+                          // Handle empty string as default
+                          if (value === '') {
+                            field.onChange(7)
+                            return
+                          }
+                          // Parse and clamp the value
+                          const parsed = parseInt(value, 10)
+                          if (isNaN(parsed)) {
+                            field.onChange(7)
+                          } else {
+                            // Clamp between 0 and 30
+                            const clamped = Math.min(Math.max(parsed, 0), 30)
+                            field.onChange(clamped)
+                          }
+                        }}
                         className="flex-1"
                       />
                       <span className="text-sm font-medium">일 전</span>

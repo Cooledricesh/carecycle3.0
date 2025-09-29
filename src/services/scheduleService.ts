@@ -90,6 +90,8 @@ export const scheduleService = {
     startDate: string
     nextDueDate: string
     notes?: string | null
+    category: 'test' | 'injection' | 'procedure' | 'other'
+    notificationDaysBefore?: number | null
   }, supabase?: SupabaseClient): Promise<Schedule> {
     const client = supabase || createClient()
     try {
@@ -113,7 +115,7 @@ export const scheduleService = {
           .insert({
             code: itemCode,
             name: input.itemName,
-            category: 'other', // Use English category value
+            category: input.category, // Use category from input
             description: `${input.intervalWeeks}주 주기`,
             default_interval_weeks: input.intervalWeeks,
             preparation_notes: null
@@ -171,7 +173,7 @@ export const scheduleService = {
           notes: input.notes,
           priority: 0,
           requires_notification: true,
-          notification_days_before: 7,
+          notification_days_before: input.notificationDaysBefore ?? 7,
           created_by: userId,
           assigned_nurse_id: userId // Assign to the creator by default
         })

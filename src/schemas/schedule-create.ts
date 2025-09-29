@@ -46,7 +46,7 @@ export const ScheduleCreateWithIntervalSchema = z.object({
     .nullable(),
 
   category: z
-    .enum(['test', 'injection', 'procedure', 'other'], {
+    .enum(['injection', 'test', 'other'], {
       required_error: '카테고리를 선택해주세요',
       invalid_type_error: '유효한 카테고리가 아닙니다'
     })
