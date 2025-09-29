@@ -164,7 +164,7 @@ export function PatientRegistrationModal({
         name: data.name,
         patientNumber: data.patientNumber,
         careType: data.careType,
-        doctorId: profile?.role === 'admin' ? data.doctorId : null,
+        doctorId: (profile?.role === 'admin' || profile?.role === 'doctor' || profile?.role === 'nurse') ? data.doctorId : null,
         isActive: true,
       }, supabase)
       
@@ -224,7 +224,7 @@ export function PatientRegistrationModal({
         updateInfo: {
           name: formData.name,
           careType: formData.careType,
-          doctorId: profile?.role === 'admin' ? formData.doctorId : null
+          doctorId: (profile?.role === 'admin' || profile?.role === 'doctor' || profile?.role === 'nurse') ? formData.doctorId : null
         }
       })
 
@@ -270,7 +270,7 @@ export function PatientRegistrationModal({
       await restoration.createWithArchive(formData.patientNumber, {
         name: formData.name,
         careType: formData.careType,
-        doctorId: profile?.role === 'admin' ? formData.doctorId : null,
+        doctorId: (profile?.role === 'admin' || profile?.role === 'doctor' || profile?.role === 'nurse') ? formData.doctorId : null,
         metadata: {}
       })
 
@@ -390,7 +390,7 @@ export function PatientRegistrationModal({
                 </FormItem>
               )}
             />
-            {profile?.role === 'admin' && (
+            {(profile?.role === 'admin' || profile?.role === 'doctor' || profile?.role === 'nurse') && (
               <FormField
                 control={form.control}
                 name="doctorId"
