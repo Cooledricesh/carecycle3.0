@@ -65,7 +65,7 @@ Thumbs.db
 Desktop.ini
 
 # Logs and databases
-logs/
+/logs/
 *.log
 *.sqlite
 *.sqlite3
