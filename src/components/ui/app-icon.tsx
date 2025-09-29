@@ -31,7 +31,7 @@ export function AppIcon({ size = 'md', className, priority = false }: AppIconPro
   return (
     <div className={cn('relative inline-flex items-center justify-center', className)}>
       <Image
-        src="/logo.svg"
+        src="/logo.png"
         alt="케어스케줄러 로고"
         width={dimensions}
         height={dimensions}
