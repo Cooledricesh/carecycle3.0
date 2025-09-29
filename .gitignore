@@ -144,6 +144,9 @@ test-helpers.*
 check_*.mjs
 check-*.mjs
 test_*.mjs
+scripts/test-*.mjs
+scripts/create-test-*.mjs
+scripts/*-test.mjs
 
 # Test artifacts and screenshots only (not all PNGs)
 .playwright-mcp/**/*.png
