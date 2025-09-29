@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { activityService } from '@/services/activityService'
+import type { ActivityFilters } from '@/types/activity'
 
 // Force dynamic rendering for this route
 export const dynamic = 'force-dynamic'
@@ -16,18 +17,18 @@ const requiredEnvVars = [
 
 for (const envVar of requiredEnvVars) {
   if (!process.env[envVar]) {
-    console.error(`[API /admin/activity/stats] Missing required environment variable: ${envVar}`)
+    console.error(`[API /admin/activity/logs] Missing required environment variable: ${envVar}`)
   }
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     // Wrap client creation with explicit error handling
     let supabase
     try {
       supabase = await createClient()
     } catch (error) {
-      console.error('[API /admin/activity/stats] Failed to create Supabase client:', error)
+      console.error('[API /admin/activity/logs] Failed to create Supabase client:', error)
       return NextResponse.json(
         { error: 'Database connection failed' },
         { status: 500 }
@@ -70,15 +71,26 @@ export async function GET() {
       )
     }
 
-    const stats = await activityService.getStats(supabase)
+    const searchParams = request.nextUrl.searchParams
+    const filters: ActivityFilters = {
+      startDate: searchParams.get('startDate') || undefined,
+      endDate: searchParams.get('endDate') || undefined,
+      userId: searchParams.get('userId') || undefined,
+      tableName: (searchParams.get('tableName') as any) || undefined,
+      operation: (searchParams.get('operation') as any) || undefined,
+      page: parseInt(searchParams.get('page') || '1'),
+      limit: parseInt(searchParams.get('limit') || '20'),
+    }
 
-    return NextResponse.json(stats)
+    const result = await activityService.getAuditLogs(filters, supabase)
+
+    return NextResponse.json(result)
   } catch (error) {
-    console.error('[API /admin/activity/stats] Error:', error)
+    console.error('[API /admin/activity/logs] Error:', error)
 
     return NextResponse.json(
       {
-        error: '통계 데이터 조회 중 오류가 발생했습니다.',
+        error: '활동 로그 조회 중 오류가 발생했습니다.',
         details: error instanceof Error ? error.message : 'Unknown error',
       },
       { status: 500 }
