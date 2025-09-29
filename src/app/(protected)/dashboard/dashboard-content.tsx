@@ -262,7 +262,9 @@ export default function DashboardContent() {
               {todaySchedules.map((schedule) => {
                 const dueDate = safeParse(schedule.nextDueDate);
                 // Use date boundaries for accurate day calculation
-                const daysOverdue = dueDate ? getDaysDifference(startOfDay(new Date()), startOfDay(dueDate)) : null;
+                const rawDaysOverdue = dueDate ? getDaysDifference(startOfDay(new Date()), startOfDay(dueDate)) : null;
+                // Clamp to prevent negative values (future dates shouldn't appear as overdue)
+                const daysOverdue = rawDaysOverdue !== null ? Math.max(0, rawDaysOverdue) : null;
 
                 return (
                   <div
@@ -281,9 +283,11 @@ export default function DashboardContent() {
                           <span className={`px-2 py-1 text-xs rounded shrink-0 ml-2 ${
                             daysOverdue === 0
                               ? 'bg-orange-100 text-orange-700'
-                              : 'bg-red-100 text-red-700'
+                              : daysOverdue > 0
+                              ? 'bg-red-100 text-red-700'
+                              : 'bg-blue-100 text-blue-700'
                           }`}>
-                            {daysOverdue === 0 ? '오늘' : `${daysOverdue}일 연체`}
+                            {daysOverdue === 0 ? '오늘' : daysOverdue > 0 ? `${daysOverdue}일 연체` : '예정'}
                           </span>
                         )}
                       </div>
@@ -328,9 +332,11 @@ export default function DashboardContent() {
                       <Badge className={
                         daysOverdue === 0
                           ? "bg-orange-100 text-orange-700"
-                          : "bg-red-100 text-red-700"
+                          : daysOverdue > 0
+                          ? "bg-red-100 text-red-700"
+                          : "bg-blue-100 text-blue-700"
                       }>
-                        {daysOverdue === 0 ? '오늘' : `${daysOverdue}일 연체`}
+                        {daysOverdue === 0 ? '오늘' : daysOverdue > 0 ? `${daysOverdue}일 연체` : '예정'}
                       </Badge>
                     )}
                   </div>
