@@ -154,8 +154,6 @@ export function ItemForm({
                 <SelectContent>
                   <SelectItem value="injection">주사</SelectItem>
                   <SelectItem value="test">검사</SelectItem>
-                  <SelectItem value="treatment">처치</SelectItem>
-                  <SelectItem value="medication">약물</SelectItem>
                   <SelectItem value="other">기타</SelectItem>
                 </SelectContent>
               </Select>

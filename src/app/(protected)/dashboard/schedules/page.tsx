@@ -74,8 +74,13 @@ interface ScheduleItem {
 
 // Helper function to map ScheduleWithDetails to ScheduleItem
 function mapScheduleWithDetailsToItem(schedule: ScheduleWithDetails): ScheduleItem {
+  // Prefer schedule.id (if it exists as actual DB PK), then schedule_id (which is s.id from DB),
+  // then fallback to composite key for temporary records
+  const scheduleId = (schedule as any).id || schedule.schedule_id ||
+    `${schedule.patient_id}-${schedule.item_id}-temp`;
+
   return {
-    id: schedule.schedule_id,
+    id: scheduleId,
     status: (schedule.status as any) || 'active',
     patient: {
       name: schedule.patient_name,

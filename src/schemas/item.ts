@@ -4,7 +4,7 @@ import { z } from 'zod'
 import { ItemCategory } from '@/lib/database.types'
 
 // Item categories
-export const ItemCategorySchema = z.enum(['injection', 'test', 'treatment', 'medication', 'other'])
+export const ItemCategorySchema = z.enum(['injection', 'test', 'other'])
 
 // Base validation schemas
 export const ItemCreateSchema = z.object({

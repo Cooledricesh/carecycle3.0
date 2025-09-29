@@ -140,7 +140,8 @@ export class ScheduleServiceEnhanced {
         // Keep both snake_case and camelCase for backward compatibility
         return {
           // Main schedule properties with both naming conventions
-          id: s.schedule_id || s.id,
+          // Prefer s.id (DB primary key if present), then s.schedule_id (RPC renamed PK), then composite fallback
+          id: s.id || s.schedule_id || `${s.patient_id}-${s.item_id}-temp`,
           patient_id: s.patient_id,  // snake_case for compatibility
           patientId: s.patient_id,   // camelCase
           item_id: s.item_id,        // snake_case

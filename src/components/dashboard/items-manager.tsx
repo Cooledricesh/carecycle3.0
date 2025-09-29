@@ -174,8 +174,6 @@ export function ItemsManager() {
                     <SelectItem value="all">전체 카테고리</SelectItem>
                     <SelectItem value="injection">주사 ({filterCounts.byCategory.injection})</SelectItem>
                     <SelectItem value="test">검사 ({filterCounts.byCategory.test})</SelectItem>
-                    <SelectItem value="treatment">처치 ({filterCounts.byCategory.treatment})</SelectItem>
-                    <SelectItem value="medication">약물 ({filterCounts.byCategory.medication})</SelectItem>
                     <SelectItem value="other">기타 ({filterCounts.byCategory.other})</SelectItem>
                   </SelectContent>
                 </Select>
@@ -224,8 +222,6 @@ export function ItemsManager() {
                 <SelectItem value="all">전체 카테고리</SelectItem>
                 <SelectItem value="injection">주사</SelectItem>
                 <SelectItem value="test">검사</SelectItem>
-                <SelectItem value="treatment">처치</SelectItem>
-                <SelectItem value="medication">약물</SelectItem>
                 <SelectItem value="other">기타</SelectItem>
               </SelectContent>
             </Select>

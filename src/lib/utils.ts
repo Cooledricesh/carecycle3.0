@@ -128,18 +128,14 @@ export const categoryMapping = {
   // Korean to English mapping
   koreanToEnglish: {
     '주사': 'injection',
-    '검사': 'test', 
-    '처치': 'treatment',
-    '약물': 'medication',
+    '검사': 'test',
     '기타': 'other'
   } as const,
-  
+
   // English to Korean mapping (for display purposes)
   englishToKorean: {
     'injection': '주사',
     'test': '검사',
-    'treatment': '처치',
-    'medication': '약물',
     'other': '기타'
   } as const
 };

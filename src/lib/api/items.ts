@@ -66,8 +66,6 @@ async function generateItemCode(category: string): Promise<string> {
   const prefix = {
     'injection': 'INJ',
     'test': 'TST',
-    'treatment': 'TRT',
-    'medication': 'MED',
     'other': 'OTH'
   }[category] || 'ITM'
   

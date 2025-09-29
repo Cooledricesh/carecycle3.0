@@ -47,14 +47,6 @@ export function ItemTable({
         label: '검사',
         className: 'bg-green-100 text-green-700'
       },
-      treatment: {
-        label: '처치',
-        className: 'bg-yellow-100 text-yellow-700'
-      },
-      medication: {
-        label: '약물',
-        className: 'bg-purple-100 text-purple-700'
-      },
       other: {
         label: '기타',
         className: 'bg-gray-100 text-gray-700'
