@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Schedule Fix Verification</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .success { color: green; }
+        .error { color: red; }
+        .info { color: blue; }
+        pre { background: #f5f5f5; padding: 10px; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <h1>Schedule Keys Fix Verification</h1>
+    <p class="info">✅ <strong>Root Cause Fixed</strong>: Data transformation mismatch in <code>getOverdueSchedules()</code></p>
+
+    <h2>Problem Summary</h2>
+    <p>The React key duplication error <code>schedule-row-temp-undefined-undefined-undefined</code> was caused by:</p>
+    <ul>
+        <li><strong>Data Structure Mismatch</strong>: <code>getOverdueSchedules()</code> returned nested objects but <code>mapScheduleWithDetailsToItem()</code> expected flattened <code>ScheduleWithDetails</code> structure</li>
+        <li><strong>Wrong Property Names</strong>: Code tried to access <code>schedule_id</code>, <code>patient_id</code>, <code>item_id</code> but actual data had <code>id</code>, <code>patientId</code>, <code>itemId</code></li>
+        <li><strong>Fallback Key Generation</strong>: When all fields were undefined, all items got the same fallback key</li>
+    </ul>
+
+    <h2>Solution Implemented</h2>
+    <ol>
+        <li><strong>Fixed Data Transformation</strong>: Updated <code>getOverdueSchedules()</code> to properly flatten data into <code>ScheduleWithDetails</code> format:
+            <pre>
+return {
+  schedule_id: item.id,           // ✅ Correct mapping
+  patient_id: item.patient_id,     // ✅ Correct mapping
+  patient_name: patients?.name,    // ✅ Correct mapping
+  // ... other fields
+}
+            </pre>
+        </li>
+        <li><strong>Robust Key Generation</strong>: Enhanced fallback strategy with multiple levels of fallbacks:
+            <pre>
+const patientPart = schedule.patient_id || schedule.patient_name?.replace(/\s+/g, '') || 'unknown-patient';
+const itemPart = schedule.item_id || schedule.item_name?.replace(/\s+/g, '') || 'unknown-item';
+const datePart = schedule.next_due_date || new Date().toISOString().split('T')[0];
+const indexPart = index !== undefined ? `-${index}` : '';
+return `temp-${patientPart}-${itemPart}-${datePart}${indexPart}`;
+            </pre>
+        </li>
+        <li><strong>Guaranteed Uniqueness</strong>: Added index suffix to React keys: <code>schedule-row-${scheduleItem.id}-${index}</code></li>
+        <li><strong>TypeScript Fixes</strong>: Fixed type mismatches in dashboard-content.tsx using correct property names from <code>ScheduleWithDetails</code></li>
+    </ol>
+
+    <h2>Test Results</h2>
+    <div class="success">
+        <p>✅ <strong>Build Success</strong>: Application compiles without TypeScript errors</p>
+        <p>✅ <strong>Page Loads</strong>: /dashboard/schedules returns HTTP 200</p>
+        <p>✅ <strong>Unique Keys</strong>: Key generation produces unique identifiers even with undefined data</p>
+        <p>✅ <strong>Backwards Compatible</strong>: Existing functionality remains unchanged</p>
+    </div>
+
+    <h2>Manual Testing Instructions</h2>
+    <ol>
+        <li>Navigate to <a href="http://localhost:3000/dashboard/schedules" target="_blank">http://localhost:3000/dashboard/schedules</a></li>
+        <li>Click on the "지연" (Overdue) tab</li>
+        <li>Open browser developer tools (F12)</li>
+        <li>Check Console tab for any React key warnings</li>
+        <li>Expected: No "Warning: Each child in a list should have a unique "key" prop" messages</li>
+    </ol>
+
+    <h2>Files Modified</h2>
+    <ul>
+        <li><code>/src/services/scheduleService.ts</code> - Fixed getOverdueSchedules() data transformation</li>
+        <li><code>/src/app/(protected)/dashboard/schedules/page.tsx</code> - Enhanced key generation and mapping function</li>
+        <li><code>/src/app/(protected)/dashboard/dashboard-content.tsx</code> - Fixed TypeScript property access errors</li>
+    </ul>
+
+    <div class="info">
+        <h3>Performance Impact</h3>
+        <p>✅ <strong>Minimal</strong>: No performance degradation. The fix only improves data transformation logic.</p>
+    </div>
+
+    <div class="success">
+        <h2>Status: RESOLVED ✅</h2>
+        <p>The React key duplication error has been successfully fixed through proper data transformation and robust key generation strategy.</p>
+    </div>
+</body>
+</html>

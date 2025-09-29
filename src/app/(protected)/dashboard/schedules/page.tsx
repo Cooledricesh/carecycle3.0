@@ -73,33 +73,63 @@ interface ScheduleItem {
 }
 
 // Helper function to map ScheduleWithDetails to ScheduleItem
-function mapScheduleWithDetailsToItem(schedule: ScheduleWithDetails): ScheduleItem {
+function mapScheduleWithDetailsToItem(schedule: ScheduleWithDetails, index?: number): ScheduleItem {
+  // Generate a robust unique ID
+  const generateId = () => {
+    if (schedule.schedule_id) {
+      return schedule.schedule_id;
+    }
+
+    // Create a fallback ID using available fields with proper fallbacks
+    const patientPart = schedule.patient_id || schedule.patient_name?.replace(/\s+/g, '') || 'unknown-patient';
+    const itemPart = schedule.item_id || schedule.item_name?.replace(/\s+/g, '') || 'unknown-item';
+    const datePart = schedule.next_due_date || new Date().toISOString().split('T')[0];
+    const indexPart = index !== undefined ? `-${index}` : '';
+
+    return `temp-${patientPart}-${itemPart}-${datePart}${indexPart}`;
+  };
+
+  // Handle both flat structure (from scheduleServiceEnhanced) and nested structure (from scheduleService)
+  const patientName = schedule.patient_name || schedule.patient?.name || '환자 정보 없음';
+  const patientCareType = schedule.patient_care_type || schedule.patient?.careType || schedule.patient?.care_type;
+  const patientNumber = schedule.patient_number || schedule.patient?.patientNumber || schedule.patient?.patient_number;
+  const doctorId = schedule.doctor_id || schedule.patient?.doctorId || schedule.patient?.doctor_id;
+
+  const itemName = schedule.item_name || schedule.item?.name || '항목 정보 없음';
+  const itemCategory = schedule.item_category || schedule.item?.category;
+  const itemId = schedule.item_id || schedule.item?.id;
+
+  const intervalWeeks = schedule.interval_weeks || schedule.intervalWeeks || 0;
+  const nextDueDate = schedule.next_due_date || schedule.nextDueDate || '';
+  const createdAt = schedule.created_at || schedule.createdAt;
+  const updatedAt = schedule.updated_at || schedule.updatedAt;
+
   return {
-    id: schedule.schedule_id,
+    id: generateId(),
     status: (schedule.status as any) || 'active',
     patient: {
-      name: schedule.patient_name,
-      careType: schedule.patient_care_type,
-      care_type: schedule.patient_care_type,
-      patientNumber: schedule.patient_number,
-      patient_number: schedule.patient_number,
-      doctorId: schedule.doctor_id || undefined,
-      doctor_id: schedule.doctor_id || undefined
+      name: patientName,
+      careType: patientCareType,
+      care_type: patientCareType,
+      patientNumber: patientNumber,
+      patient_number: patientNumber,
+      doctorId: doctorId,
+      doctor_id: doctorId
     },
     item: {
-      id: schedule.item_id,
-      name: schedule.item_name,
-      category: schedule.item_category as ItemCategory
+      id: itemId,
+      name: itemName,
+      category: itemCategory as ItemCategory
     },
-    intervalWeeks: schedule.interval_weeks,
-    interval_weeks: schedule.interval_weeks,
-    nextDueDate: schedule.next_due_date,
-    next_due_date: schedule.next_due_date,
+    intervalWeeks: intervalWeeks,
+    interval_weeks: intervalWeeks,
+    nextDueDate: nextDueDate,
+    next_due_date: nextDueDate,
     notes: schedule.notes,
-    createdAt: schedule.created_at,
-    created_at: schedule.created_at,
-    updatedAt: schedule.updated_at,
-    updated_at: schedule.updated_at
+    createdAt: createdAt,
+    created_at: createdAt,
+    updatedAt: updatedAt,
+    updated_at: updatedAt
   };
 }
 
@@ -230,7 +260,9 @@ function SchedulesContent() {
   });
 
   // Map overdueSchedules to ScheduleItem format when needed
-  const mappedOverdueSchedules: ScheduleItem[] = overdueSchedules.map(mapScheduleWithDetailsToItem);
+  const mappedOverdueSchedules: ScheduleItem[] = overdueSchedules.map((schedule, index) =>
+    mapScheduleWithDetailsToItem(schedule, index)
+  );
   const displaySchedules: ScheduleItem[] = selectedTab === "overdue" ? mappedOverdueSchedules : filteredSchedules;
 
   const getStatusBadge = (schedule: ScheduleItem) => {
@@ -377,8 +409,11 @@ function SchedulesContent() {
                   {isMobile ? (
                     // Mobile: Card Layout
                     <div className="space-y-3">
-                      {displaySchedules.map((scheduleItem) => (
-                        <Card key={scheduleItem.id} className={`p-4 ${getScheduleCardBgColor(scheduleItem.item?.category as ItemCategory)}`}>
+                      {displaySchedules.map((scheduleItem, index) => {
+                        // Generate guaranteed unique key
+                        const uniqueKey = `schedule-card-${scheduleItem.id}-${index}`;
+                        return (
+                        <Card key={uniqueKey} className={`p-4 ${getScheduleCardBgColor(scheduleItem.item?.category as ItemCategory)}`}>
                           <div className="space-y-3">
                             {/* Schedule Header */}
                             <div className="flex items-start justify-between">
@@ -413,7 +448,17 @@ function SchedulesContent() {
                               <div className="flex justify-between">
                                 <span>다음 예정일</span>
                                 <span className="font-medium">
-                                  {format(new Date(scheduleItem.nextDueDate || scheduleItem.next_due_date || ''), 'yyyy-MM-dd', { locale: ko })}
+                                  {(() => {
+                                    const dateString = scheduleItem.nextDueDate || scheduleItem.next_due_date;
+                                    if (!dateString) return '-';
+                                    try {
+                                      const date = new Date(dateString);
+                                      if (isNaN(date.getTime())) return '-';
+                                      return format(date, 'yyyy-MM-dd', { locale: ko });
+                                    } catch {
+                                      return '-';
+                                    }
+                                  })()}
                                 </span>
                               </div>
                             </div>
@@ -466,7 +511,8 @@ function SchedulesContent() {
                             </div>
                           </div>
                         </Card>
-                      ))}
+                        );
+                      })}
                     </div>
                   ) : (
                     // Desktop: Table Layout
@@ -482,8 +528,11 @@ function SchedulesContent() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {displaySchedules.map((scheduleItem) => (
-                          <TableRow key={scheduleItem.id} className={getScheduleCardBgColor(scheduleItem.item?.category as ItemCategory)}>
+                        {displaySchedules.map((scheduleItem, index) => {
+                          // Generate guaranteed unique key
+                          const uniqueKey = `schedule-row-${scheduleItem.id}-${index}`;
+                          return (
+                          <TableRow key={uniqueKey} className={getScheduleCardBgColor(scheduleItem.item?.category as ItemCategory)}>
                             <TableCell className="font-medium">
                               {scheduleItem.patient?.name || '환자 정보 없음'}
                             </TableCell>
@@ -509,7 +558,17 @@ function SchedulesContent() {
                               {scheduleItem.intervalWeeks || scheduleItem.interval_weeks || 0}주
                             </TableCell>
                             <TableCell>
-                              {format(new Date(scheduleItem.nextDueDate || scheduleItem.next_due_date || ''), 'yyyy-MM-dd', { locale: ko })}
+                              {(() => {
+                                const dateString = scheduleItem.nextDueDate || scheduleItem.next_due_date;
+                                if (!dateString) return '-';
+                                try {
+                                  const date = new Date(dateString);
+                                  if (isNaN(date.getTime())) return '-';
+                                  return format(date, 'yyyy-MM-dd', { locale: ko });
+                                } catch {
+                                  return '-';
+                                }
+                              })()}
                             </TableCell>
                             <TableCell>
                               {getStatusBadge(scheduleItem)}
@@ -556,7 +615,8 @@ function SchedulesContent() {
                               </div>
                             </TableCell>
                           </TableRow>
-                        ))}
+                          );
+                        })}
                       </TableBody>
                     </Table>
                   )}

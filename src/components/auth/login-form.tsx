@@ -113,7 +113,7 @@ export function LoginForm({
                 href="/auth/signup"
                 className="underline underline-offset-4"
               >
-                회원가입
+                등록하기
               </Link>
             </div>
           </form>

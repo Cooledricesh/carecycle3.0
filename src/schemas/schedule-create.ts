@@ -44,6 +44,23 @@ export const ScheduleCreateWithIntervalSchema = z.object({
     .max(500, '메모는 500자 이내로 입력해주세요')
     .optional()
     .nullable(),
+
+  category: z
+    .enum(['test', 'injection', 'procedure', 'other'], {
+      required_error: '카테고리를 선택해주세요',
+      invalid_type_error: '유효한 카테고리가 아닙니다'
+    })
+    .default('other'),
+
+  notificationDaysBefore: z
+    .number({
+      required_error: '알림 일수를 입력해주세요',
+      invalid_type_error: '숫자를 입력해주세요'
+    })
+    .int('정수를 입력해주세요')
+    .min(0, '최소 0 이상 입력해주세요')
+    .max(30, '최대 30일까지 입력 가능합니다')
+    .default(7),
 })
 
 export type ScheduleCreateWithIntervalInput = z.infer<typeof ScheduleCreateWithIntervalSchema>

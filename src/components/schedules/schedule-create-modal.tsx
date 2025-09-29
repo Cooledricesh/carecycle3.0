@@ -40,6 +40,13 @@ import {
   CommandInput,
   CommandItem,
 } from '@/components/ui/command'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { cn } from '@/lib/utils'
 import { useToast } from '@/hooks/use-toast'
 import { createClient } from '@/lib/supabase/client'
@@ -91,7 +98,9 @@ export function ScheduleCreateModal({
       intervalUnit: 'week',
       intervalValue: 1,
       firstPerformedAt: new Date(),
-      notes: ''
+      notes: '',
+      category: 'other',
+      notificationDaysBefore: 7
     }
   })
 
@@ -177,7 +186,9 @@ export function ScheduleCreateModal({
         intervalValue: data.intervalValue,
         startDate: formatDateForDB(data.firstPerformedAt),
         nextDueDate: formatDateForDB(firstDueDate), // Use first performed date as first due date
-        notes: data.notes || null
+        notes: data.notes || null,
+        category: data.category,
+        notificationDaysBefore: data.notificationDaysBefore
       })
 
       // Clear cache and emit event for real-time updates
@@ -381,6 +392,63 @@ export function ScheduleCreateModal({
             />
             {/* Hidden field for intervalUnit - always 'week' */}
             <input type="hidden" {...form.register('intervalUnit')} value="week" />
+
+            {/* Category Selection */}
+            <FormField
+              control={form.control}
+              name="category"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>카테고리 *</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="카테고리를 선택하세요" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="test">검사</SelectItem>
+                      <SelectItem value="injection">주사</SelectItem>
+                      <SelectItem value="procedure">시술</SelectItem>
+                      <SelectItem value="other">기타</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormDescription>
+                    항목의 카테고리를 선택하세요.
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Notification Days Before */}
+            <FormField
+              control={form.control}
+              name="notificationDaysBefore"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>알림 일수</FormLabel>
+                  <FormControl>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="number"
+                        min="0"
+                        max="30"
+                        placeholder="7"
+                        {...field}
+                        onChange={e => field.onChange(parseInt(e.target.value) || 7)}
+                        className="flex-1"
+                      />
+                      <span className="text-sm font-medium">일 전</span>
+                    </div>
+                  </FormControl>
+                  <FormDescription>
+                    예정일 몇 일 전에 알림을 받을지 설정하세요 (0-30일).
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             {/* First Performed Date */}
             <FormField

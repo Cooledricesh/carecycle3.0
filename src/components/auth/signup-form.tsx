@@ -94,7 +94,7 @@ export function SignUpForm({
             <AppIcon size="xl" />
           </div>
           <div className="text-center">
-            <CardTitle className="text-2xl">회원가입</CardTitle>
+            <CardTitle className="text-2xl">등록하기</CardTitle>
             <CardDescription>새 계정을 만드세요</CardDescription>
           </div>
         </CardHeader>
@@ -161,7 +161,7 @@ export function SignUpForm({
               </div>
               {error && <p className="text-sm text-red-500">{error}</p>}
               <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? "계정 생성 중..." : "회원가입"}
+                {isLoading ? "계정 생성 중..." : "등록하기"}
               </Button>
             </div>
             <div className="mt-4 text-center text-sm">
