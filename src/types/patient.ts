@@ -17,6 +17,7 @@ export interface Patient {
   careType?: '외래' | '입원' | '낮병원' | null
   doctorId?: string | null
   doctorName?: string | null
+  assignedDoctorName?: string | null  // For unregistered doctors
   isActive: boolean
   metadata?: Record<string, any>
   createdBy?: string | null
@@ -56,6 +57,7 @@ export interface PatientUpdateInput {
   department?: string | null
   careType?: '외래' | '입원' | '낮병원' | null
   doctorId?: string | null
+  assignedDoctorName?: string | null  // For unregistered doctors
   isActive?: boolean
   metadata?: Record<string, any>
 }

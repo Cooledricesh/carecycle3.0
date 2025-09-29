@@ -39,6 +39,12 @@ export const PatientCreateSchema = z.object({
     .nullable()
     .optional(),
 
+  assignedDoctorName: z
+    .string()
+    .max(100, '의사 이름은 100자 이내로 입력해주세요')
+    .nullable()
+    .optional(),
+
   isActive: z
     .boolean()
     .default(true),
