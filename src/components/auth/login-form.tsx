@@ -44,7 +44,14 @@ export function LoginForm({
       // 템플릿처럼 단순하게 리다이렉트
       router.push("/dashboard");
     } catch (error: unknown) {
-      setError(error instanceof Error ? error.message : "로그인 중 오류가 발생했습니다.");
+      const errorMessage = error instanceof Error ? error.message : "로그인 중 오류가 발생했습니다.";
+
+      // Supabase 에러 메시지를 한국어로 변환
+      if (errorMessage === "Invalid login credentials") {
+        setError("이메일 또는 비밀번호를 다시 확인해주세요.");
+      } else {
+        setError(errorMessage);
+      }
     } finally {
       setIsLoading(false);
     }

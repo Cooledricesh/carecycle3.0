@@ -224,13 +224,12 @@ export const activityService = {
 
       const statusChanged = oldValues.status !== newValues.status
 
-      // 완료처리 감지: status는 active로 유지되고, next_due_date가 미래로 변경됨
+      // 완료처리 감지: last_executed_date 필드가 변경됨 (Phase 1 분석 결과 기반)
       const isCompletion =
-        !statusChanged &&
+        oldValues.last_executed_date !== newValues.last_executed_date &&
+        newValues.last_executed_date !== null &&
         oldValues.status === 'active' &&
-        newValues.status === 'active' &&
-        oldValues.next_due_date !== newValues.next_due_date &&
-        newValues.next_due_date > oldValues.next_due_date
+        newValues.status === 'active'
 
       // 삭제 처리 감지: active → cancelled
       const isDeletion = statusChanged && oldValues.status === 'active' && newValues.status === 'cancelled'

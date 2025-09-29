@@ -32,11 +32,11 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { Check, X, UserCheck, UserX, Shield, User, Stethoscope, Edit2, Save, XCircle } from 'lucide-react';
+import { Check, X, UserCheck, UserX, Shield, User, Stethoscope, Edit2, Save, XCircle, Trash2 } from 'lucide-react';
 
 type UserAction = {
   userId: string;
-  action: 'approve' | 'reject' | 'activate' | 'deactivate';
+  action: 'approve' | 'reject' | 'activate' | 'deactivate' | 'delete';
   userName: string;
 };
 
@@ -249,13 +249,13 @@ export default function AdminUsersPage() {
 
   const handleUserAction = async () => {
     if (!actionDialog) return;
-    
+
     setProcessing(true);
     const { userId, action } = actionDialog;
 
     try {
       let error = null;
-      
+
       switch (action) {
         case 'approve':
           const { error: approveError } = await supabase.rpc('approve_user', {
@@ -283,6 +283,21 @@ export default function AdminUsersPage() {
           });
           error = deactivateError;
           break;
+        case 'delete':
+          const response = await fetch('/api/admin/delete-user', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ userId }),
+          });
+
+          const result = await response.json();
+
+          if (!response.ok) {
+            throw new Error(result.error || 'Failed to delete user');
+          }
+          break;
       }
 
       if (error) throw error;
@@ -290,9 +305,10 @@ export default function AdminUsersPage() {
       toast({
         title: '성공',
         description: `사용자 ${actionDialog.userName}님이 ${
-          action === 'approve' ? '승인' : 
+          action === 'approve' ? '승인' :
           action === 'reject' ? '거부' :
-          action === 'activate' ? '활성화' : '비활성화'
+          action === 'activate' ? '활성화' :
+          action === 'deactivate' ? '비활성화' : '삭제'
         }되었습니다.`,
       });
 
@@ -626,6 +642,20 @@ export default function AdminUsersPage() {
                                 )}
                               </Button>
                             )}
+                            {!isCurrentUser && (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                onClick={() => setActionDialog({
+                                  userId: user.id,
+                                  action: 'delete',
+                                  userName: user.name
+                                })}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            )}
                           </>
                         )}
                       </div>
@@ -647,13 +677,15 @@ export default function AdminUsersPage() {
               {actionDialog?.action === 'reject' && '사용자 거부'}
               {actionDialog?.action === 'activate' && '사용자 활성화'}
               {actionDialog?.action === 'deactivate' && '사용자 비활성화'}
+              {actionDialog?.action === 'delete' && '사용자 삭제'}
             </AlertDialogTitle>
             <AlertDialogDescription>
               {actionDialog?.userName}님을 {
                 actionDialog?.action === 'approve' ? '승인하시겠습니까? 승인 후 해당 사용자는 시스템에 로그인할 수 있습니다.' :
                 actionDialog?.action === 'reject' ? '거부하시겠습니까? 거부된 사용자는 시스템에 접근할 수 없습니다.' :
                 actionDialog?.action === 'activate' ? '활성화하시겠습니까? 활성화된 사용자는 시스템에 로그인할 수 있습니다.' :
-                '비활성화하시겠습니까? 비활성화된 사용자는 시스템에 접근할 수 없습니다.'
+                actionDialog?.action === 'deactivate' ? '비활성화하시겠습니까? 비활성화된 사용자는 시스템에 접근할 수 없습니다.' :
+                '완전히 삭제하시겠습니까? 이 작업은 되돌릴 수 없으며, 사용자의 모든 데이터가 삭제됩니다.'
               }
             </AlertDialogDescription>
           </AlertDialogHeader>
