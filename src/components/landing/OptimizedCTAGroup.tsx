@@ -40,31 +40,31 @@ export function OptimizedCTAGroup({
   // This prevents the loading skeleton from showing on initial render
   if (!showButtons) {
     return (
-      <div className={`flex flex-col items-center justify-center gap-3 sm:flex-row sm:gap-4 ${className}`}>
-        <Button 
-          variant="outline" 
-          size={variant === 'compact' ? 'default' : 'lg'} 
+      <div className={`flex items-center justify-center gap-1.5 sm:gap-2 md:gap-3 ${className}`}>
+        <Button
+          variant="outline"
+          size={variant === 'compact' ? 'sm' : 'lg'}
           onClick={onSignIn}
           disabled={loading}
-          className="w-full sm:w-auto min-h-[44px] px-4 sm:px-6 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 bg-white hover:bg-gray-50 transition-opacity"
+          className="h-7 sm:h-8 md:h-9 px-2 sm:px-3 md:px-4 text-[11px] sm:text-xs md:text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 bg-white hover:bg-gray-50 transition-opacity"
           style={{ opacity: loading ? 0.6 : 1 }}
           aria-label="로그인하기"
         >
-          <LogIn className="mr-2 h-4 w-4 flex-shrink-0" aria-hidden="true" />
+          <LogIn className="mr-1 h-3 w-3 sm:h-3.5 sm:w-3.5 md:h-4 md:w-4 flex-shrink-0" aria-hidden="true" />
           <span className="whitespace-nowrap">로그인</span>
         </Button>
-        
-        <Button 
-          size={variant === 'compact' ? 'default' : 'lg'} 
+
+        <Button
+          size={variant === 'compact' ? 'sm' : 'lg'}
           onClick={onSignUp}
           disabled={loading}
-          className="group w-full sm:w-auto min-h-[44px] px-4 sm:px-6 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 transition-opacity"
+          className="group h-7 sm:h-8 md:h-9 px-2 sm:px-3 md:px-4 text-[11px] sm:text-xs md:text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 transition-opacity"
           style={{ opacity: loading ? 0.6 : 1 }}
           aria-label="회원가입하기"
         >
-          <UserPlus className="mr-2 h-4 w-4 flex-shrink-0" aria-hidden="true" />
+          <UserPlus className="mr-1 h-3 w-3 sm:h-3.5 sm:w-3.5 md:h-4 md:w-4 flex-shrink-0" aria-hidden="true" />
           <span className="whitespace-nowrap">회원가입</span>
-          <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" aria-hidden="true" />
+          <ArrowRight className="ml-1 h-3 w-3 sm:h-3.5 sm:w-3.5 md:h-4 md:w-4 transition-transform group-hover:translate-x-1" aria-hidden="true" />
         </Button>
       </div>
     );
@@ -74,14 +74,14 @@ export function OptimizedCTAGroup({
   if (user && !loading) {
     return (
       <div className={`flex items-center justify-center ${className}`}>
-        <Button 
-          size={variant === 'compact' ? 'default' : 'lg'} 
+        <Button
+          size={variant === 'compact' ? 'sm' : 'lg'}
           onClick={onDashboard}
-          className="group min-h-[44px] px-4 sm:px-6 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+          className="group h-7 sm:h-8 md:h-9 px-2 sm:px-3 md:px-4 text-[11px] sm:text-xs md:text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
           aria-label="대시보드로 이동"
         >
           대시보드로 이동
-          <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" aria-hidden="true" />
+          <ArrowRight className="ml-1 h-3 w-3 sm:h-3.5 sm:w-3.5 md:h-4 md:w-4 transition-transform group-hover:translate-x-1" aria-hidden="true" />
         </Button>
       </div>
     );
@@ -89,27 +89,27 @@ export function OptimizedCTAGroup({
 
   // Default: show sign in/up buttons
   return (
-    <div className={`flex flex-col items-center justify-center gap-3 sm:flex-row sm:gap-4 ${className}`}>
-      <Button 
-        variant="outline" 
-        size={variant === 'compact' ? 'default' : 'lg'} 
+    <div className={`flex items-center justify-center gap-1.5 sm:gap-2 md:gap-3 ${className}`}>
+      <Button
+        variant="outline"
+        size={variant === 'compact' ? 'sm' : 'lg'}
         onClick={onSignIn}
-        className="w-full sm:w-auto min-h-[44px] px-4 sm:px-6 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 bg-white hover:bg-gray-50"
+        className="h-7 sm:h-8 md:h-9 px-2 sm:px-3 md:px-4 text-[11px] sm:text-xs md:text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 bg-white hover:bg-gray-50"
         aria-label="로그인하기"
       >
-        <LogIn className="mr-2 h-4 w-4 flex-shrink-0" aria-hidden="true" />
+        <LogIn className="mr-1 h-3 w-3 sm:h-3.5 sm:w-3.5 md:h-4 md:w-4 flex-shrink-0" aria-hidden="true" />
         <span className="whitespace-nowrap">로그인</span>
       </Button>
-      
-      <Button 
-        size={variant === 'compact' ? 'default' : 'lg'} 
+
+      <Button
+        size={variant === 'compact' ? 'sm' : 'lg'}
         onClick={onSignUp}
-        className="group w-full sm:w-auto min-h-[44px] px-4 sm:px-6 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+        className="group h-7 sm:h-8 md:h-9 px-2 sm:px-3 md:px-4 text-[11px] sm:text-xs md:text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
         aria-label="회원가입하기"
       >
-        <UserPlus className="mr-2 h-4 w-4 flex-shrink-0" aria-hidden="true" />
+        <UserPlus className="mr-1 h-3 w-3 sm:h-3.5 sm:w-3.5 md:h-4 md:w-4 flex-shrink-0" aria-hidden="true" />
         <span className="whitespace-nowrap">회원가입</span>
-        <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" aria-hidden="true" />
+        <ArrowRight className="ml-1 h-3 w-3 sm:h-3.5 sm:w-3.5 md:h-4 md:w-4 transition-transform group-hover:translate-x-1" aria-hidden="true" />
       </Button>
     </div>
   );

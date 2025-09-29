@@ -45,29 +45,29 @@ export default function LandingPage() {
       {/* Header */}
       <header className="border-b bg-white/95 backdrop-blur-sm sticky top-0 z-50" role="banner" aria-label="사이트 헤더">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
+          <div className="flex justify-between items-center h-12 sm:h-14 md:h-16">
             <div className="flex items-center space-x-2">
               <AppIcon size="sm" priority />
-              <span className="text-xl font-bold text-gray-900">케어스케줄러</span>
+              <span className="text-lg sm:text-xl font-bold text-gray-900">케어스케줄러</span>
             </div>
-            
+
             <nav className="hidden md:flex items-center space-x-8" role="navigation" aria-label="주요 메뉴">
-              <a 
-                href="#features" 
+              <a
+                href="#features"
                 className="text-gray-600 hover:text-gray-900 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded px-2 py-1"
                 aria-label="제품 기능 섹션으로 이동"
               >
                 기능
               </a>
-              <a 
-                href="#benefits" 
+              <a
+                href="#benefits"
                 className="text-gray-600 hover:text-gray-900 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded px-2 py-1"
                 aria-label="제품 혜택 섹션으로 이동"
               >
                 혜택
               </a>
-              <a 
-                href="#security" 
+              <a
+                href="#security"
                 className="text-gray-600 hover:text-gray-900 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded px-2 py-1"
                 aria-label="보안 정보 섹션으로 이동"
               >
@@ -75,7 +75,7 @@ export default function LandingPage() {
               </a>
             </nav>
 
-            <div className="flex items-center space-x-3">
+            <div className="flex items-center space-x-2 sm:space-x-3">
               <CTAGroup
                 onSignIn={handleSignIn}
                 onSignUp={handleSignUp}
