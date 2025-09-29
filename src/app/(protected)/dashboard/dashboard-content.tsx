@@ -261,7 +261,8 @@ export default function DashboardContent() {
             <div className="space-y-3 sm:space-y-4">
               {todaySchedules.map((schedule) => {
                 const dueDate = safeParse(schedule.nextDueDate);
-                const daysOverdue = dueDate ? getDaysDifference(dueDate, new Date()) : null;
+                // Use date boundaries for accurate day calculation
+                const daysOverdue = dueDate ? getDaysDifference(startOfDay(new Date()), startOfDay(dueDate)) : null;
 
                 return (
                   <div
@@ -282,7 +283,7 @@ export default function DashboardContent() {
                               ? 'bg-orange-100 text-orange-700'
                               : 'bg-red-100 text-red-700'
                           }`}>
-                            {daysOverdue === 0 ? '오늘' : `${Math.abs(daysOverdue)}일 연체`}
+                            {daysOverdue === 0 ? '오늘' : `${daysOverdue}일 연체`}
                           </span>
                         )}
                       </div>
@@ -329,7 +330,7 @@ export default function DashboardContent() {
                           ? "bg-orange-100 text-orange-700"
                           : "bg-red-100 text-red-700"
                       }>
-                        {daysOverdue === 0 ? '오늘' : `${Math.abs(daysOverdue)}일 연체`}
+                        {daysOverdue === 0 ? '오늘' : `${daysOverdue}일 연체`}
                       </Badge>
                     )}
                   </div>
@@ -363,7 +364,8 @@ export default function DashboardContent() {
             <div className="space-y-3 sm:space-y-4">
               {upcomingSchedules.map((schedule) => {
                 const dueDate = safeParse(schedule.nextDueDate);
-                const daysUntil = dueDate ? getDaysDifference(dueDate, new Date()) : null;
+                // Use date boundaries for accurate day calculation
+                const daysUntil = dueDate ? getDaysDifference(startOfDay(dueDate), startOfDay(new Date())) : null;
                 
                 return (
                   <div
