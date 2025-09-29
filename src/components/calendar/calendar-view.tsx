@@ -46,6 +46,7 @@ import { useFilterContext } from '@/lib/filters/filter-context';
 import { Check } from 'lucide-react';
 import { useScheduleRefetch } from '@/hooks/useScheduleRefetch';
 import { eventManager } from '@/lib/events/schedule-event-manager';
+import { ScheduleIndicator } from '@/components/schedules/ScheduleIndicator';
 
 interface CalendarViewProps {
   className?: string;
@@ -519,33 +520,46 @@ export function CalendarView({ className }: CalendarViewProps) {
           {/* 캘린더 그리드 - 모바일에서 더 촘촘하게 */}
           <div className={`grid grid-cols-7 ${isMobile ? 'gap-0.5' : 'gap-1'}`}>
             {calendarDays.map((day) => {
-              const dayScheduleCount = day.schedules.length;
-              const hasActiveSchedules = day.schedules.some(s => s.status === 'active');
-              const hasCompletedSchedules = day.schedules.some(s =>
-                (s as any).display_type === 'completed' || s.status === 'completed'
+              // Calculate separate counts for different schedule types
+              const completedSchedules = day.schedules.filter(s =>
+                (s as any).display_type === 'completed'
               );
-              const hasOverdueSchedules = day.schedules.some(s => {
+              const activeSchedules = day.schedules.filter(s =>
+                (s as any).display_type !== 'completed' && s.status === 'active'
+              );
+              const overdueSchedules = activeSchedules.filter(s => {
                 const statusInfo = getScheduleStatusLabel(s);
-                return statusInfo.variant === 'overdue' && (s as any).display_type !== 'completed' && s.status === 'active';
+                return statusInfo.variant === 'overdue';
               });
-              
+              const normalSchedules = activeSchedules.filter(s => {
+                const statusInfo = getScheduleStatusLabel(s);
+                return statusInfo.variant !== 'overdue';
+              });
+
+              const completedCount = completedSchedules.length;
+              const overdueCount = overdueSchedules.length;
+              const scheduledCount = normalSchedules.length;
+              const hasOverdueSchedules = overdueCount > 0;
+
               return (
                 <button
                   key={format(day.date, 'yyyy-MM-dd')}
                   type="button"
                   className={`
-                    ${isMobile ? 'min-h-[70px] p-1' : 'min-h-[90px] p-2'} 
-                    border rounded-lg cursor-pointer transition-all duration-200 text-left
-                    ${isMobile ? 'min-w-[44px] hover:bg-gray-100' : 'hover:bg-gray-50'}
+                    ${isMobile ? 'min-h-[70px] p-1' : 'min-h-[90px] p-2'}
+                    border-2 rounded-lg cursor-pointer transition-all duration-200 text-left
+                    ${isMobile ? 'min-w-[44px]' : ''}
                     ${day.isCurrentMonth ? 'bg-white' : 'bg-gray-50/50 text-gray-400'}
                     ${selectedDate && isSameDay(day.date, selectedDate) ? 'ring-2 ring-blue-500 bg-blue-50' : ''}
-                    ${isToday(day.date) ? 'bg-blue-100 border-blue-300' : 'border-gray-200'}
-                    ${hasOverdueSchedules ? 'border-red-300 bg-red-50/30' : ''}
+                    ${isToday(day.date) && !hasOverdueSchedules ? 'bg-blue-50 border-blue-400' : ''}
+                    ${hasOverdueSchedules ? 'border-red-400 bg-red-50/50' : 'border-gray-200'}
+                    ${!hasOverdueSchedules && (isMobile ? 'hover:bg-gray-100' : 'hover:bg-gray-50')}
+                    ${hasOverdueSchedules ? 'hover:bg-red-50' : ''}
                     hover:shadow-sm active:scale-95 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1
                   `}
                   onClick={() => handleDateClick(day.date)}
                   aria-pressed={selectedDate && isSameDay(day.date, selectedDate) ? true : undefined}
-                  aria-label={`${format(day.date, 'yyyy년 M월 d일', { locale: ko })}${dayScheduleCount > 0 ? `, ${dayScheduleCount}개 스케줄` : ', 스케줄 없음'}`}
+                  aria-label={`${format(day.date, 'yyyy년 M월 d일', { locale: ko })}${completedCount > 0 ? `, 완료 ${completedCount}건` : ''}${overdueCount > 0 ? `, 연체 ${overdueCount}건` : ''}${scheduledCount > 0 ? `, 예정 ${scheduledCount}건` : ''}${completedCount === 0 && overdueCount === 0 && scheduledCount === 0 ? ', 스케줄 없음' : ''}`}
                 >
                   {/* 날짜 숫자와 스케줄 카운트 */}
                   <div className={`flex items-center justify-between ${isMobile ? 'mb-1' : 'mb-2'}`}>
@@ -558,71 +572,55 @@ export function CalendarView({ className }: CalendarViewProps) {
                       {format(day.date, 'd')}
                     </div>
                     
-                    {/* 스케줄 카운트 뱃지 - 모바일에서 더 작게 */}
-                    {dayScheduleCount > 0 && (
-                      <div className={`
-                        ${isMobile ? 'text-xs px-1 py-0.5' : 'text-xs px-1.5 py-0.5'} 
-                        rounded-full font-medium flex items-center gap-0.5
-                        ${hasOverdueSchedules ? 'bg-red-500 text-white' : 'bg-gray-500 text-white'}
-                      `}>
-                        {hasOverdueSchedules && (
-                          <AlertCircle className={`${isMobile ? 'h-2 w-2' : 'h-2.5 w-2.5'}`} />
-                        )}
-                        {dayScheduleCount}
-                      </div>
+                    {/* Use ScheduleIndicator for clear separation */}
+                    {(completedCount > 0 || overdueCount > 0 || scheduledCount > 0) && (
+                      <ScheduleIndicator
+                        completedCount={completedCount}
+                        overdueCount={overdueCount}
+                        scheduledCount={scheduledCount}
+                        size={isMobile ? 'compact' : 'default'}
+                        className="ml-auto"
+                      />
                     )}
                   </div>
 
-                  {/* 스케줄 유형별 카운트 - 모바일에서 더 컴팩트하게 */}
-                  <div className={`flex flex-wrap ${isMobile ? 'gap-0.5' : 'gap-1'}`}>
-                    {(() => {
-                      const activeSchedules = day.schedules.filter(s =>
-                        (s as any).display_type !== 'completed'
-                      );
-                      const completedSchedules = day.schedules.filter(s =>
-                        (s as any).display_type === 'completed'
-                      );
-                      const injectionCount = activeSchedules.filter(s => {
-                        const category = s.item_category;
-                        return category === 'injection';
-                      }).length;
-                      const testCount = activeSchedules.filter(s => {
-                        const category = s.item_category;
-                        return category === 'test';
-                      }).length;
-                      const completedCount = completedSchedules.length;
+                  {/* 카테고리별 표시 (주사/검사) */}
+                  {(() => {
+                    const nonCompletedSchedules = day.schedules.filter(s =>
+                      (s as any).display_type !== 'completed'
+                    );
+                    const injectionCount = nonCompletedSchedules.filter(s => {
+                      const category = s.item_category;
+                      return category === 'injection';
+                    }).length;
+                    const testCount = nonCompletedSchedules.filter(s => {
+                      const category = s.item_category;
+                      return category === 'test';
+                    }).length;
 
-                      return (
-                        <>
-                          {injectionCount > 0 && (
-                            <div className={`
-                              ${isMobile ? 'text-xs px-1 py-0.5' : 'text-xs px-2 py-1'}
-                              rounded-full bg-blue-100 text-blue-700 font-medium border border-blue-200
-                            `}>
-                              {isMobile ? `주${injectionCount}` : `주사 ${injectionCount}`}
-                            </div>
-                          )}
-                          {testCount > 0 && (
-                            <div className={`
-                              ${isMobile ? 'text-xs px-1 py-0.5' : 'text-xs px-2 py-1'}
-                              rounded-full bg-emerald-100 text-emerald-700 font-medium border border-emerald-200
-                            `}>
-                              {isMobile ? `검${testCount}` : `검사 ${testCount}`}
-                            </div>
-                          )}
-                          {completedCount > 0 && (
-                            <div className={`
-                              ${isMobile ? 'text-xs px-1 py-0.5' : 'text-xs px-2 py-1'}
-                              rounded-full bg-gray-100 text-gray-600 font-medium border border-gray-200 flex items-center gap-0.5
-                            `}>
-                              <Check className={`${isMobile ? 'h-2 w-2' : 'h-2.5 w-2.5'}`} />
-                              {completedCount}
-                            </div>
-                          )}
-                        </>
-                      );
-                    })()}
-                  </div>
+                    if (injectionCount === 0 && testCount === 0) return null;
+
+                    return (
+                      <div className={`flex flex-wrap ${isMobile ? 'gap-0.5' : 'gap-1'} mt-1`}>
+                        {injectionCount > 0 && (
+                          <div className={`
+                            ${isMobile ? 'text-xs px-1 py-0.5' : 'text-xs px-2 py-0.5'}
+                            rounded-full bg-blue-50 text-blue-600 font-medium border border-blue-200
+                          `}>
+                            {isMobile ? `주${injectionCount}` : `주사 ${injectionCount}`}
+                          </div>
+                        )}
+                        {testCount > 0 && (
+                          <div className={`
+                            ${isMobile ? 'text-xs px-1 py-0.5' : 'text-xs px-2 py-0.5'}
+                            rounded-full bg-emerald-50 text-emerald-600 font-medium border border-emerald-200
+                          `}>
+                            {isMobile ? `검${testCount}` : `검사 ${testCount}`}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </button>
               );
             })}

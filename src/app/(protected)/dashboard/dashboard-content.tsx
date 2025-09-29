@@ -25,6 +25,7 @@ import { useIsMobile } from "@/hooks/useIsMobile";
 import { responsiveGrid, responsiveText, touchTarget } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import { AppIcon } from "@/components/ui/app-icon";
+import { scheduleService } from "@/services/scheduleService";
 
 export default function DashboardContent() {
   const { user } = useAuth();
@@ -35,7 +36,7 @@ export default function DashboardContent() {
   const router = useRouter();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  
+
   // 완료 처리 훅 사용
   const {
     selectedSchedule,
@@ -62,6 +63,47 @@ export default function DashboardContent() {
   // Refresh data function
   const refreshData = () => {
     queryClient.invalidateQueries({ queryKey: ['schedules'] });
+  };
+
+  // Pause schedule handler
+  const handlePause = async (schedule: ScheduleWithDetails) => {
+    try {
+      await scheduleService.pauseSchedule(schedule.id, { reason: '수동 일시중지' });
+      toast({
+        title: "일시중지 완료",
+        description: `${schedule.patient?.name}님의 ${schedule.item?.name} 스케줄이 일시중지되었습니다.`,
+      });
+      refreshData();
+    } catch (error) {
+      console.error('Failed to pause schedule:', error);
+      toast({
+        title: "일시중지 실패",
+        description: "스케줄을 일시중지하는 중 오류가 발생했습니다.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  // Resume schedule handler
+  const handleResume = async (schedule: ScheduleWithDetails) => {
+    try {
+      await scheduleService.resumeSchedule(schedule.id, {
+        strategy: 'next_cycle',
+        handleMissed: 'skip'
+      });
+      toast({
+        title: "재개 완료",
+        description: `${schedule.patient?.name}님의 ${schedule.item?.name} 스케줄이 재개되었습니다.`,
+      });
+      refreshData();
+    } catch (error) {
+      console.error('Failed to resume schedule:', error);
+      toast({
+        title: "재개 실패",
+        description: "스케줄을 재개하는 중 오류가 발생했습니다.",
+        variant: "destructive"
+      });
+    }
   };
 
   // Manual refresh function
@@ -178,13 +220,13 @@ export default function DashboardContent() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
         <Card>
           <CardHeader className={`flex flex-row items-center justify-between space-y-0 ${isMobile ? 'p-3 pb-2' : 'pb-2'}`}>
-            <CardTitle className="text-xs sm:text-sm font-medium">오늘 체크리스트</CardTitle>
+            <CardTitle className="text-xs sm:text-sm font-medium">대기 중 스케줄</CardTitle>
             <Calendar className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent className={isMobile ? 'p-3 pt-0' : ''}>
             <div className="text-xl sm:text-2xl font-bold">{todayLoading ? '—' : todayCount}</div>
             <p className="text-xs text-muted-foreground">
-              오늘 처리 필요
+              즉시 처리 필요
             </p>
           </CardContent>
         </Card>
@@ -206,36 +248,44 @@ export default function DashboardContent() {
 
       </div>
 
-      {/* 오늘 체크리스트 */}
+      {/* 오늘 체크리스트 (연체 포함) */}
       {todayCount > 0 && (
         <Card>
           <CardHeader className={isMobile ? 'p-4' : ''}>
-            <CardTitle className={responsiveText.h3}>오늘 체크리스트</CardTitle>
+            <CardTitle className={responsiveText.h3}>처리 대기 중인 스케줄</CardTitle>
             <CardDescription className="text-xs sm:text-sm">
-              오늘까지 처리해야 할 검사/주사 일정입니다.
+              오늘까지 처리가 필요한 모든 검사/주사 일정입니다. (연체된 항목 포함)
             </CardDescription>
           </CardHeader>
           <CardContent className={isMobile ? 'p-4 pt-0' : ''}>
             <div className="space-y-3 sm:space-y-4">
-              {todaySchedules.map((schedule) => (
-                <div
-                  key={schedule.id}
-                  className={`
-                    ${isMobile ? 'flex-col space-y-3' : 'flex items-center justify-between'}
-                    p-3 sm:p-4 border rounded-lg bg-red-50 border-red-200
-                  `}
-                >
-                  <div className={isMobile ? 'space-y-2' : ''}>
-                    <div className="flex items-start justify-between">
-                      <h4 className="font-medium text-sm sm:text-base">
-                        {schedule.patient?.name || '환자 정보 없음'}
-                      </h4>
-                      {isMobile && (
-                        <span className="px-2 py-1 text-xs bg-red-100 text-red-700 rounded shrink-0 ml-2">
-                          오늘 처리
-                        </span>
-                      )}
-                    </div>
+              {todaySchedules.map((schedule) => {
+                const dueDate = safeParse(schedule.nextDueDate);
+                const daysOverdue = dueDate ? getDaysDifference(dueDate, new Date()) : null;
+
+                return (
+                  <div
+                    key={schedule.id}
+                    className={`
+                      ${isMobile ? 'flex-col space-y-3' : 'flex items-center justify-between'}
+                      p-3 sm:p-4 border rounded-lg bg-red-50 border-red-200
+                    `}
+                  >
+                    <div className={isMobile ? 'space-y-2' : ''}>
+                      <div className="flex items-start justify-between">
+                        <h4 className="font-medium text-sm sm:text-base">
+                          {schedule.patient?.name || '환자 정보 없음'}
+                        </h4>
+                        {isMobile && daysOverdue !== null && (
+                          <span className={`px-2 py-1 text-xs rounded shrink-0 ml-2 ${
+                            daysOverdue === 0
+                              ? 'bg-orange-100 text-orange-700'
+                              : 'bg-red-100 text-red-700'
+                          }`}>
+                            {daysOverdue === 0 ? '오늘' : `${Math.abs(daysOverdue)}일 연체`}
+                          </span>
+                        )}
+                      </div>
                     <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-600">
                       {(() => {
                         const IconComponent = getScheduleCategoryIcon(schedule.item?.category);
@@ -266,19 +316,26 @@ export default function DashboardContent() {
                       variant={isMobile ? 'default' : 'compact'}
                       showStatus={false}
                       onComplete={() => handleComplete(schedule)}
+                      onPause={() => handlePause(schedule)}
+                      onResume={() => handleResume(schedule)}
                     />
                     <ScheduleEditModal
                       schedule={schedule}
                       onSuccess={refreshData}
                     />
-                    {!isMobile && (
-                      <Badge className="bg-red-100 text-red-700">
-                        오늘 처리 필요
+                    {!isMobile && daysOverdue !== null && (
+                      <Badge className={
+                        daysOverdue === 0
+                          ? "bg-orange-100 text-orange-700"
+                          : "bg-red-100 text-red-700"
+                      }>
+                        {daysOverdue === 0 ? '오늘' : `${Math.abs(daysOverdue)}일 연체`}
                       </Badge>
                     )}
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           </CardContent>
         </Card>
@@ -368,6 +425,8 @@ export default function DashboardContent() {
                         variant={isMobile ? 'default' : 'compact'}
                         showStatus={false}
                         onComplete={() => handleComplete(schedule)}
+                        onPause={() => handlePause(schedule)}
+                        onResume={() => handleResume(schedule)}
                       />
                       <ScheduleEditModal
                         schedule={schedule}

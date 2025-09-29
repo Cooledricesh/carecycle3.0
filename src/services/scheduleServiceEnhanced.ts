@@ -256,10 +256,10 @@ export class ScheduleServiceEnhanced {
       if (error?.message?.includes('function') || error?.message?.includes('exist')) {
         console.log('[getTodayChecklist] RPC function issue, falling back to direct query')
 
-        // Fallback: Query schedules directly for today
+        // Fallback: Query schedules directly for today and overdue
         const today = format(new Date(), 'yyyy-MM-dd')
 
-        console.log('[getTodayChecklist] Fallback query with date:', today)
+        console.log('[getTodayChecklist] Fallback query for today and overdue schedules up to:', today)
 
         let query = client
           .from('schedules')
@@ -286,7 +286,7 @@ export class ScheduleServiceEnhanced {
               category
             )
           `)
-          .eq('next_due_date', today)
+          .lte('next_due_date', today)  // Less than or equal to today (includes overdue)
           .eq('status', 'active')
 
         // Apply role-based filtering
