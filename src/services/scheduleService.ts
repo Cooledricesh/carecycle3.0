@@ -2,13 +2,15 @@
 
 import { createClient } from '@/lib/supabase/client'
 import type { SupabaseClient } from '@/lib/supabase/database'
-import { 
-  ScheduleCreateSchema, 
+import {
+  ScheduleCreateSchema,
   ScheduleUpdateSchema,
   ScheduleEditSchema,
+  ScheduleCreateWithCustomItemSchema,
   type ScheduleCreateInput,
   type ScheduleUpdateInput,
-  type ScheduleEditInput
+  type ScheduleEditInput,
+  type ScheduleCreateWithCustomItemInput
 } from '@/schemas/schedule'
 import type { Schedule, ScheduleWithDetails } from '@/types/schedule'
 import { toCamelCase as snakeToCamel, toSnakeCase as camelToSnake } from '@/lib/database-utils'
@@ -81,19 +83,18 @@ export const scheduleService = {
     }
   },
 
-  async createWithCustomItem(input: {
-    patientId: string
-    itemName: string
-    intervalWeeks: number
-    intervalUnit: string
-    intervalValue: number
-    startDate: string
-    nextDueDate: string
-    notes?: string | null
-    category?: 'injection' | 'test' | 'other' | null
-    notificationDaysBefore?: number | null
-  }, supabase?: SupabaseClient): Promise<Schedule> {
+  async createWithCustomItem(input: ScheduleCreateWithCustomItemInput, supabase?: SupabaseClient): Promise<Schedule> {
     const client = supabase || createClient()
+
+    // Validate input using Zod schema
+    const validationResult = ScheduleCreateWithCustomItemSchema.safeParse(input)
+    if (!validationResult.success) {
+      const errors = validationResult.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ')
+      throw new Error(`Validation failed: ${errors}`)
+    }
+
+    const validatedInput = validationResult.data
+
     try {
       // First, create or find the item
       let itemId: string
@@ -102,7 +103,7 @@ export const scheduleService = {
       const { data: existingItem } = await client
         .from('items')
         .select('id')
-        .eq('name', input.itemName)
+        .eq('name', validatedInput.itemName)
         .maybeSingle()
       
       if (existingItem) {
@@ -114,10 +115,10 @@ export const scheduleService = {
           .from('items')
           .insert({
             code: itemCode,
-            name: input.itemName,
-            category: input.category || 'other', // Use provided category or default to 'other'
-            description: `${input.intervalWeeks}주 주기`,
-            default_interval_weeks: input.intervalWeeks,
+            name: validatedInput.itemName,
+            category: validatedInput.category || 'other', // Use validated category or default to 'other'
+            description: `${validatedInput.intervalWeeks}주 주기`,
+            default_interval_weeks: validatedInput.intervalWeeks,
             preparation_notes: null
           })
           .select()
@@ -139,7 +140,7 @@ export const scheduleService = {
       const { data: existingSchedule } = await client
         .from('schedules')
         .select('id')
-        .eq('patient_id', input.patientId)
+        .eq('patient_id', validatedInput.patientId)
         .eq('item_id', itemId)
         .eq('status', 'active')
         .maybeSingle()
@@ -149,12 +150,12 @@ export const scheduleService = {
         // Log only in development for debugging if needed
         if (process.env.NODE_ENV === 'development') {
           console.log('Duplicate schedule validation:', {
-            patientId: input.patientId,
+            patientId: validatedInput.patientId,
             itemId: itemId,
-            itemName: input.itemName
+            itemName: validatedInput.itemName
           })
         }
-        throw new Error(`이미 해당 환자의 "${input.itemName}" 스케줄이 활성 상태로 존재합니다. 기존 스케줄을 수정하거나 중지한 후 다시 시도해주세요.`)
+        throw new Error(`이미 해당 환자의 "${validatedInput.itemName}" 스케줄이 활성 상태로 존재합니다. 기존 스케줄을 수정하거나 중지한 후 다시 시도해주세요.`)
       }
 
       // Create the schedule with current user as creator
@@ -164,16 +165,16 @@ export const scheduleService = {
       const { data, error } = await (client as any)
         .from('schedules')
         .insert({
-          patient_id: input.patientId,
+          patient_id: validatedInput.patientId,
           item_id: itemId,
-          interval_weeks: input.intervalWeeks,
-          start_date: input.startDate,
-          next_due_date: input.nextDueDate,
+          interval_weeks: validatedInput.intervalWeeks,
+          start_date: validatedInput.startDate,
+          next_due_date: validatedInput.nextDueDate,
           status: 'active',
-          notes: input.notes,
+          notes: validatedInput.notes,
           priority: 0,
           requires_notification: true,
-          notification_days_before: input.notificationDaysBefore ?? 7, // Use provided value or default to 7
+          notification_days_before: validatedInput.notificationDaysBefore ?? 7, // Use validated value or default to 7
           created_by: userId,
           assigned_nurse_id: userId // Assign to the creator by default
         })
