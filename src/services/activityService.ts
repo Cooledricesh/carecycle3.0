@@ -71,6 +71,7 @@ export const activityService = {
       limit = 20,
     } = filters
 
+    // Simple select without JOIN since there's no foreign key relationship
     let query = client
       .from('audit_logs')
       .select('*', { count: 'exact' })
@@ -119,7 +120,8 @@ export const activityService = {
         newValues: row.new_values,
         userId: row.user_id,
         userEmail: row.user_email,
-        userName: row.user_name,
+        // Use the user_name field from audit_logs (populated by our migration)
+        userName: row.user_name || null,
         userRole: row.user_role,
         timestamp: row.timestamp,
         ipAddress: row.ip_address,

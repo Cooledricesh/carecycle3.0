@@ -138,6 +138,7 @@ export interface Database {
           new_values: Json | null
           user_id: string | null
           user_email: string | null
+          user_name: string | null
           user_role: string | null
           timestamp: string
           ip_address: string | null
@@ -152,6 +153,7 @@ export interface Database {
           new_values?: Json | null
           user_id?: string | null
           user_email?: string | null
+          user_name?: string | null
           user_role?: string | null
           timestamp?: string
           ip_address?: string | null
@@ -166,6 +168,7 @@ export interface Database {
           new_values?: Json | null
           user_id?: string | null
           user_email?: string | null
+          user_name?: string | null
           user_role?: string | null
           timestamp?: string
           ip_address?: string | null
