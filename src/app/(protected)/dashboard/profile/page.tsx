@@ -219,7 +219,7 @@ export default function ProfilePage() {
                 <span className="text-xs sm:text-sm text-gray-600">
                   {profile.role === "admin" ? "관리자" :
                    profile.role === "doctor" ? "의사" :
-                   profile.role === "nurse" ? "간호사" : "스텝"}
+                   profile.role === "nurse" ? "스텝" : "스텝"}
                 </span>
                 {profile.care_type && (
                   <>
@@ -256,15 +256,16 @@ export default function ProfilePage() {
                 <div className={`grid gap-4 ${isMobile ? 'grid-cols-1' : 'md:grid-cols-2'}`}>
                   <div className="space-y-2">
                     <Label htmlFor="name">이름</Label>
-                    <div className="relative">
-                      <User className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                    <div className="relative flex items-center">
+                      <User className="absolute left-3 h-4 w-4 text-gray-400 z-10" />
                       <Input
                         id="name"
                         value={formData.name}
                         onChange={(e) =>
                           setFormData({ ...formData, name: e.target.value })
                         }
-                        className={`pl-10 ${touchTarget.input}`}
+                        className={`pl-12 ${touchTarget.input}`}
+                        style={{ paddingLeft: '3rem' }}
                         required
                       />
                     </div>
@@ -272,13 +273,14 @@ export default function ProfilePage() {
 
                   <div className="space-y-2">
                     <Label htmlFor="email">이메일</Label>
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                    <div className="relative flex items-center">
+                      <Mail className="absolute left-3 h-4 w-4 text-gray-400 z-10" />
                       <Input
                         id="email"
                         type="email"
                         value={formData.email}
-                        className={`pl-10 ${touchTarget.input}`}
+                        className={`pl-12 ${touchTarget.input}`}
+                        style={{ paddingLeft: '3rem' }}
                         disabled
                         title="이메일은 변경할 수 없습니다"
                       />
@@ -287,8 +289,8 @@ export default function ProfilePage() {
 
                   <div className="space-y-2">
                     <Label htmlFor="phone">전화번호</Label>
-                    <div className="relative">
-                      <Phone className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                    <div className="relative flex items-center">
+                      <Phone className="absolute left-3 h-4 w-4 text-gray-400 z-10" />
                       <Input
                         id="phone"
                         type="tel"
@@ -296,7 +298,8 @@ export default function ProfilePage() {
                         onChange={(e) =>
                           setFormData({ ...formData, phone: e.target.value })
                         }
-                        className={`pl-10 ${touchTarget.input}`}
+                        className={`pl-12 ${touchTarget.input}`}
+                        style={{ paddingLeft: '3rem' }}
                         placeholder="010-0000-0000"
                       />
                     </div>
@@ -304,16 +307,16 @@ export default function ProfilePage() {
 
                   {profile.role === 'nurse' && (
                     <div className="space-y-2">
-                      <Label htmlFor="care_type">진료 유형</Label>
-                      <div className="relative">
-                        <Building className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                      <Label htmlFor="care_type">소속</Label>
+                      <div className="relative flex items-center">
+                        <Building className="absolute left-3 h-4 w-4 text-gray-400 z-10" />
                         <Select
                           value={formData.care_type}
                           onValueChange={(value) =>
                             setFormData({ ...formData, care_type: value })
                           }
                         >
-                          <SelectTrigger id="care_type" className={`pl-10 ${touchTarget.input}`}>
+                          <SelectTrigger id="care_type" className={`pl-12 ${touchTarget.input}`} style={{ paddingLeft: '3rem' }}>
                             <SelectValue placeholder="진료 유형 선택" />
                           </SelectTrigger>
                           <SelectContent>
@@ -356,8 +359,8 @@ export default function ProfilePage() {
                 <div className="space-y-4 max-w-md">
                   <div className="space-y-2">
                     <Label htmlFor="newPassword">새 비밀번호</Label>
-                    <div className="relative">
-                      <Key className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                    <div className="relative flex items-center">
+                      <Key className="absolute left-3 h-4 w-4 text-gray-400 z-10" />
                       <Input
                         id="newPassword"
                         type="password"
@@ -368,7 +371,8 @@ export default function ProfilePage() {
                             newPassword: e.target.value,
                           })
                         }
-                        className={`pl-10 ${touchTarget.input}`}
+                        className={`pl-12 ${touchTarget.input}`}
+                        style={{ paddingLeft: '3rem' }}
                         placeholder="최소 6자 이상"
                         required
                       />
@@ -377,8 +381,8 @@ export default function ProfilePage() {
 
                   <div className="space-y-2">
                     <Label htmlFor="confirmPassword">새 비밀번호 확인</Label>
-                    <div className="relative">
-                      <Key className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                    <div className="relative flex items-center">
+                      <Key className="absolute left-3 h-4 w-4 text-gray-400 z-10" />
                       <Input
                         id="confirmPassword"
                         type="password"
@@ -389,7 +393,8 @@ export default function ProfilePage() {
                             confirmPassword: e.target.value,
                           })
                         }
-                        className={`pl-10 ${touchTarget.input}`}
+                        className={`pl-12 ${touchTarget.input}`}
+                        style={{ paddingLeft: '3rem' }}
                         placeholder="비밀번호 재입력"
                         required
                       />
