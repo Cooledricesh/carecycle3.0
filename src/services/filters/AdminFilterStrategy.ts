@@ -134,14 +134,14 @@ export class AdminFilterStrategy implements FilterStrategy {
       }
     }
 
-    const { data: schedules, error: queryError } = await query
+    const { data: schedules, error: queryError } = await query as any
 
     if (queryError) {
       console.error('[AdminFilterStrategy] Fallback error:', queryError)
       return { data: null, error: queryError }
     }
 
-    const transformedData = (schedules || []).map(s => ({
+    const transformedData = (schedules || []).map((s: any) => ({
       schedule_id: s.id,
       patient_id: s.patient_id,
       patient_name: s.patients?.name || '',

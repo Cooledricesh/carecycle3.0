@@ -8,29 +8,44 @@ import { useFilteredSchedules, useFilteredTodayChecklist, useFilteredUpcomingSch
 export function useSchedulesWithOptionalFilter() {
   const isFilterAvailable = useIsFilterContextAvailable()
 
+  // Call both hooks unconditionally to satisfy React's Rules of Hooks
+  const filteredResult = useFilteredSchedules()
+  const unfilteredResult = useSchedules()
+
+  // Return the appropriate result based on the condition
   if (isFilterAvailable) {
-    return useFilteredSchedules()
+    return filteredResult
   } else {
-    return useSchedules()
+    return unfilteredResult
   }
 }
 
 export function useTodayChecklistWithOptionalFilter() {
   const isFilterAvailable = useIsFilterContextAvailable()
 
+  // Call both hooks unconditionally to satisfy React's Rules of Hooks
+  const filteredResult = useFilteredTodayChecklist()
+  const unfilteredResult = useTodayChecklist()
+
+  // Return the appropriate result based on the condition
   if (isFilterAvailable) {
-    return useFilteredTodayChecklist()
+    return filteredResult
   } else {
-    return useTodayChecklist()
+    return unfilteredResult
   }
 }
 
 export function useUpcomingSchedulesWithOptionalFilter(daysAhead: number = 7) {
   const isFilterAvailable = useIsFilterContextAvailable()
 
+  // Call both hooks unconditionally to satisfy React's Rules of Hooks
+  const filteredResult = useFilteredUpcomingSchedules(daysAhead)
+  const unfilteredResult = useUpcomingSchedules(daysAhead)
+
+  // Return the appropriate result based on the condition
   if (isFilterAvailable) {
-    return useFilteredUpcomingSchedules(daysAhead)
+    return filteredResult
   } else {
-    return useUpcomingSchedules(daysAhead)
+    return unfilteredResult
   }
 }

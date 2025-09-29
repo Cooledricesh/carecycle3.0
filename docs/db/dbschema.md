@@ -1,9 +1,9 @@
 # Comprehensive Database Schema Documentation
 
-**Last Updated**: September 22, 2025
-**Schema Version**: 2.5.0 (Current Production State - Verified)
-**Migration Count**: 24+ migrations applied
-**Direct DB Verification**: 2025-09-22  
+**Last Updated**: September 30, 2025
+**Schema Version**: 2.7.0 (Current Production State - Verified)
+**Migration Count**: 26+ migrations applied
+**Direct DB Verification**: 2025-09-30
 
 ## Overview
 
@@ -17,6 +17,8 @@ This document provides a complete and accurate description of the medical schedu
 - **Schedule Pause/Resume System**: Complete pause/resume workflow with data integrity
 - **Notification State Enhancement**: Added 'cancelled' state to notification_state enum
 - **Conflict Resolution**: Unique constraints and conflict handling for notifications
+- **Flexible Doctor Assignment** (September 29, 2025): Patients can be assigned to doctors by name before registration
+- **Simplified Item Categories** (September 30, 2025): Reduced categories to 3 core types (injection, test, other)
 
 ---
 
@@ -57,7 +59,7 @@ This document provides a complete and accurate description of the medical schedu
 
 ### 2. patients
 **Purpose**: Patient information (simplified, no encryption)
-**Created**: 2025-08-18 | **Enhanced**: 2025-09-09 (Archiving Support) | **Verified**: 2025-09-22
+**Created**: 2025-08-18 | **Enhanced**: 2025-09-09 (Archiving Support), 2025-09-29 (Flexible Doctor Assignment) | **Verified**: 2025-09-30
 
 | Column | Type | Constraints | Description |
 |--------|------|-------------|-------------|
@@ -65,7 +67,8 @@ This document provides a complete and accurate description of the medical schedu
 | patient_number | text | NOT NULL | Patient identification number |
 | name | text | NOT NULL | Patient full name |
 | **care_type** | text | NULL, CHECK (care_type IN ('외래','입원','낮병원')) | Type of care: 외래/입원/낮병원 |
-| **doctor_id** | uuid | NULL REFERENCES profiles(id) | Assigned doctor ID |
+| **doctor_id** | uuid | NULL REFERENCES profiles(id) | Assigned doctor ID (registered) |
+| **assigned_doctor_name** | text | NULL | Doctor name for pre-registration assignment |
 | is_active | boolean | DEFAULT true | Active status |
 | **archived** | boolean | DEFAULT false | Archival status |
 | **archived_at** | timestamptz | NULL | Archival timestamp |
@@ -80,21 +83,25 @@ This document provides a complete and accurate description of the medical schedu
 **Unique Constraints**:
 - `unique_active_patient_number`: Unique constraint on `patient_number` WHERE `is_active = true AND archived = false`
 
+**Indexes**:
+- `idx_patients_assigned_doctor_name`: Index on `assigned_doctor_name` WHERE NOT NULL
+
 **Key Changes**:
 - **NO ENCRYPTION**: Simplified from original encrypted design for development
 - **Archiving System**: Prevents unique constraint conflicts during restoration
 - Added care_type field for patient classification
+- **Flexible Doctor Assignment**: Supports text-based doctor assignment before registration
 
 ### 3. items
-**Purpose**: Medical procedures, tests, and treatments catalog  
-**Created**: 2025-08-18 | **Updated**: 2024-08-26 (Interval Conversion)
+**Purpose**: Medical procedures, tests, and treatments catalog
+**Created**: 2025-08-18 | **Updated**: 2025-09-30 (Simplified Categories)
 
 | Column | Type | Constraints | Description |
 |--------|------|-------------|-------------|
 | id | uuid | PRIMARY KEY DEFAULT gen_random_uuid() | Item unique identifier |
 | code | text | UNIQUE NOT NULL | Item code (e.g., 'INJ001') |
 | name | text | NOT NULL | Item name |
-| category | text | NOT NULL CHECK (category IN ('injection', 'test', 'treatment', 'medication', 'other')) | Item category |
+| category | text | NOT NULL CHECK (category IN ('injection', 'test', 'other')) | Item category (simplified) |
 | **default_interval_weeks** | integer | NULL CHECK (> 0) | Default interval in weeks |
 | description | text | NULL | Detailed description |
 | instructions | text | NULL | Execution instructions |
@@ -109,6 +116,7 @@ This document provides a complete and accurate description of the medical schedu
 
 **Key Changes**:
 - **Interval Units**: Changed from `default_interval_days` to `default_interval_weeks` (2024-08-26)
+- **Categories Simplified**: Reduced from 5 to 3 categories (injection, test, other) (2025-09-30)
 - Pre-loaded with psychiatric medication injection schedules
 
 ### 4. schedules
@@ -286,6 +294,14 @@ This document provides a complete and accurate description of the medical schedu
 
 ### System Views
 
+#### patient_doctor_view
+**Purpose**: Unified view for patient-doctor assignments (Added 2025-09-29)
+**Columns**:
+- All patient fields
+- doctor_display_name: Unified display name (registered doctor, pending name, or '미지정')
+- doctor_status: 'registered', 'pending', or 'unassigned'
+- doctor_email, doctor_role, doctor_approval_status (if registered)
+
 #### database_health
 **Purpose**: System health monitoring
 
@@ -329,14 +345,27 @@ This document provides a complete and accurate description of the medical schedu
 ### Patient Archiving Functions
 
 #### archive_patient_with_timestamp(patient_id)
-**Purpose**: Archive patient with timestamp suffix  
-**Created**: 2025-09-09  
+**Purpose**: Archive patient with timestamp suffix
+**Created**: 2025-09-09
 **Logic**: Appends '_archived_YYYYMMDDHH24MISS' to patient_number
 
 #### restore_archived_patient(patient_id)
 **Purpose**: Restore archived patient
 **Created**: 2025-09-09
 **Logic**: Reverts to original_patient_number
+
+### Doctor Assignment Functions
+
+#### auto_link_doctor_on_signup()
+**Purpose**: Auto-link patients to newly registered doctors
+**Created**: 2025-09-29
+**Logic**: When a doctor registers, automatically links patients with matching assigned_doctor_name
+
+#### get_pending_doctor_names()
+**Purpose**: Get list of pending (unregistered) doctor assignments
+**Created**: 2025-09-29
+**Returns**: Table with doctor name and patient count
+**Usage**: Shows doctors who need to be registered in the system
 
 ### Schedule Management Functions
 
@@ -541,9 +570,15 @@ Applied to all major tables for automatic timestamp updates:
 **Current Implementation**: Simplified log-only trigger to prevent conflicts (2025-09-14)
 **Note**: Application layer handles notifications/executions to avoid 409/23505 errors
 
+#### auto_link_doctor_on_profile_create
+**Table**: profiles
+**Purpose**: Auto-link patients when doctors register
+**Created**: 2025-09-29
+**Logic**: Matches patients with assigned_doctor_name to newly registered doctors
+
 #### on_auth_user_created
-**Table**: auth.users  
-**Purpose**: Create profile on user signup  
+**Table**: auth.users
+**Purpose**: Create profile on user signup
 **Enhanced**: 2025-09-02 - Defaults to inactive/pending approval
 
 ### Audit Triggers
@@ -687,9 +722,16 @@ CREATE TYPE appointment_type AS ENUM ('consultation', 'treatment', 'follow_up', 
 - **Monthly Summary View**: Added calendar_monthly_summary for dashboard metrics
 - **UI Enhancement**: Visual distinction for completed schedules in calendar
 
-**Total Migrations**: 25+ applied migrations
-**Current Status**: Production-ready with complete history preservation and calendar integration
-**Database Verification**: Direct verification performed on 2025-09-22, History feature added 2025-12-25
+### Phase 7: Enhanced Patient Management (September 29-30, 2025)
+- **Flexible Doctor Assignment**: Added assigned_doctor_name column for pre-registration assignment
+- **Auto-linking System**: Automatic patient-doctor linking when doctors register
+- **Patient Doctor View**: Unified view for all doctor assignments
+- **Simplified Item Categories**: Reduced from 5 to 3 categories (injection, test, other)
+- **Custom Item Creation**: Enhanced validation and schema for item management
+
+**Total Migrations**: 26+ applied migrations
+**Current Status**: Production-ready with flexible doctor assignment and simplified item management
+**Database Verification**: Direct verification performed on 2025-09-30
 
 ---
 
@@ -749,14 +791,14 @@ CREATE TYPE appointment_type AS ENUM ('consultation', 'treatment', 'follow_up', 
 
 ---
 
-**Document Version**: 2.0.0
+**Document Version**: 2.1.0
 **Schema Accuracy**: Directly verified against production database
-**Last Verified**: September 22, 2025
-**Verification Method**: Direct SQL queries against production database
+**Last Verified**: September 30, 2025
+**Verification Method**: Direct SQL queries against production database and git history
 
-*This document reflects the actual production database state as verified through direct database inspection on 2025-09-22. Major updates include:*
-- *Doctor role implementation with patient assignment*
-- *Profile care_type column (replacing department)*
-- *Complete role-based filtering system with get_filtered_schedules function*
-- *Dashboard optimization with materialized view*
-- *Comprehensive index strategy for performance*
+*This document reflects the actual production database state as verified through direct database inspection on 2025-09-30. Major updates include:*
+- *Flexible doctor assignment system allowing pre-registration assignment*
+- *Simplified item categories (reduced from 5 to 3)*
+- *Auto-linking mechanism for doctor-patient relationships*
+- *Enhanced validation schemas for item creation*
+- *Patient doctor view for unified assignment tracking*

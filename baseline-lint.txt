@@ -1,0 +1,27 @@
+
+> sample@0.1.0 lint
+> next lint
+
+
+./src/components/patients/patient-doctor-select.tsx
+85:6  Warning: React Hook useEffect has a missing dependency: 'currentValue'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./src/components/schedules/schedule-edit-modal.tsx
+137:43  Error: A `require()` style import is forbidden.  @typescript-eslint/no-require-imports
+138:32  Error: A `require()` style import is forbidden.  @typescript-eslint/no-require-imports
+
+./src/hooks/useFilterStatistics.ts
+47:6  Warning: React Hook useEffect has a missing dependency: 'profile'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./src/hooks/useSchedulesWithFilter.ts
+12:12  Error: React Hook "useFilteredSchedules" is called conditionally. React Hooks must be called in the exact same order in every component render. Did you accidentally call a React Hook after an early return?  react-hooks/rules-of-hooks
+14:12  Error: React Hook "useSchedules" is called conditionally. React Hooks must be called in the exact same order in every component render. Did you accidentally call a React Hook after an early return?  react-hooks/rules-of-hooks
+22:12  Error: React Hook "useFilteredTodayChecklist" is called conditionally. React Hooks must be called in the exact same order in every component render. Did you accidentally call a React Hook after an early return?  react-hooks/rules-of-hooks
+24:12  Error: React Hook "useTodayChecklist" is called conditionally. React Hooks must be called in the exact same order in every component render. Did you accidentally call a React Hook after an early return?  react-hooks/rules-of-hooks
+32:12  Error: React Hook "useFilteredUpcomingSchedules" is called conditionally. React Hooks must be called in the exact same order in every component render. Did you accidentally call a React Hook after an early return?  react-hooks/rules-of-hooks
+34:12  Error: React Hook "useUpcomingSchedules" is called conditionally. React Hooks must be called in the exact same order in every component render. Did you accidentally call a React Hook after an early return?  react-hooks/rules-of-hooks
+
+./src/providers/filter-provider-enhanced.tsx
+160:28  Warning: React Hook useCallback received a function whose dependencies are unknown. Pass an inline function instead.  react-hooks/exhaustive-deps
+
+info  - Need to disable some ESLint rules? Learn more here: https://nextjs.org/docs/app/api-reference/config/eslint#disabling-rules

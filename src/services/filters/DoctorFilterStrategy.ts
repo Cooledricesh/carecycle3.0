@@ -174,7 +174,7 @@ export class DoctorFilterStrategy implements FilterStrategy {
     }
 
     // Transform the data to match ScheduleWithDetails format
-    const transformedData = filteredSchedules.map(s => ({
+    const transformedData = filteredSchedules.map((s: any) => ({
       schedule_id: s.id,
       patient_id: s.patient_id,
       patient_name: s.patients?.name || '',
