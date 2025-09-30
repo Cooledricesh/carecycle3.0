@@ -20,6 +20,16 @@ import { ko } from "date-fns/locale";
 import { safeFormatDate, safeParse, getDaysDifference } from "@/lib/utils/date";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useQueryClient } from "@tanstack/react-query";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { responsiveGrid, responsiveText, touchTarget } from "@/lib/utils";
@@ -106,14 +116,25 @@ export default function DashboardContent() {
     }
   };
 
-  // Delete schedule handler
-  const handleDelete = async (schedule: ScheduleWithDetails) => {
+  // Delete schedule handler - shows confirmation dialog
+  const handleDelete = (schedule: ScheduleWithDetails) => {
+    setScheduleToDelete(schedule);
+    setDeleteConfirmOpen(true);
+  };
+
+  // Actual deletion after confirmation
+  const confirmDelete = async () => {
+    if (!scheduleToDelete) return;
+
+    setIsDeleting(true);
     try {
-      await scheduleService.delete(schedule.id);
+      await scheduleService.delete(scheduleToDelete.schedule_id);
       toast({
         title: "삭제 완료",
-        description: `${schedule.patient?.name}님의 ${schedule.item?.name} 스케줄이 삭제되었습니다.`,
+        description: `${scheduleToDelete.patient_name}님의 ${scheduleToDelete.item_name} 스케줄이 삭제되었습니다.`,
       });
+      setDeleteConfirmOpen(false);
+      setScheduleToDelete(null);
       refreshData();
     } catch (error) {
       console.error('Failed to delete schedule:', error);
@@ -122,11 +143,25 @@ export default function DashboardContent() {
         description: "스케줄을 삭제하는 중 오류가 발생했습니다.",
         variant: "destructive"
       });
+    } finally {
+      setIsDeleting(false);
     }
+  };
+
+  // Cancel delete
+  const cancelDelete = () => {
+    setDeleteConfirmOpen(false);
+    setScheduleToDelete(null);
+    setIsDeleting(false);
   };
 
   // Edit modal state and handler
   const [editingSchedule, setEditingSchedule] = useState<ScheduleWithDetails | null>(null);
+
+  // Delete confirmation dialog state
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [scheduleToDelete, setScheduleToDelete] = useState<ScheduleWithDetails | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Manual refresh function
   const handleRefresh = async () => {
@@ -453,6 +488,7 @@ export default function DashboardContent() {
                         schedule={schedule}
                         variant='default'
                         showStatus={false}
+                        showButtonLabels={true}
                         onComplete={() => handleComplete(schedule)}
                         onPause={() => handlePause(schedule)}
                         onResume={() => handleResume(schedule)}
@@ -505,12 +541,46 @@ export default function DashboardContent() {
       {editingSchedule && (
         <ScheduleEditModal
           schedule={editingSchedule}
+          open={Boolean(editingSchedule)}
+          onOpenChange={(open) => {
+            if (!open) {
+              setEditingSchedule(null);
+            }
+          }}
           onSuccess={() => {
             setEditingSchedule(null);
             refreshData();
           }}
         />
       )}
+
+      {/* 삭제 확인 다이얼로그 */}
+      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>스케줄 삭제 확인</AlertDialogTitle>
+            <AlertDialogDescription>
+              {scheduleToDelete && (
+                <>
+                  <strong>{scheduleToDelete.patient_name}</strong>님의{' '}
+                  <strong>{scheduleToDelete.item_name}</strong> 스케줄을 삭제하시겠습니까?
+                  <br />
+                  <br />
+                  이 작업은 되돌릴 수 없습니다.
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={cancelDelete} disabled={isDeleting}>
+              취소
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} disabled={isDeleting}>
+              {isDeleting ? '삭제 중...' : '삭제'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

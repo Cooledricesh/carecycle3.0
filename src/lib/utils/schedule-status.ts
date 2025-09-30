@@ -47,11 +47,11 @@ export function getScheduleStatusLabel(schedule: ScheduleWithDetails | Schedule 
     }
   }
   
-  // 지난 날짜인 경우 (연체)
+  // 지난 날짜인 경우 (지연)
   if (isBefore(scheduleDate, today) && schedule.status === 'active') {
     const daysOverdue = Math.abs(differenceInDays(scheduleDate, today))
     return {
-      label: `${daysOverdue}일 연체`,
+      label: `${daysOverdue}일 지연`,
       variant: 'overdue',
       priority: 0
     }
@@ -113,7 +113,7 @@ export function sortSchedulesByPriority<T extends ScheduleWithDetails | Schedule
     const statusA = getScheduleStatusLabel(a)
     const statusB = getScheduleStatusLabel(b)
 
-    // 우선순위로 정렬 (연체 > 오늘 > 가까운 미래 > 먼 미래)
+    // 우선순위로 정렬 (지연 > 오늘 > 가까운 미래 > 먼 미래)
     if (statusA.priority !== statusB.priority) {
       return statusA.priority - statusB.priority
     }

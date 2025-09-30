@@ -34,7 +34,7 @@ const BUTTON_CONFIGS: Record<string, ButtonConfig> = {
   resume: {
     icon: Play,
     label: '재개',
-    ariaLabel: '일시중지된 스케줄을 활성 상태로 재개',
+    ariaLabel: '보류 상태의 스케줄을 활성 상태로 재개',
     variant: 'outline'
   },
   edit: {
@@ -93,18 +93,7 @@ export function ScheduleActionButtons({
     const config = BUTTON_CONFIGS[configKey]
     const Icon = config.icon
     // showButtonLabels prop이 제공되면 우선 사용, 아니면 variant에 따라 결정
-    // 디버깅을 위해 임시로 항상 true로 설정 (문제 해결 후 원복)
-    const showLabel = true // showButtonLabels !== undefined ? showButtonLabels : variant === 'default'
-
-    // 디버깅: variant와 showLabel 값 확인
-    if (process.env.NODE_ENV === 'development') {
-      console.log(`[ScheduleActionButtons] Button: ${configKey}`, {
-        variant,
-        showLabel,
-        label: config.label,
-        isMobile
-      })
-    }
+    const showLabel = showButtonLabels !== undefined ? showButtonLabels : variant === 'default'
 
     // 버튼 클래스 계산
     const buttonClassName = [
