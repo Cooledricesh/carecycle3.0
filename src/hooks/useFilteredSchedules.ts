@@ -18,8 +18,10 @@ export function useFilteredSchedules() {
   const { user, loading: authLoading } = useAuth()
   const { data: profile, isLoading: profileLoading } = useProfile()
   const isFilterAvailable = useIsFilterContextAvailable()
-  // Only access filter context if it's available
-  const filters = isFilterAvailable ? useFilterContext().filters : { showAll: false }
+  // Always call the hook unconditionally
+  const filterContext = useFilterContext()
+  // Then use conditional logic on the returned value
+  const filters = isFilterAvailable ? filterContext.filters : { showAll: false }
   const supabase = createClient()
 
 
@@ -97,8 +99,10 @@ export function useFilteredTodayChecklist() {
   const { user, loading: authLoading } = useAuth()
   const { data: profile, isLoading: profileLoading } = useProfile()
   const isFilterAvailable = useIsFilterContextAvailable()
-  // Only access filter context if it's available
-  const filters = isFilterAvailable ? useFilterContext().filters : { showAll: false }
+  // Always call the hook unconditionally
+  const filterContext = useFilterContext()
+  // Then use conditional logic on the returned value
+  const filters = isFilterAvailable ? filterContext.filters : { showAll: false }
   const supabase = createClient()
 
   return useQuery({
@@ -144,8 +148,10 @@ export function useFilteredUpcomingSchedules(daysAhead: number = 7) {
   const { user, loading: authLoading } = useAuth()
   const { data: profile, isLoading: profileLoading } = useProfile()
   const isFilterAvailable = useIsFilterContextAvailable()
-  // Only access filter context if it's available
-  const filters = isFilterAvailable ? useFilterContext().filters : { showAll: false }
+  // Always call the hook unconditionally
+  const filterContext = useFilterContext()
+  // Then use conditional logic on the returned value
+  const filters = isFilterAvailable ? filterContext.filters : { showAll: false }
   const supabase = createClient()
 
   return useQuery({
