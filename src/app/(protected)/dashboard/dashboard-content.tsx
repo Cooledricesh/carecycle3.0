@@ -68,17 +68,17 @@ export default function DashboardContent() {
   // Pause schedule handler
   const handlePause = async (schedule: ScheduleWithDetails) => {
     try {
-      await scheduleService.pauseSchedule(schedule.id, { reason: '수동 일시중지' });
+      await scheduleService.pauseSchedule(schedule.id, { reason: '수동 보류' });
       toast({
-        title: "일시중지 완료",
-        description: `${schedule.patient?.name}님의 ${schedule.item?.name} 스케줄이 일시중지되었습니다.`,
+        title: "보류 완료",
+        description: `${schedule.patient?.name}님의 ${schedule.item?.name} 스케줄이 보류되었습니다.`,
       });
       refreshData();
     } catch (error) {
       console.error('Failed to pause schedule:', error);
       toast({
-        title: "일시중지 실패",
-        description: "스케줄을 일시중지하는 중 오류가 발생했습니다.",
+        title: "보류 실패",
+        description: "스케줄을 보류하는 중 오류가 발생했습니다.",
         variant: "destructive"
       });
     }
@@ -105,6 +105,28 @@ export default function DashboardContent() {
       });
     }
   };
+
+  // Delete schedule handler
+  const handleDelete = async (schedule: ScheduleWithDetails) => {
+    try {
+      await scheduleService.delete(schedule.id);
+      toast({
+        title: "삭제 완료",
+        description: `${schedule.patient?.name}님의 ${schedule.item?.name} 스케줄이 삭제되었습니다.`,
+      });
+      refreshData();
+    } catch (error) {
+      console.error('Failed to delete schedule:', error);
+      toast({
+        title: "삭제 실패",
+        description: "스케줄을 삭제하는 중 오류가 발생했습니다.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  // Edit modal state and handler
+  const [editingSchedule, setEditingSchedule] = useState<ScheduleWithDetails | null>(null);
 
   // Manual refresh function
   const handleRefresh = async () => {
@@ -318,15 +340,14 @@ export default function DashboardContent() {
                   <div className={`flex items-center ${isMobile ? 'w-full' : 'gap-2'}`}>
                     <ScheduleActionButtons
                       schedule={schedule}
-                      variant={isMobile ? 'default' : 'compact'}
+                      variant='default'
                       showStatus={false}
+                      showButtonLabels={true}  // 명시적으로 라벨 표시
                       onComplete={() => handleComplete(schedule)}
                       onPause={() => handlePause(schedule)}
                       onResume={() => handleResume(schedule)}
-                    />
-                    <ScheduleEditModal
-                      schedule={schedule}
-                      onSuccess={refreshData}
+                      onEdit={() => setEditingSchedule(schedule)}
+                      onDelete={() => handleDelete(schedule)}
                     />
                     {!isMobile && daysOverdue !== null && (
                       <Badge className={
@@ -399,7 +420,7 @@ export default function DashboardContent() {
                               : 'bg-green-100 text-green-700'
                           }`}>
                             {daysUntil < 0 ? `${Math.abs(daysUntil)}일 전` : daysUntil === 0 ? '오늘' : daysUntil === 1 ? '내일' : `${daysUntil}일 후`}
-                            {schedule.status === 'paused' && ' (일시중지)'}
+                            {schedule.status === 'paused' && ' (보류)'}
                           </span>
                         )}
                       </div>
@@ -430,15 +451,13 @@ export default function DashboardContent() {
                     <div className={`flex items-center ${isMobile ? 'w-full' : 'gap-2'}`}>
                       <ScheduleActionButtons
                         schedule={schedule}
-                        variant={isMobile ? 'default' : 'compact'}
+                        variant='default'
                         showStatus={false}
                         onComplete={() => handleComplete(schedule)}
                         onPause={() => handlePause(schedule)}
                         onResume={() => handleResume(schedule)}
-                      />
-                      <ScheduleEditModal
-                        schedule={schedule}
-                        onSuccess={refreshData}
+                        onEdit={() => setEditingSchedule(schedule)}
+                        onDelete={() => handleDelete(schedule)}
                       />
                       {!isMobile && (() => {
                         if (schedule.status === 'paused') {
@@ -447,7 +466,7 @@ export default function DashboardContent() {
                               {daysUntil !== null && (
                                 <>
                                   {daysUntil < 0 ? `${Math.abs(daysUntil)}일 전` : daysUntil === 0 ? '오늘' : daysUntil === 1 ? '내일' : `${daysUntil}일 후`}
-                                  {' (일시중지)'}
+                                  {' (보류)'}
                                 </>
                               )}
                             </Badge>
@@ -481,6 +500,17 @@ export default function DashboardContent() {
         onExecutionNotesChange={setExecutionNotes}
         onSubmit={handleSubmit}
       />
+
+      {/* 수정 모달 */}
+      {editingSchedule && (
+        <ScheduleEditModal
+          schedule={editingSchedule}
+          onSuccess={() => {
+            setEditingSchedule(null);
+            refreshData();
+          }}
+        />
+      )}
     </div>
   );
 }

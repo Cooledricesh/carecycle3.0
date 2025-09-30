@@ -235,7 +235,7 @@ export function CalendarView({ className }: CalendarViewProps) {
       toast({
         title: "성공",
         description: variables.status === 'paused'
-          ? "스케줄이 일시중지되었습니다."
+          ? "스케줄이 보류되었습니다."
           : "스케줄이 재개되었습니다.",
       });
 

@@ -81,7 +81,7 @@ export function CalendarDayCard({
               ) : isPaused ? (
                 <Badge className="text-xs bg-gray-200 text-gray-600">
                   <PauseCircle className={`${isMobile ? 'h-2.5 w-2.5' : 'h-3 w-3'} mr-1`} />
-                  일시중지
+                  보류
                 </Badge>
               ) : (
                 <Badge className={`text-xs ${getStatusBadgeClass(statusInfo.variant)}`}>
@@ -140,7 +140,7 @@ export function CalendarDayCard({
           <div className="pt-2 border-t">
             <ScheduleActionButtons
               schedule={schedule}
-              variant={isMobile ? 'default' : 'compact'}
+              variant='default'
               showStatus={false}
               onComplete={onComplete}
               onPause={onPause}

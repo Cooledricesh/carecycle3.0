@@ -165,7 +165,7 @@ function SchedulesContent() {
       toast({
         title: "성공",
         description: variables.status === 'paused'
-          ? "스케줄이 일시중지되었습니다."
+          ? "스케줄이 보류되었습니다."
           : "스케줄이 재개되었습니다.",
       });
 
@@ -240,7 +240,7 @@ function SchedulesContent() {
 
   const getStatusBadge = (schedule: ScheduleItem) => {
     if (schedule.status === 'paused') {
-      return <Badge variant="secondary">일시중지</Badge>;
+      return <Badge variant="secondary">보류</Badge>;
     }
     if (schedule.status === 'completed') {
       return <Badge variant="outline">완료</Badge>;
@@ -316,7 +316,7 @@ function SchedulesContent() {
                 isMobile && "h-12 bg-white border border-gray-200 data-[state=active]:bg-blue-50 data-[state=active]:border-blue-300 data-[state=active]:text-blue-700"
               )}
             >
-              일시중지 ({schedules.filter(s => s.status === 'paused').length})
+              보류 ({schedules.filter(s => s.status === 'paused').length})
             </TabsTrigger>
             <TabsTrigger
               value="overdue"
@@ -433,7 +433,7 @@ function SchedulesContent() {
                                   className={`flex-1 ${touchTarget.button}`}
                                 >
                                   <Pause className="h-4 w-4 mr-2" />
-                                  일시중지
+                                  보류
                                 </Button>
                               ) : scheduleItem.status === 'paused' ? (
                                 <Button
@@ -453,9 +453,10 @@ function SchedulesContent() {
                                     size="default"
                                     variant="outline"
                                     aria-label="스케줄 수정"
-                                    className={touchTarget.iconButton}
+                                    className={`flex-1 ${touchTarget.button}`}
                                   >
-                                    <Edit className="h-4 w-4" />
+                                    <Edit className="h-4 w-4 mr-2" />
+                                    수정
                                   </Button>
                                 }
                               />
@@ -464,9 +465,10 @@ function SchedulesContent() {
                                 variant="destructive"
                                 aria-label="스케줄 삭제"
                                 onClick={() => handleDeleteSchedule(scheduleItem.id)}
-                                className={touchTarget.iconButton}
+                                className={`flex-1 ${touchTarget.button}`}
                               >
-                                <Trash2 className="h-4 w-4" />
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                삭제
                               </Button>
                             </div>
                           </div>
@@ -526,15 +528,19 @@ function SchedulesContent() {
                                     size="sm"
                                     variant="outline"
                                     onClick={() => handlePauseSchedule(scheduleItem.id)}
+                                    className="flex items-center gap-1"
                                   >
-                                    일시중지
+                                    <Pause className="h-3 w-3" />
+                                    보류
                                   </Button>
                                 ) : scheduleItem.status === 'paused' ? (
                                   <Button
                                     size="sm"
                                     variant="outline"
                                     onClick={() => handleResumeSchedule(scheduleItem)}
+                                    className="flex items-center gap-1"
                                   >
+                                    <Play className="h-3 w-3" />
                                     재개
                                   </Button>
                                 ) : null}
@@ -545,8 +551,10 @@ function SchedulesContent() {
                                       size="sm"
                                       variant="outline"
                                       aria-label="스케줄 수정"
+                                      className="flex items-center gap-1"
                                     >
-                                      <Edit className="h-4 w-4" />
+                                      <Edit className="h-3 w-3" />
+                                      수정
                                     </Button>
                                   }
                                 />
@@ -555,8 +563,10 @@ function SchedulesContent() {
                                   variant="destructive"
                                   aria-label="스케줄 삭제"
                                   onClick={() => handleDeleteSchedule(scheduleItem.id)}
+                                  className="flex items-center gap-1"
                                 >
-                                  <Trash2 className="h-4 w-4" />
+                                  <Trash2 className="h-3 w-3" />
+                                  삭제
                                 </Button>
                               </div>
                             </TableCell>
