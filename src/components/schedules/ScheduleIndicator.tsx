@@ -59,7 +59,7 @@ export function ScheduleIndicator({
     <div
       className={`flex items-center ${effectiveStyles.container} ${className}`}
       role="group"
-      aria-label={`정시 완료 ${completedCount}건, 연체 ${overdueCount}건${scheduledCount > 0 ? `, 예정 ${scheduledCount}건` : ''}`}
+      aria-label={`정시 완료 ${completedCount}건, 지연 ${overdueCount}건${scheduledCount > 0 ? `, 예정 ${scheduledCount}건` : ''}`}
     >
       {/* Completed on time */}
       {completedCount > 0 && (
@@ -158,7 +158,7 @@ export function ScheduleIndicatorVertical({
     <div
       className={`flex flex-col gap-0.5 ${className}`}
       role="group"
-      aria-label={`정시 완료 ${completedCount}건, 연체 ${overdueCount}건${scheduledCount > 0 ? `, 예정 ${scheduledCount}건` : ''}`}
+      aria-label={`정시 완료 ${completedCount}건, 지연 ${overdueCount}건${scheduledCount > 0 ? `, 예정 ${scheduledCount}건` : ''}`}
     >
       {completedCount > 0 && (
         <div className="flex items-center gap-0.5 px-1 py-0.5 bg-green-100 text-green-700 rounded text-xs font-medium">

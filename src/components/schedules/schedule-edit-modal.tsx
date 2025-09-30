@@ -58,6 +58,8 @@ interface ScheduleEditModalProps {
   schedule: ScheduleWithDetails
   onSuccess?: () => void
   triggerButton?: React.ReactNode
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
 }
 
 interface ItemOption {
@@ -71,9 +73,16 @@ interface ItemOption {
 export function ScheduleEditModal({
   schedule,
   onSuccess,
-  triggerButton
+  triggerButton,
+  open: controlledOpen,
+  onOpenChange
 }: ScheduleEditModalProps) {
-  const [open, setOpen] = useState(false)
+  const [internalOpen, setInternalOpen] = useState(false)
+
+  // Use controlled state if provided, otherwise use internal state
+  const isControlled = controlledOpen !== undefined
+  const open = isControlled ? controlledOpen : internalOpen
+  const setOpen = isControlled && onOpenChange ? onOpenChange : setInternalOpen
   const [items, setItems] = useState<ItemOption[]>([])
   const [itemComboOpen, setItemComboOpen] = useState(false)
   const [itemSearchValue, setItemSearchValue] = useState('')

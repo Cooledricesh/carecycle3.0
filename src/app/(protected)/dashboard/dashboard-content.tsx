@@ -20,6 +20,16 @@ import { ko } from "date-fns/locale";
 import { safeFormatDate, safeParse, getDaysDifference } from "@/lib/utils/date";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useQueryClient } from "@tanstack/react-query";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { responsiveGrid, responsiveText, touchTarget } from "@/lib/utils";
@@ -68,17 +78,17 @@ export default function DashboardContent() {
   // Pause schedule handler
   const handlePause = async (schedule: ScheduleWithDetails) => {
     try {
-      await scheduleService.pauseSchedule(schedule.id, { reason: '수동 일시중지' });
+      await scheduleService.pauseSchedule(schedule.id, { reason: '수동 보류' });
       toast({
-        title: "일시중지 완료",
-        description: `${schedule.patient?.name}님의 ${schedule.item?.name} 스케줄이 일시중지되었습니다.`,
+        title: "보류 완료",
+        description: `${schedule.patient?.name}님의 ${schedule.item?.name} 스케줄이 보류되었습니다.`,
       });
       refreshData();
     } catch (error) {
       console.error('Failed to pause schedule:', error);
       toast({
-        title: "일시중지 실패",
-        description: "스케줄을 일시중지하는 중 오류가 발생했습니다.",
+        title: "보류 실패",
+        description: "스케줄을 보류하는 중 오류가 발생했습니다.",
         variant: "destructive"
       });
     }
@@ -105,6 +115,53 @@ export default function DashboardContent() {
       });
     }
   };
+
+  // Delete schedule handler - shows confirmation dialog
+  const handleDelete = (schedule: ScheduleWithDetails) => {
+    setScheduleToDelete(schedule);
+    setDeleteConfirmOpen(true);
+  };
+
+  // Actual deletion after confirmation
+  const confirmDelete = async () => {
+    if (!scheduleToDelete) return;
+
+    setIsDeleting(true);
+    try {
+      await scheduleService.delete(scheduleToDelete.schedule_id);
+      toast({
+        title: "삭제 완료",
+        description: `${scheduleToDelete.patient_name}님의 ${scheduleToDelete.item_name} 스케줄이 삭제되었습니다.`,
+      });
+      setDeleteConfirmOpen(false);
+      setScheduleToDelete(null);
+      refreshData();
+    } catch (error) {
+      console.error('Failed to delete schedule:', error);
+      toast({
+        title: "삭제 실패",
+        description: "스케줄을 삭제하는 중 오류가 발생했습니다.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  // Cancel delete
+  const cancelDelete = () => {
+    setDeleteConfirmOpen(false);
+    setScheduleToDelete(null);
+    setIsDeleting(false);
+  };
+
+  // Edit modal state and handler
+  const [editingSchedule, setEditingSchedule] = useState<ScheduleWithDetails | null>(null);
+
+  // Delete confirmation dialog state
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [scheduleToDelete, setScheduleToDelete] = useState<ScheduleWithDetails | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Manual refresh function
   const handleRefresh = async () => {
@@ -318,15 +375,14 @@ export default function DashboardContent() {
                   <div className={`flex items-center ${isMobile ? 'w-full' : 'gap-2'}`}>
                     <ScheduleActionButtons
                       schedule={schedule}
-                      variant={isMobile ? 'default' : 'compact'}
+                      variant='default'
                       showStatus={false}
+                      showButtonLabels={true}  // 명시적으로 라벨 표시
                       onComplete={() => handleComplete(schedule)}
                       onPause={() => handlePause(schedule)}
                       onResume={() => handleResume(schedule)}
-                    />
-                    <ScheduleEditModal
-                      schedule={schedule}
-                      onSuccess={refreshData}
+                      onEdit={() => setEditingSchedule(schedule)}
+                      onDelete={() => handleDelete(schedule)}
                     />
                     {!isMobile && daysOverdue !== null && (
                       <Badge className={
@@ -399,7 +455,7 @@ export default function DashboardContent() {
                               : 'bg-green-100 text-green-700'
                           }`}>
                             {daysUntil < 0 ? `${Math.abs(daysUntil)}일 전` : daysUntil === 0 ? '오늘' : daysUntil === 1 ? '내일' : `${daysUntil}일 후`}
-                            {schedule.status === 'paused' && ' (일시중지)'}
+                            {schedule.status === 'paused' && ' (보류)'}
                           </span>
                         )}
                       </div>
@@ -430,15 +486,14 @@ export default function DashboardContent() {
                     <div className={`flex items-center ${isMobile ? 'w-full' : 'gap-2'}`}>
                       <ScheduleActionButtons
                         schedule={schedule}
-                        variant={isMobile ? 'default' : 'compact'}
+                        variant='default'
                         showStatus={false}
+                        showButtonLabels={true}
                         onComplete={() => handleComplete(schedule)}
                         onPause={() => handlePause(schedule)}
                         onResume={() => handleResume(schedule)}
-                      />
-                      <ScheduleEditModal
-                        schedule={schedule}
-                        onSuccess={refreshData}
+                        onEdit={() => setEditingSchedule(schedule)}
+                        onDelete={() => handleDelete(schedule)}
                       />
                       {!isMobile && (() => {
                         if (schedule.status === 'paused') {
@@ -447,7 +502,7 @@ export default function DashboardContent() {
                               {daysUntil !== null && (
                                 <>
                                   {daysUntil < 0 ? `${Math.abs(daysUntil)}일 전` : daysUntil === 0 ? '오늘' : daysUntil === 1 ? '내일' : `${daysUntil}일 후`}
-                                  {' (일시중지)'}
+                                  {' (보류)'}
                                 </>
                               )}
                             </Badge>
@@ -481,6 +536,51 @@ export default function DashboardContent() {
         onExecutionNotesChange={setExecutionNotes}
         onSubmit={handleSubmit}
       />
+
+      {/* 수정 모달 */}
+      {editingSchedule && (
+        <ScheduleEditModal
+          schedule={editingSchedule}
+          open={Boolean(editingSchedule)}
+          onOpenChange={(open) => {
+            if (!open) {
+              setEditingSchedule(null);
+            }
+          }}
+          onSuccess={() => {
+            setEditingSchedule(null);
+            refreshData();
+          }}
+        />
+      )}
+
+      {/* 삭제 확인 다이얼로그 */}
+      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>스케줄 삭제 확인</AlertDialogTitle>
+            <AlertDialogDescription>
+              {scheduleToDelete && (
+                <>
+                  <strong>{scheduleToDelete.patient_name}</strong>님의{' '}
+                  <strong>{scheduleToDelete.item_name}</strong> 스케줄을 삭제하시겠습니까?
+                  <br />
+                  <br />
+                  이 작업은 되돌릴 수 없습니다.
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={cancelDelete} disabled={isDeleting}>
+              취소
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} disabled={isDeleting}>
+              {isDeleting ? '삭제 중...' : '삭제'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
