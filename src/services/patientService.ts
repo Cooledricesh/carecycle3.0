@@ -146,6 +146,7 @@ export const patientService = {
           .from('patients')
           .select(`
             *,
+            assigned_doctor_name,
             doctor:profiles!doctor_id(id, name)
           `)
           .eq('is_active', true)
@@ -215,6 +216,7 @@ export const patientService = {
         .from('patients')
         .select(`
           *,
+          assigned_doctor_name,
           doctor:profiles!doctor_id(id, name)
         `)
         .eq('id', id)

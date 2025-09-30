@@ -48,6 +48,8 @@ import {
   type ScheduleEditInput 
 } from '@/schemas/schedule'
 import { scheduleService } from '@/services/scheduleService'
+import { scheduleServiceEnhanced } from '@/services/scheduleServiceEnhanced'
+import { eventManager } from '@/lib/events/schedule-event-manager'
 import type { ScheduleWithDetails } from '@/types/schedule'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { mapErrorToUserMessage } from '@/lib/error-mapper'
@@ -83,9 +85,9 @@ export function ScheduleEditModal({
   const form = useForm<ScheduleEditInput>({
     resolver: zodResolver(ScheduleEditSchema),
     defaultValues: {
-      itemName: schedule.item?.name || '',
-      intervalWeeks: schedule.intervalWeeks || 1,
-      nextDueDate: schedule.nextDueDate || undefined,
+      itemName: schedule.item_name || '',
+      intervalWeeks: schedule.interval_weeks || 1,
+      nextDueDate: schedule.next_due_date || undefined,
       notes: schedule.notes || ''
     }
   })
@@ -96,9 +98,9 @@ export function ScheduleEditModal({
       loadItems()
       // Reset form with current schedule data
       form.reset({
-        itemName: schedule.item?.name || '',
-        intervalWeeks: schedule.intervalWeeks || 1,
-        nextDueDate: schedule.nextDueDate || undefined,
+        itemName: schedule.item_name || '',
+        intervalWeeks: schedule.interval_weeks || 1,
+        nextDueDate: schedule.next_due_date || undefined,
         notes: schedule.notes || ''
       })
     }
@@ -131,11 +133,9 @@ export function ScheduleEditModal({
   }
 
   const editMutation = useMutation({
-    mutationFn: (data: ScheduleEditInput) => scheduleService.editSchedule(schedule.id, data),
+    mutationFn: (data: ScheduleEditInput) => scheduleService.editSchedule(schedule.schedule_id, data),
     onSuccess: () => {
       // scheduleServiceEnhanced의 캐시도 클리어하고 이벤트 발행
-      const { scheduleServiceEnhanced } = require('@/services/scheduleServiceEnhanced')
-      const { eventManager } = require('@/lib/events/schedule-event-manager')
       scheduleServiceEnhanced.clearCache()
       eventManager.emitScheduleChange()
 
@@ -195,7 +195,7 @@ export function ScheduleEditModal({
         <DialogHeader>
           <DialogTitle>스케줄 수정</DialogTitle>
           <DialogDescription>
-            {schedule.patient?.name}님의 스케줄을 수정합니다.
+            {schedule.patient_name}님의 스케줄을 수정합니다.
           </DialogDescription>
         </DialogHeader>
 

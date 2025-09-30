@@ -143,8 +143,6 @@ export function useItemFilters(items: Item[]) {
       byCategory: {
         injection: items.filter(item => item.category === 'injection').length,
         test: items.filter(item => item.category === 'test').length,
-        treatment: items.filter(item => item.category === 'treatment').length,
-        medication: items.filter(item => item.category === 'medication').length,
         other: items.filter(item => item.category === 'other').length,
       }
     }

@@ -49,6 +49,8 @@ import {
 } from '@/schemas/schedule-create'
 import { calculateNextDueDate, formatDateForDB } from '@/lib/date-utils'
 import { scheduleService } from '@/services/scheduleService'
+import { scheduleServiceEnhanced } from '@/services/scheduleServiceEnhanced'
+import { eventManager } from '@/lib/events/schedule-event-manager'
 import { patientService } from '@/services/patientService'
 import { PatientSearchField } from '@/components/patients/patient-search-field'
 import type { Patient } from '@/types/patient'
@@ -168,6 +170,10 @@ export function ScheduleCreateModal({
       // Use weeks directly - no conversion needed
       const intervalWeeks = data.intervalValue
 
+      // Find selected item to get its category
+      const selectedItem = items.find(item => item.name === data.itemName)
+      const category = selectedItem?.category as 'injection' | 'test' | 'other' | undefined
+
       // Create schedule
       await scheduleService.createWithCustomItem({
         patientId: data.patientId,
@@ -177,12 +183,12 @@ export function ScheduleCreateModal({
         intervalValue: data.intervalValue,
         startDate: formatDateForDB(data.firstPerformedAt),
         nextDueDate: formatDateForDB(firstDueDate), // Use first performed date as first due date
-        notes: data.notes || null
+        notes: data.notes || null,
+        category: category || 'other', // Use item's category or default to 'other'
+        notificationDaysBefore: 7 // Default notification days
       })
 
       // Clear cache and emit event for real-time updates
-      const { scheduleServiceEnhanced } = require('@/services/scheduleServiceEnhanced')
-      const { eventManager } = require('@/lib/events/schedule-event-manager')
       scheduleServiceEnhanced.clearCache()
       eventManager.emitScheduleChange()
 

@@ -50,8 +50,8 @@ export function ScheduleCompletionDialog({
           <DialogDescription className="text-xs sm:text-sm">
             {schedule && (
               <>
-                <strong>{schedule.patient?.name}</strong>님의{' '}
-                <strong>{schedule.item?.name}</strong> 일정을 완료 처리합니다.
+                <strong>{schedule.patient_name}</strong>님의{' '}
+                <strong>{schedule.item_name}</strong> 일정을 완료 처리합니다.
               </>
             )}
           </DialogDescription>
@@ -82,14 +82,14 @@ export function ScheduleCompletionDialog({
               rows={3}
             />
           </div>
-          {schedule && schedule.intervalWeeks && (
+          {schedule && schedule.interval_weeks && (
             <div className="text-xs sm:text-sm text-gray-600">
               <p>다음 예정일: {
                 (() => {
-                  const nextDate = addWeeks(executionDate, schedule.intervalWeeks);
+                  const nextDate = addWeeks(executionDate, schedule.interval_weeks);
                   return nextDate ? safeFormatDate(nextDate, 'yyyy년 MM월 dd일') : '계산 오류';
                 })()
-              } ({schedule.intervalWeeks}주 후, 자동 계산됨)</p>
+              } ({schedule.interval_weeks}주 후, 자동 계산됨)</p>
             </div>
           )}
         </div>

@@ -87,8 +87,6 @@ export function useItemsStatistics() {
     byCategory: {
       injection: items.filter(item => item.category === 'injection').length,
       test: items.filter(item => item.category === 'test').length,
-      treatment: items.filter(item => item.category === 'treatment').length,
-      medication: items.filter(item => item.category === 'medication').length,
       other: items.filter(item => item.category === 'other').length,
     },
     withNotification: items.filter(item => item.requires_notification).length,

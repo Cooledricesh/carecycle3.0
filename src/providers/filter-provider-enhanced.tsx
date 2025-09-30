@@ -157,6 +157,7 @@ export function FilterProviderEnhanced({
   }, [userContext, initializeFilters])
 
   // Sync filters to URL when they change
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const syncFiltersToUrl = useCallback(
     debounce((filters: ScheduleFilter) => {
       if (!persistToUrl) return

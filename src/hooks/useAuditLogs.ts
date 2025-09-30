@@ -2,12 +2,8 @@
 
 import { useQuery } from '@tanstack/react-query'
 import type { ActivityFilters, PaginatedAuditLogs } from '@/types/activity'
-import { useToast } from '@/hooks/use-toast'
-import { mapErrorToUserMessage } from '@/lib/error-mapper'
 
 export function useAuditLogs(filters: ActivityFilters = {}) {
-  const { toast } = useToast()
-
   return useQuery<PaginatedAuditLogs>({
     queryKey: ['activity', 'logs', filters],
     queryFn: async () => {
@@ -29,14 +25,6 @@ export function useAuditLogs(filters: ActivityFilters = {}) {
       }
 
       return response.json()
-    },
-    onError: (error) => {
-      const message = mapErrorToUserMessage(error)
-      toast({
-        title: '활동 로그 조회 실패',
-        description: message,
-        variant: 'destructive',
-      })
     },
   })
 }

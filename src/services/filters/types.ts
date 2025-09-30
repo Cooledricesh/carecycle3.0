@@ -1,5 +1,6 @@
 import { SupabaseClient } from '@supabase/supabase-js'
 import { Database } from '@/lib/database.types'
+import type { ScheduleWithDetails } from '@/types/schedule'
 
 export interface UserContext {
   userId: string
@@ -25,7 +26,7 @@ export interface FilterStrategy {
     supabase: SupabaseClient<Database>,
     filters: FilterOptions,
     userContext: UserContext
-  ): Promise<any>
+  ): Promise<{ data: ScheduleWithDetails[] | null; error: Error | null }>
 
   getCacheKey(filters: FilterOptions, userContext: UserContext): string
   getCacheTTL(): number
@@ -41,5 +42,5 @@ export interface FilterStatistics {
   upcomingSchedules: number
 }
 
-// Import the centralized ScheduleWithDetails type
+// Re-export the centralized ScheduleWithDetails type
 export type { ScheduleWithDetails } from '@/types/schedule'

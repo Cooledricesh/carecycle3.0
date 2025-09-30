@@ -9,7 +9,7 @@ export class DoctorFilterStrategy implements FilterStrategy {
     supabase: SupabaseClient<Database>,
     filters: FilterOptions,
     userContext: UserContext
-  ): Promise<{ data: ScheduleWithDetails[] | null; error: any }> {
+  ): Promise<{ data: ScheduleWithDetails[] | null; error: Error | null }> {
     console.log('[DoctorFilterStrategy] Called with:', {
       userId: userContext.userId,
       role: userContext.role,
@@ -37,11 +37,11 @@ export class DoctorFilterStrategy implements FilterStrategy {
           showAll: filters.showAll,
           userId: userContext.userId,
           dateRange: filters.dateRange,
-          hasCompletedItems: calendarData.some((item: any) => item.display_type === 'completed')
+          hasCompletedItems: calendarData.some((item: Record<string, any>) => item.display_type === 'completed')
         })
 
         // Transform calendar data to ScheduleWithDetails format
-        const transformedData = calendarData.map((item: any) => ({
+        const transformedData = calendarData.map((item: Record<string, any>) => ({
           schedule_id: item.schedule_id,
           patient_id: item.patient_id,
           patient_name: item.patient_name,
@@ -174,7 +174,7 @@ export class DoctorFilterStrategy implements FilterStrategy {
     }
 
     // Transform the data to match ScheduleWithDetails format
-    const transformedData = filteredSchedules.map(s => ({
+    const transformedData = filteredSchedules.map((s: Record<string, any>) => ({
       schedule_id: s.id,
       patient_id: s.patient_id,
       patient_name: s.patients?.name || '',

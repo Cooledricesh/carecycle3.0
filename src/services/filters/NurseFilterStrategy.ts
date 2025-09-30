@@ -9,7 +9,7 @@ export class NurseFilterStrategy implements FilterStrategy {
     supabase: SupabaseClient<Database>,
     filters: FilterOptions,
     userContext: UserContext
-  ): Promise<{ data: ScheduleWithDetails[] | null; error: any }> {
+  ): Promise<{ data: ScheduleWithDetails[] | null; error: Error | null }> {
     // Nurse defaults to their care_type unless showing all
     const effectiveCareTypes = filters.showAll
       ? filters.careTypes
@@ -36,11 +36,11 @@ export class NurseFilterStrategy implements FilterStrategy {
           userId: userContext.userId,
           careType: userContext.careType,
           dateRange: filters.dateRange,
-          hasCompletedItems: calendarData.some((item: any) => item.display_type === 'completed')
+          hasCompletedItems: calendarData.some((item: Record<string, any>) => item.display_type === 'completed')
         })
 
         // Transform calendar data to ScheduleWithDetails format
-        const transformedData = calendarData.map((item: any) => ({
+        const transformedData = calendarData.map((item: Record<string, any>) => ({
           schedule_id: item.schedule_id,
           patient_id: item.patient_id,
           patient_name: item.patient_name,
@@ -148,7 +148,7 @@ export class NurseFilterStrategy implements FilterStrategy {
       return { data: null, error: queryError }
     }
 
-    const transformedData = (schedules || []).map(s => ({
+    const transformedData = (schedules || []).map((s: Record<string, any>) => ({
       schedule_id: s.id,
       patient_id: s.patient_id,
       patient_name: s.patients?.name || '',

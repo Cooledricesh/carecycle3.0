@@ -246,3 +246,81 @@ export type ScheduleEditInput = z.infer<typeof ScheduleEditSchema>
 export const validateScheduleEdit = (data: unknown) => {
   return ScheduleEditSchema.safeParse(data)
 }
+
+// Schedule Create With Custom Item Schema
+export const ScheduleCreateWithCustomItemSchema = z.object({
+  patientId: z
+    .string()
+    .uuid('유효한 환자 ID가 아닙니다'),
+
+  itemName: z
+    .string()
+    .min(1, '검사/주사명을 입력하세요')
+    .max(100, '검사/주사명은 100자 이내로 입력하세요')
+    .trim(),
+
+  intervalWeeks: z
+    .number()
+    .int('정수를 입력해주세요')
+    .min(1, '최소 1주 이상 입력해주세요')
+    .max(52, '최대 52주까지 입력 가능합니다'),
+
+  intervalUnit: z
+    .enum(['week', 'month', 'year'], {
+      errorMap: () => ({ message: '유효한 주기 단위를 선택하세요' })
+    }),
+
+  intervalValue: z
+    .number()
+    .int('정수를 입력해주세요')
+    .min(1, '최소 1 이상 입력해주세요')
+    .max(365, '최대 365까지 입력 가능합니다'),
+
+  startDate: z
+    .string()
+    .refine(isValidDate, '유효한 날짜 형식이 아닙니다'),
+
+  nextDueDate: z
+    .string()
+    .refine(isValidDate, '유효한 날짜 형식이 아닙니다'),
+
+  notes: z
+    .string()
+    .max(500, '메모는 500자 이내로 입력해주세요')
+    .nullable()
+    .optional(),
+
+  category: z
+    .enum(['injection', 'test', 'other'], {
+      errorMap: () => ({ message: '유효한 카테고리를 선택하세요 (injection, test, other)' })
+    })
+    .nullable()
+    .optional()
+    .default('other'),
+
+  notificationDaysBefore: z
+    .number()
+    .int('정수를 입력해주세요')
+    .min(0, '알림 일수는 0일 이상이어야 합니다')
+    .max(30, '알림 일수는 최대 30일까지 설정 가능합니다')
+    .nullable()
+    .optional()
+    .transform(val => val === null || val === undefined ? 0 : val) // null/undefined는 0으로 처리 (알림 없음)
+}).refine(
+  (data) => {
+    // nextDueDate는 startDate 이후여야 함
+    return new Date(data.nextDueDate) >= new Date(data.startDate)
+  },
+  {
+    message: '다음 시행일은 시작일 이후여야 합니다',
+    path: ['nextDueDate'],
+  }
+)
+
+// Schedule Create With Custom Item type
+export type ScheduleCreateWithCustomItemInput = z.infer<typeof ScheduleCreateWithCustomItemSchema>
+
+// Schedule Create With Custom Item validation helper
+export const validateScheduleCreateWithCustomItem = (data: unknown) => {
+  return ScheduleCreateWithCustomItemSchema.safeParse(data)
+}

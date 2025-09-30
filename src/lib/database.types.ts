@@ -17,7 +17,7 @@ export type ScheduleStatus = 'active' | 'paused' | 'completed' | 'cancelled'
 
 export type ExecutionStatus = 'planned' | 'completed' | 'skipped' | 'overdue'
 
-export type ItemCategory = 'injection' | 'test' | 'treatment' | 'medication' | 'other'
+export type ItemCategory = 'injection' | 'test' | 'other'
 
 export type AppointmentType = 'consultation' | 'treatment' | 'follow_up' | 'emergency' | 'routine_check'
 
