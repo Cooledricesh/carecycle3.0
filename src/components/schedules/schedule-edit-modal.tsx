@@ -143,11 +143,15 @@ export function ScheduleEditModal({
 
   const editMutation = useMutation({
     mutationFn: (data: ScheduleEditInput) => {
-      console.log('[ScheduleEditModal] Calling editSchedule with:', {
-        schedule_id: schedule.schedule_id,
-        data,
-        fullSchedule: schedule
-      })
+      // Only log non-PHI identifiers in development
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[ScheduleEditModal] Calling editSchedule:', {
+          schedule_id: schedule.schedule_id,
+          has_data: !!data,
+          // Only log field presence, not actual values
+          fields_to_update: data ? Object.keys(data) : []
+        })
+      }
       return scheduleService.editSchedule(schedule.schedule_id, data)
     },
     onSuccess: () => {
