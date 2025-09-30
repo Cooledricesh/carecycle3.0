@@ -142,7 +142,14 @@ export function ScheduleEditModal({
   }
 
   const editMutation = useMutation({
-    mutationFn: (data: ScheduleEditInput) => scheduleService.editSchedule(schedule.schedule_id, data),
+    mutationFn: (data: ScheduleEditInput) => {
+      console.log('[ScheduleEditModal] Calling editSchedule with:', {
+        schedule_id: schedule.schedule_id,
+        data,
+        fullSchedule: schedule
+      })
+      return scheduleService.editSchedule(schedule.schedule_id, data)
+    },
     onSuccess: () => {
       // scheduleServiceEnhanced의 캐시도 클리어하고 이벤트 발행
       scheduleServiceEnhanced.clearCache()

@@ -683,10 +683,18 @@ export const scheduleService = {
 
   async editSchedule(scheduleId: string, input: ScheduleEditInput, supabase?: SupabaseClient): Promise<Schedule> {
     const client = supabase || createClient()
+
+    console.log('[editSchedule] Starting with:', {
+      scheduleId,
+      input,
+      hasSupabaseClient: !!supabase
+    })
+
     try {
       const validated = ScheduleEditSchema.parse(input)
 
       // First, get the current schedule to check start_date
+      console.log('[editSchedule] Fetching schedule with ID:', scheduleId)
       const { data: currentSchedule, error: fetchError } = await client
         .from('schedules')
         .select('start_date')
@@ -694,10 +702,11 @@ export const scheduleService = {
         .single()
 
       if (fetchError) {
-        console.error('Error fetching schedule:', {
+        console.error('[editSchedule] Error fetching schedule:', {
           error: fetchError.message,
           code: fetchError.code,
           details: fetchError.details,
+          hint: fetchError.hint,
           scheduleId
         })
         throw fetchError
@@ -779,12 +788,24 @@ export const scheduleService = {
         updateData.next_due_date = validated.nextDueDate
       }
 
+      console.log('[editSchedule] Updating schedule with:', {
+        scheduleId,
+        updateData,
+        itemId
+      })
+
       const { data, error } = await client
         .from('schedules')
         .update(updateData)
         .eq('id', scheduleId)
         .select()
         .single()
+
+      console.log('[editSchedule] Update result:', {
+        success: !error,
+        data: data ? 'Data returned' : 'No data',
+        error: error?.message
+      })
       
       if (error) {
         // Handle specific database constraint errors

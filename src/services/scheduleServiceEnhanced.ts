@@ -139,6 +139,8 @@ export class ScheduleServiceEnhanced {
         // Transform from flattened RPC format to nested format
         // Keep both snake_case and camelCase for backward compatibility
         return {
+          // CRITICAL: Map schedule_id for ScheduleWithDetails type compatibility
+          schedule_id: s.schedule_id || s.id,  // UI expects schedule_id
           // Main schedule properties with both naming conventions
           // Prefer s.id (DB primary key if present), then s.schedule_id (RPC renamed PK), then composite fallback
           id: s.id || s.schedule_id || `${s.patient_id}-${s.item_id}-temp`,
@@ -334,6 +336,8 @@ export class ScheduleServiceEnhanced {
 
         // Transform the data to match expected format used by UI
         return (schedules || []).map(s => ({
+          // Map 'id' to 'schedule_id' to match ScheduleWithDetails type
+          schedule_id: s.id,  // IMPORTANT: UI expects schedule_id, not id
           // Keep both naming conventions for compatibility
           id: s.id,
           patient_id: s.patient_id,
@@ -350,6 +354,14 @@ export class ScheduleServiceEnhanced {
           createdAt: s.created_at,
           updated_at: s.updated_at,
           updatedAt: s.updated_at,
+          // Add flat fields for UI compatibility
+          patient_name: s.patients?.name || '',
+          patient_care_type: s.patients?.care_type || '',
+          patient_number: s.patients?.patient_number || '',
+          item_name: s.items?.name || '',
+          item_category: s.items?.category || '',
+          doctor_id: s.patients?.doctor_id || null,
+          doctor_name: null, // Not available in direct query
           // Nested patient object
           patient: s.patients ? {
             id: s.patients.id,
