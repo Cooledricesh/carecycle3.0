@@ -174,7 +174,7 @@ import { SpecificExport } from 'some-module';
 ## 8. Enforcement Prompts for AI Assistants
 
 ### Starting Any Task
-```
+```text
 Before I begin, I will:
 1. Run `npm run lint` and document current errors
 2. Run `npx tsc --noEmit` and document type errors
@@ -183,7 +183,7 @@ Before I begin, I will:
 ```
 
 ### During Development
-```
+```text
 After each file modification, I will:
 1. Run lint on the specific file
 2. Fix ALL errors in that file, not just "related" ones
@@ -192,7 +192,7 @@ After each file modification, I will:
 ```
 
 ### Before Completion
-```
+```text
 I cannot consider this task complete until:
 1. npm run lint shows no new errors
 2. npx tsc --noEmit shows no new errors

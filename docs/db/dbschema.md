@@ -84,7 +84,11 @@ This document provides a complete and accurate description of the medical schedu
 - `unique_active_patient_number`: Unique constraint on `patient_number` WHERE `is_active = true AND archived = false`
 
 **Indexes**:
-- `idx_patients_assigned_doctor_name`: Index on `assigned_doctor_name` WHERE NOT NULL
+- `idx_patients_assigned_doctor_name`: Index on `assigned_doctor_name` WHERE `assigned_doctor_name IS NOT NULL`
+  ```sql
+  CREATE INDEX idx_patients_assigned_doctor_name ON patients(assigned_doctor_name)
+  WHERE assigned_doctor_name IS NOT NULL;
+  ```
 
 **Key Changes**:
 - **NO ENCRYPTION**: Simplified from original encrypted design for development

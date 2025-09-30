@@ -78,11 +78,13 @@ export function PatientDoctorSelect({
     // Only sync when not loading to avoid overwriting user's pending changes
     if (!isLoading) {
       const newValue = patient.doctorId || patient.assignedDoctorName || null
+      // Only update if the value actually changed to prevent unnecessary re-renders
       if (newValue !== currentValue) {
         setCurrentValue(newValue)
       }
     }
-  }, [patient.doctorId, patient.assignedDoctorName, patient.id, isLoading, currentValue])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [patient.doctorId, patient.assignedDoctorName, patient.id, isLoading]) // currentValue excluded to prevent infinite loop
 
   // Cleanup on unmount
   useEffect(() => {
@@ -119,8 +121,9 @@ export function PatientDoctorSelect({
       newDoctorName = value.substring('pending:'.length)
     }
 
-    // Check if value actually changed
-    if (newDoctorId === patient.doctorId && newDoctorName === patient.assignedDoctorName) {
+    // Check if value actually changed by comparing with currentValue
+    const newValue = newDoctorId || newDoctorName || null
+    if (newValue === currentValue) {
       return
     }
 
@@ -213,19 +216,22 @@ export function PatientDoctorSelect({
     await handleChange(`pending:${trimmedName}`)
   }
 
-  // Get display value and determine current selection type
+  // Get display value and determine current selection type based on currentValue
   let displayValue = '미지정'
   let selectValue = 'none'
 
-  if (patient.doctorId) {
-    const doctor = doctors?.find(d => d.id === patient.doctorId)
+  // Use currentValue instead of patient props for display
+  if (currentValue) {
+    // Check if it's a registered doctor ID
+    const doctor = doctors?.find(d => d.id === currentValue)
     if (doctor) {
       displayValue = doctor.name
-      selectValue = `registered:${patient.doctorId}`
+      selectValue = `registered:${currentValue}`
+    } else {
+      // It's a pending doctor name
+      displayValue = currentValue
+      selectValue = `pending:${currentValue}`
     }
-  } else if (patient.assignedDoctorName) {
-    displayValue = patient.assignedDoctorName
-    selectValue = `pending:${patient.assignedDoctorName}`
   }
 
   return (
@@ -257,10 +263,10 @@ export function PatientDoctorSelect({
             ) : (
               <SelectValue placeholder="미지정">
                 <div className="flex items-center gap-1">
-                  {patient.doctorId && (
+                  {currentValue && doctors?.find(d => d.id === currentValue) && (
                     <UserCheck className="h-3 w-3 text-green-600" />
                   )}
-                  {!patient.doctorId && patient.assignedDoctorName && (
+                  {currentValue && !doctors?.find(d => d.id === currentValue) && (
                     <Clock className="h-3 w-3 text-amber-600" />
                   )}
                   <span>{displayValue}</span>

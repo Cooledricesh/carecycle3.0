@@ -12,9 +12,16 @@ export function useSchedulesWithOptionalFilter() {
   const filteredResult = useFilteredSchedules()
   const unfilteredResult = useSchedules()
 
-  // Return the appropriate result based on the condition
+  // When filter is available, overlay the filtered data/loading/error onto the full shape
+  // This preserves mutation handlers and other properties from useSchedules
   if (isFilterAvailable) {
-    return filteredResult
+    return {
+      ...unfilteredResult,
+      schedules: filteredResult.schedules,
+      isLoading: filteredResult.isLoading,
+      error: filteredResult.error,
+      refetch: filteredResult.refetch
+    }
   } else {
     return unfilteredResult
   }
