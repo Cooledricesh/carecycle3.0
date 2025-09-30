@@ -142,7 +142,18 @@ export function ScheduleEditModal({
   }
 
   const editMutation = useMutation({
-    mutationFn: (data: ScheduleEditInput) => scheduleService.editSchedule(schedule.schedule_id, data),
+    mutationFn: (data: ScheduleEditInput) => {
+      // Only log non-PHI identifiers in development
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[ScheduleEditModal] Calling editSchedule:', {
+          schedule_id: schedule.schedule_id,
+          has_data: !!data,
+          // Only log field presence, not actual values
+          fields_to_update: data ? Object.keys(data) : []
+        })
+      }
+      return scheduleService.editSchedule(schedule.schedule_id, data)
+    },
     onSuccess: () => {
       // scheduleServiceEnhanced의 캐시도 클리어하고 이벤트 발행
       scheduleServiceEnhanced.clearCache()

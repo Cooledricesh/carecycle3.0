@@ -681,20 +681,39 @@ export const scheduleService = {
     return executeQuery()
   },
 
-  async editSchedule(id: string, input: ScheduleEditInput, supabase?: SupabaseClient): Promise<Schedule> {
+  async editSchedule(scheduleId: string, input: ScheduleEditInput, supabase?: SupabaseClient): Promise<Schedule> {
     const client = supabase || createClient()
+
+    // Development-only logging without PHI
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[editSchedule] Starting:', {
+        scheduleId,
+        inputFields: input ? Object.keys(input) : [],
+        hasSupabaseClient: !!supabase
+      })
+    }
+
     try {
       const validated = ScheduleEditSchema.parse(input)
 
       // First, get the current schedule to check start_date
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[editSchedule] Fetching schedule with ID:', scheduleId)
+      }
       const { data: currentSchedule, error: fetchError } = await client
         .from('schedules')
         .select('start_date')
-        .eq('id', id)
+        .eq('id', scheduleId)
         .single()
 
       if (fetchError) {
-        console.error('Error fetching schedule:', fetchError)
+        console.error('[editSchedule] Error fetching schedule:', {
+          error: fetchError.message,
+          code: fetchError.code,
+          details: fetchError.details,
+          hint: fetchError.hint,
+          scheduleId
+        })
         throw fetchError
       }
 
@@ -774,12 +793,28 @@ export const scheduleService = {
         updateData.next_due_date = validated.nextDueDate
       }
 
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[editSchedule] Updating schedule:', {
+          scheduleId,
+          fieldsToUpdate: Object.keys(updateData),
+          hasItemId: !!itemId
+        })
+      }
+
       const { data, error } = await client
         .from('schedules')
         .update(updateData)
-        .eq('id', id)
+        .eq('id', scheduleId)
         .select()
         .single()
+
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[editSchedule] Update result:', {
+          success: !error,
+          hasData: !!data,
+          errorCode: error?.code || null
+        })
+      }
       
       if (error) {
         // Handle specific database constraint errors
@@ -791,7 +826,12 @@ export const scheduleService = {
       }
       return snakeToCamel(data) as Schedule
     } catch (error) {
-      console.error('Error editing schedule:', error)
+      console.error('[editSchedule] Error:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        code: (error as any)?.code,
+        scheduleId
+        // Note: input removed to prevent PHI exposure
+      })
 
       // If it's already our custom error message, pass it through
       if (error instanceof Error && error.message.includes('다음 예정일')) {
