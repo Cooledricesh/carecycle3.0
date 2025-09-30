@@ -82,7 +82,7 @@ export function PatientDoctorSelect({
         setCurrentValue(newValue)
       }
     }
-  }, [patient.doctorId, patient.assignedDoctorName, patient.id, isLoading])
+  }, [patient.doctorId, patient.assignedDoctorName, patient.id, isLoading, currentValue])
 
   // Cleanup on unmount
   useEffect(() => {

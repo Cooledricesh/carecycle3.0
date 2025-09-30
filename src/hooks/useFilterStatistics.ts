@@ -44,6 +44,7 @@ export function useFilterStatistics(profile: UserProfile | null | undefined): Us
     }
 
     fetchStats()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile?.id, profile?.role, profile?.care_type])
 
   return { statistics, urgentCount }

@@ -9,7 +9,7 @@ export class AdminFilterStrategy implements FilterStrategy {
     supabase: SupabaseClient<Database>,
     filters: FilterOptions,
     userContext: UserContext
-  ): Promise<{ data: ScheduleWithDetails[] | null; error: any }> {
+  ): Promise<{ data: ScheduleWithDetails[] | null; error: Error | null }> {
     // Admin always sees all data, showAll flag is ignored
     console.log('[AdminFilterStrategy] Attempting RPC call')
 
@@ -31,11 +31,11 @@ export class AdminFilterStrategy implements FilterStrategy {
         console.log('[AdminFilterStrategy] Calendar RPC successful:', {
           dataLength: calendarData.length || 0,
           dateRange: filters.dateRange,
-          hasCompletedItems: calendarData.some((item: any) => item.display_type === 'completed')
+          hasCompletedItems: calendarData.some((item: Record<string, any>) => item.display_type === 'completed')
         })
 
         // Transform calendar data to ScheduleWithDetails format
-        const transformedData = calendarData.map((item: any) => ({
+        const transformedData = calendarData.map((item: Record<string, any>) => ({
           schedule_id: item.schedule_id,
           patient_id: item.patient_id,
           patient_name: item.patient_name,
@@ -134,14 +134,14 @@ export class AdminFilterStrategy implements FilterStrategy {
       }
     }
 
-    const { data: schedules, error: queryError } = await query as any
+    const { data: schedules, error: queryError } = await query
 
     if (queryError) {
       console.error('[AdminFilterStrategy] Fallback error:', queryError)
       return { data: null, error: queryError }
     }
 
-    const transformedData = (schedules || []).map((s: any) => ({
+    const transformedData = (schedules || []).map((s: Record<string, any>) => ({
       schedule_id: s.id,
       patient_id: s.patient_id,
       patient_name: s.patients?.name || '',
