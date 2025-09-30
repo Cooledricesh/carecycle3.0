@@ -681,7 +681,7 @@ export const scheduleService = {
     return executeQuery()
   },
 
-  async editSchedule(id: string, input: ScheduleEditInput, supabase?: SupabaseClient): Promise<Schedule> {
+  async editSchedule(scheduleId: string, input: ScheduleEditInput, supabase?: SupabaseClient): Promise<Schedule> {
     const client = supabase || createClient()
     try {
       const validated = ScheduleEditSchema.parse(input)
@@ -690,11 +690,16 @@ export const scheduleService = {
       const { data: currentSchedule, error: fetchError } = await client
         .from('schedules')
         .select('start_date')
-        .eq('id', id)
+        .eq('id', scheduleId)
         .single()
 
       if (fetchError) {
-        console.error('Error fetching schedule:', fetchError)
+        console.error('Error fetching schedule:', {
+          error: fetchError.message,
+          code: fetchError.code,
+          details: fetchError.details,
+          scheduleId
+        })
         throw fetchError
       }
 
@@ -777,7 +782,7 @@ export const scheduleService = {
       const { data, error } = await client
         .from('schedules')
         .update(updateData)
-        .eq('id', id)
+        .eq('id', scheduleId)
         .select()
         .single()
       
@@ -791,7 +796,12 @@ export const scheduleService = {
       }
       return snakeToCamel(data) as Schedule
     } catch (error) {
-      console.error('Error editing schedule:', error)
+      console.error('Error editing schedule:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        error,
+        scheduleId,
+        input
+      })
 
       // If it's already our custom error message, pass it through
       if (error instanceof Error && error.message.includes('다음 예정일')) {
