@@ -24,7 +24,7 @@ npm run lint 2>&1 | tee -a .errors-baseline.txt
 npx tsc --noEmit 2>&1 | tee -a .errors-baseline.txt
 ```
 
-**⚠️ If you skip this step, your work is invalid**
+### ⚠️ If you skip this step, your work is invalid
 
 ## 2. During Development Workflow
 

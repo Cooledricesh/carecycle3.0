@@ -3,7 +3,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { scheduleService } from '@/services/scheduleService'
 import { scheduleServiceEnhanced } from '@/services/scheduleServiceEnhanced'
-import { useFilterContext } from '@/lib/filters/filter-context'
+import { useFilterContext, useIsFilterContextAvailable } from '@/lib/filters/filter-context'
 import { useAuth } from '@/providers/auth-provider-simple'
 import { useProfile } from '@/hooks/useProfile'
 import { useToast } from '@/hooks/use-toast'
@@ -17,7 +17,9 @@ export function useFilteredSchedules() {
   const queryClient = useQueryClient()
   const { user, loading: authLoading } = useAuth()
   const { data: profile, isLoading: profileLoading } = useProfile()
-  const { filters } = useFilterContext()
+  const isFilterAvailable = useIsFilterContextAvailable()
+  // Only access filter context if it's available
+  const filters = isFilterAvailable ? useFilterContext().filters : { showAll: false }
   const supabase = createClient()
 
 
@@ -94,7 +96,9 @@ export function useFilteredTodayChecklist() {
   const { toast } = useToast()
   const { user, loading: authLoading } = useAuth()
   const { data: profile, isLoading: profileLoading } = useProfile()
-  const { filters } = useFilterContext()
+  const isFilterAvailable = useIsFilterContextAvailable()
+  // Only access filter context if it's available
+  const filters = isFilterAvailable ? useFilterContext().filters : { showAll: false }
   const supabase = createClient()
 
   return useQuery({
@@ -139,7 +143,9 @@ export function useFilteredUpcomingSchedules(daysAhead: number = 7) {
   const { toast } = useToast()
   const { user, loading: authLoading } = useAuth()
   const { data: profile, isLoading: profileLoading } = useProfile()
-  const { filters } = useFilterContext()
+  const isFilterAvailable = useIsFilterContextAvailable()
+  // Only access filter context if it's available
+  const filters = isFilterAvailable ? useFilterContext().filters : { showAll: false }
   const supabase = createClient()
 
   return useQuery({
