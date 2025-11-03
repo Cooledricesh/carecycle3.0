@@ -17,7 +17,7 @@ interface UserProfile {
   created_at: string
 }
 
-export default async function ApprovalPendingPage(): Promise<React.ReactElement> {
+export default function ApprovalPendingPage() {
   return <ApprovalPendingPageContent />
 }
 

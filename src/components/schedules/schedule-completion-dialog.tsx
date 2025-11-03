@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button"
 import { useIsMobile } from "@/hooks/useIsMobile"
 import { responsiveText, touchTarget } from "@/lib/utils"
 import { safeFormatDate, addWeeks } from "@/lib/utils/date"
+import { format } from "date-fns"
 import type { ScheduleWithDetails } from "@/types/schedule"
 
 interface ScheduleCompletionDialogProps {
@@ -87,7 +88,7 @@ export function ScheduleCompletionDialog({
               <p>다음 예정일: {
                 (() => {
                   const nextDate = addWeeks(new Date(executionDate), schedule.interval_weeks);
-                  return nextDate ? safeFormatDate(nextDate, 'yyyy년 MM월 dd일') : '계산 오류';
+                  return nextDate ? safeFormatDate(format(nextDate, 'yyyy-MM-dd'), 'yyyy년 MM월 dd일') : '계산 오류';
                 })()
               } ({schedule.interval_weeks}주 후, 자동 계산됨)</p>
             </div>

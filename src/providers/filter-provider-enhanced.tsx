@@ -88,22 +88,14 @@ export function FilterProviderEnhanced({
       }
     }
 
-    // 2. Try persisted state (if available)
-    if (enablePersistence && persistenceRef.current && userContext) {
-      const persisted = persistenceRef.current.loadFilters()
-      if (persisted) {
-        return persisted
-      }
-    }
-
-    // 3. Use role-based defaults
+    // 2. Use role-based defaults
     if (userContext) {
       return RoleBasedFilterManager.getInitialFilters(userContext)
     }
 
-    // 4. Fallback to system defaults
+    // 3. Fallback to system defaults
     return defaultFilters
-  }, [persistToUrl, searchParams, enablePersistence, userContext])
+  }, [persistToUrl, searchParams, userContext])
 
   // State
   const [filters, setFiltersInternal] = useState<ScheduleFilter>(defaultFilters)
@@ -211,14 +203,16 @@ export function FilterProviderEnhanced({
   }, [filters, syncFiltersToUrl, enablePersistence])
 
   // Enhanced setFilters with validation and optimistic updates
-  const setFilters = useCallback((newFilters: ScheduleFilter) => {
+  const setFilters = useCallback((newFilters: ScheduleFilter | ((prev: ScheduleFilter) => ScheduleFilter)) => {
+    const resolvedFilters = typeof newFilters === 'function' ? newFilters(filters) : newFilters
+
     if (!userContext) {
-      setFiltersInternal(newFilters)
+      setFiltersInternal(resolvedFilters)
       return
     }
 
     // Validate filter change
-    const validation = RoleBasedFilterManager.validateFilterChange(newFilters, userContext)
+    const validation = RoleBasedFilterManager.validateFilterChange(resolvedFilters, userContext)
     if (!validation.valid) {
       setFilterError(validation.reason || '필터 변경이 허용되지 않습니다')
       return
@@ -228,8 +222,8 @@ export function FilterProviderEnhanced({
     previousFiltersRef.current = filters
 
     // Apply optimistic update
-    setOptimisticFilters(newFilters)
-    setFiltersInternal(newFilters)
+    setOptimisticFilters(resolvedFilters)
+    setFiltersInternal(resolvedFilters)
     setFilterError(null)
 
     // Clear optimistic state after a delay
@@ -240,7 +234,7 @@ export function FilterProviderEnhanced({
 
   // Update filters (partial update)
   const updateFilters = useCallback((updates: Partial<ScheduleFilter>) => {
-    setFilters(prev => ({
+    setFilters((prev: ScheduleFilter) => ({
       ...prev,
       ...updates
     }))
@@ -274,7 +268,7 @@ export function FilterProviderEnhanced({
 
   // Toggle a care type
   const toggleCareType = useCallback((careType: CareType) => {
-    setFilters(prev => {
+    setFilters((prev: ScheduleFilter) => {
       const currentTypes = [...prev.careTypes]
       const index = currentTypes.indexOf(careType)
 

@@ -19,7 +19,7 @@ export class DoctorFilterStrategy implements FilterStrategy {
 
     // For calendar views with date range, use the calendar-specific function
     if (filters.dateRange?.start && filters.dateRange?.end) {
-      const { data: calendarData, error: calendarError } = await supabase.rpc('get_calendar_schedules_filtered', {
+      const { data: calendarData, error: calendarError } = await (supabase as any).rpc('get_calendar_schedules_filtered', {
         p_start_date: filters.dateRange.start,
         p_end_date: filters.dateRange.end,
         p_user_id: userContext.userId,
@@ -72,7 +72,7 @@ export class DoctorFilterStrategy implements FilterStrategy {
     }
 
     // Try the regular server-side filtering function
-    const { data, error } = await supabase.rpc('get_filtered_schedules', {
+    const { data, error } = await (supabase as any).rpc('get_filtered_schedules', {
       p_user_id: userContext.userId,
       p_show_all: filters.showAll || false,
       p_care_types: filters.careTypes?.length ? filters.careTypes : null,
@@ -163,7 +163,7 @@ export class DoctorFilterStrategy implements FilterStrategy {
     // Filter schedules based on doctor_id if showAll is false
     let filteredSchedules = schedules || []
     if (!filters.showAll) {
-      filteredSchedules = filteredSchedules.filter(s =>
+      filteredSchedules = filteredSchedules.filter((s: any) =>
         s.patients?.doctor_id === userContext.userId
       )
       console.log('[DoctorFilterStrategy] Filtered by doctor_id:', {

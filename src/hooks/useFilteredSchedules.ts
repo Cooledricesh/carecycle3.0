@@ -103,7 +103,7 @@ export function useFilteredTodayChecklist() {
   // Always call the hook unconditionally
   const filterContext = useFilterContext()
   // Then use conditional logic on the returned value
-  const filters = isFilterAvailable ? filterContext.filters : { showAll: false }
+  const filters = isFilterAvailable ? filterContext.filters : defaultFilters
   const supabase = createClient()
 
   return useQuery({

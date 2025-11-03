@@ -303,7 +303,7 @@ export class FilterPersistence {
  * Hook to use filter persistence
  */
 export function useFilterPersistence(userId: string, userRole: string) {
-  const persistenceRef = React.useRef<FilterPersistence>()
+  const persistenceRef = React.useRef<FilterPersistence | undefined>(undefined)
 
   React.useEffect(() => {
     persistenceRef.current = new FilterPersistence(userId, userRole)

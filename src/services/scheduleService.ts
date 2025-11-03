@@ -982,7 +982,7 @@ export const scheduleService = {
       }
 
       // Transform the data to ScheduleWithDetails format
-      let schedules = (data || []).map(item => {
+      let schedules = (data || []).map((item: any) => {
         const schedule = {
           id: item.schedule_id,
           schedule_id: item.schedule_id,
@@ -1022,7 +1022,7 @@ export const scheduleService = {
       if (filters) {
         // Filter by care types
         if (filters.careTypes && filters.careTypes.length > 0) {
-          schedules = schedules.filter(schedule => {
+          schedules = schedules.filter((schedule: any) => {
             const careType = schedule.patient_care_type || (schedule as any).patient?.careType
             return careType && filters.careTypes.includes(careType as any)
           })
@@ -1030,7 +1030,7 @@ export const scheduleService = {
 
         // Filter by doctor
         if (filters.doctorId) {
-          schedules = schedules.filter(schedule => {
+          schedules = schedules.filter((schedule: any) => {
             const doctorId = schedule.doctor_id || (schedule as any).patient?.doctorId
             return doctorId === filters.doctorId
           })
