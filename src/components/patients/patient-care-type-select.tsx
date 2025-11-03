@@ -34,7 +34,7 @@ export function PatientCareTypeSelect({
   compact = false 
 }: PatientCareTypeSelectProps) {
   const [isLoading, setIsLoading] = useState(false)
-  const [currentValue, setCurrentValue] = useState<CareType | null>(patient.careType)
+  const [currentValue, setCurrentValue] = useState<CareType | null>(patient.careType || null)
   const { toast } = useToast()
   const queryClient = useQueryClient()
   

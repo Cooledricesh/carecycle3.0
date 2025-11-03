@@ -187,8 +187,8 @@ export class ScheduleStateManager {
 
       // 6. Calculate missed executions if needed
       let missedExecutions = 0
-      if (options.handleMissed !== 'skip' && schedule.updated_at) {
-        const pausedDate = new Date(schedule.updated_at)
+      if (options.handleMissed !== 'skip' && schedule.updatedAt) {
+        const pausedDate = new Date(schedule.updatedAt)
         const missed = this.calculator.getMissedExecutions(
           schedule,
           pausedDate,
@@ -359,11 +359,11 @@ export class ScheduleStateManager {
    * @returns 일시정지 기간 (주)
    */
   getPauseDuration(schedule: Schedule): number | null {
-    if (schedule.status !== 'paused' || !schedule.updated_at) {
+    if (schedule.status !== 'paused' || !schedule.updatedAt) {
       return null
     }
 
-    const pausedDate = new Date(schedule.updated_at)
+    const pausedDate = new Date(schedule.updatedAt)
     const now = new Date()
 
     return differenceInWeeks(now, pausedDate)

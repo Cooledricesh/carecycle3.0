@@ -88,22 +88,14 @@ export function FilterProviderEnhanced({
       }
     }
 
-    // 2. Try persisted state (if available)
-    if (enablePersistence && persistenceRef.current && userContext) {
-      const persisted = persistenceRef.current.loadFilters()
-      if (persisted) {
-        return persisted
-      }
-    }
-
-    // 3. Use role-based defaults
+    // 2. Use role-based defaults
     if (userContext) {
       return RoleBasedFilterManager.getInitialFilters(userContext)
     }
 
-    // 4. Fallback to system defaults
+    // 3. Fallback to system defaults
     return defaultFilters
-  }, [persistToUrl, searchParams, enablePersistence, userContext])
+  }, [persistToUrl, searchParams, userContext])
 
   // State
   const [filters, setFiltersInternal] = useState<ScheduleFilter>(defaultFilters)
@@ -111,50 +103,55 @@ export function FilterProviderEnhanced({
   const [optimisticFilters, setOptimisticFilters] = useState<ScheduleFilter | null>(null)
   const [filterError, setFilterError] = useState<string | null>(null)
 
-  // Initialize persistence layer
+  // Initialize persistence layer and filters when user context is ready
   useEffect(() => {
-    if (!enablePersistence || !userContext) return
+    if (!userContext || isInitializedRef.current) return
 
-    persistenceRef.current = new FilterPersistence(userContext.id, userContext.role)
+    let cancelled = false
 
-    // Load persisted filters
-    if (!isInitializedRef.current) {
-      persistenceRef.current.loadFilters().then(persisted => {
-        if (persisted && !isInitializedRef.current) {
-          setFiltersInternal(persisted)
-          isInitializedRef.current = true
-        }
-      })
-    }
+    const initializeAsync = async () => {
+      let initialFilters: ScheduleFilter | null = null
 
-    // Setup multi-tab sync
-    if (enableMultiTab) {
-      const unsubscribe = persistenceRef.current.onFilterChange((newFilters) => {
-        console.log('[FilterProvider] Received filter change from other tab:', newFilters)
-        setFiltersInternal(newFilters)
-        // Invalidate queries to refresh data
-        queryClient.invalidateQueries({ queryKey: ['schedules'] })
-      })
+      // Initialize persistence
+      if (enablePersistence) {
+        persistenceRef.current = new FilterPersistence(userContext.id, userContext.role)
 
-      return () => {
-        unsubscribe()
-        persistenceRef.current?.destroy()
+        // Try to load persisted filters first
+        initialFilters = await persistenceRef.current.loadFilters()
       }
-    }
 
-    return () => {
-      persistenceRef.current?.destroy()
-    }
-  }, [userContext, enablePersistence, enableMultiTab, queryClient])
+      // If cancelled during async operation, bail out
+      if (cancelled) return
 
-  // Initialize filters when user context is ready
-  useEffect(() => {
-    if (userContext && !isInitializedRef.current) {
-      const initialFilters = initializeFilters()
-      setFiltersInternal(initialFilters)
+      // Use persisted filters if available, otherwise use initialization logic
+      const resolved = initialFilters ?? initializeFilters()
+      setFiltersInternal(resolved)
       isInitializedRef.current = true
     }
-  }, [userContext, initializeFilters])
+
+    initializeAsync()
+
+    // Setup multi-tab sync after initialization
+    const setupSync = () => {
+      if (enableMultiTab && persistenceRef.current) {
+        return persistenceRef.current.onFilterChange((newFilters) => {
+          console.log('[FilterProvider] Received filter change from other tab:', newFilters)
+          setFiltersInternal(newFilters)
+          // Invalidate queries to refresh data
+          queryClient.invalidateQueries({ queryKey: ['schedules'] })
+        })
+      }
+      return () => {}
+    }
+
+    const unsubscribe = setupSync()
+
+    return () => {
+      cancelled = true
+      unsubscribe()
+      persistenceRef.current?.destroy()
+    }
+  }, [userContext, enablePersistence, enableMultiTab, queryClient, initializeFilters])
 
   // Sync filters to URL when they change
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -211,14 +208,16 @@ export function FilterProviderEnhanced({
   }, [filters, syncFiltersToUrl, enablePersistence])
 
   // Enhanced setFilters with validation and optimistic updates
-  const setFilters = useCallback((newFilters: ScheduleFilter) => {
+  const setFilters = useCallback((newFilters: ScheduleFilter | ((prev: ScheduleFilter) => ScheduleFilter)) => {
+    const resolvedFilters = typeof newFilters === 'function' ? newFilters(filters) : newFilters
+
     if (!userContext) {
-      setFiltersInternal(newFilters)
+      setFiltersInternal(resolvedFilters)
       return
     }
 
     // Validate filter change
-    const validation = RoleBasedFilterManager.validateFilterChange(newFilters, userContext)
+    const validation = RoleBasedFilterManager.validateFilterChange(resolvedFilters, userContext)
     if (!validation.valid) {
       setFilterError(validation.reason || '필터 변경이 허용되지 않습니다')
       return
@@ -228,8 +227,8 @@ export function FilterProviderEnhanced({
     previousFiltersRef.current = filters
 
     // Apply optimistic update
-    setOptimisticFilters(newFilters)
-    setFiltersInternal(newFilters)
+    setOptimisticFilters(resolvedFilters)
+    setFiltersInternal(resolvedFilters)
     setFilterError(null)
 
     // Clear optimistic state after a delay
@@ -240,7 +239,7 @@ export function FilterProviderEnhanced({
 
   // Update filters (partial update)
   const updateFilters = useCallback((updates: Partial<ScheduleFilter>) => {
-    setFilters(prev => ({
+    setFilters((prev: ScheduleFilter) => ({
       ...prev,
       ...updates
     }))
@@ -274,7 +273,7 @@ export function FilterProviderEnhanced({
 
   // Toggle a care type
   const toggleCareType = useCallback((careType: CareType) => {
-    setFilters(prev => {
+    setFilters((prev: ScheduleFilter) => {
       const currentTypes = [...prev.careTypes]
       const index = currentTypes.indexOf(careType)
 

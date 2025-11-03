@@ -10,6 +10,7 @@ import { useToast } from '@/hooks/use-toast'
 import { mapErrorToUserMessage } from '@/lib/error-mapper'
 import { createClient } from '@/lib/supabase/client'
 import { queryKeys } from '@/lib/query-keys'
+import { defaultFilters, type ScheduleFilter } from '@/lib/filters/filter-types'
 import type { UserContext } from '@/services/filters/types'
 
 export function useFilteredSchedules() {
@@ -21,7 +22,7 @@ export function useFilteredSchedules() {
   // Always call the hook unconditionally
   const filterContext = useFilterContext()
   // Then use conditional logic on the returned value
-  const filters = isFilterAvailable ? filterContext.filters : { showAll: false }
+  const filters: ScheduleFilter = isFilterAvailable ? filterContext.filters : { ...defaultFilters, showAll: false }
   const supabase = createClient()
 
 
@@ -102,7 +103,7 @@ export function useFilteredTodayChecklist() {
   // Always call the hook unconditionally
   const filterContext = useFilterContext()
   // Then use conditional logic on the returned value
-  const filters = isFilterAvailable ? filterContext.filters : { showAll: false }
+  const filters = isFilterAvailable ? filterContext.filters : defaultFilters
   const supabase = createClient()
 
   return useQuery({
@@ -151,7 +152,7 @@ export function useFilteredUpcomingSchedules(daysAhead: number = 7) {
   // Always call the hook unconditionally
   const filterContext = useFilterContext()
   // Then use conditional logic on the returned value
-  const filters = isFilterAvailable ? filterContext.filters : { showAll: false }
+  const filters: ScheduleFilter = isFilterAvailable ? filterContext.filters : { ...defaultFilters, showAll: false }
   const supabase = createClient()
 
   return useQuery({

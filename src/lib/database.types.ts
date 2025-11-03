@@ -499,6 +499,63 @@ export interface Database {
           description: string
         }[]
       }
+      get_calendar_schedules_filtered: {
+        Args: {
+          p_start_date: string
+          p_end_date: string
+          p_user_id: string
+          p_show_all?: boolean
+          p_care_types?: string[] | null
+        }
+        Returns: {
+          schedule_id: string
+          patient_id: string
+          item_id: string
+          display_date: string
+          display_type: string
+          schedule_status: string
+          execution_id: string | null
+          executed_by: string | null
+          execution_notes: string | null
+          patient_name: string
+          item_name: string
+          item_category: string
+          interval_weeks: number
+          priority: number
+          doctor_id: string | null
+          care_type: string
+          doctor_id_at_completion: string | null
+          care_type_at_completion: string | null
+        }[]
+      }
+      get_filtered_schedules: {
+        Args: {
+          p_user_id: string
+          p_show_all?: boolean
+          p_care_types?: string[] | null
+          p_date_start?: string | null
+          p_date_end?: string | null
+        }
+        Returns: {
+          schedule_id: string
+          patient_id: string
+          patient_name: string
+          patient_care_type: string
+          patient_number: string
+          doctor_id: string | null
+          doctor_name: string
+          item_id: string
+          item_name: string
+          item_category: string
+          next_due_date: string
+          interval_weeks: number
+          priority: number
+          status: string
+          created_at: string
+          updated_at: string
+          notes: string | null
+        }[]
+      }
     }
     Enums: {
       user_role: UserRole

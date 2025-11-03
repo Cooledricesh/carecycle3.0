@@ -10,6 +10,9 @@ export interface ScheduleFilter {
   // 주치의 필터 (향후 구현 대비)
   doctorId?: string | null
 
+  // 부서 필터 (간호사 역할에서 사용)
+  department?: string | null
+
   // 날짜 범위 필터 (선택적)
   dateRange?: {
     start: string // yyyy-MM-dd format
@@ -21,6 +24,9 @@ export interface ScheduleFilter {
 
   // 역할 기반 필터 - 전체 보기 토글
   showAll?: boolean
+
+  // 뷰 모드 (내 환자 / 전체 환자)
+  viewMode?: 'my' | 'all'
 
   // 긴급도 필터 (의료 환경 특화)
   urgencyLevel?: 'all' | 'urgent' | 'normal'
@@ -35,9 +41,11 @@ export interface FilterState {
 export const defaultFilters: ScheduleFilter = {
   careTypes: [], // 빈 배열 = 모든 타입 표시
   doctorId: null,
+  department: null,
   dateRange: null,
   includeInactive: false,
   showAll: false, // 기본적으로 역할 기반 필터 적용
+  viewMode: 'my',
   urgencyLevel: 'all'
 }
 

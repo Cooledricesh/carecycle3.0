@@ -19,7 +19,7 @@ export function useSchedules() {
     queryKey: ['schedules', user?.id],
     queryFn: async () => {
       try {
-        return await scheduleService.getAllSchedules(supabase)
+        return await scheduleService.getAllSchedules(undefined, supabase)
       } catch (error) {
         console.error('useSchedules error:', error)
         const message = mapErrorToUserMessage(error)
@@ -105,7 +105,7 @@ export function useTodayChecklist() {
     queryKey: ['schedules', 'today', user?.id],
     queryFn: async () => {
       try {
-        return await scheduleService.getTodayChecklist(supabase)
+        return await scheduleService.getTodayChecklist(undefined, supabase)
       } catch (error) {
         const message = mapErrorToUserMessage(error)
         toast({
@@ -130,7 +130,7 @@ export function useUpcomingSchedules(daysAhead: number = 7) {
     queryKey: ['schedules', 'upcoming', daysAhead, user?.id],
     queryFn: async () => {
       try {
-        return await scheduleService.getUpcomingSchedules(daysAhead, supabase)
+        return await scheduleService.getUpcomingSchedules(daysAhead, undefined, supabase)
       } catch (error) {
         const message = mapErrorToUserMessage(error)
         toast({

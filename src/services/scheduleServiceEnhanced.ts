@@ -237,133 +237,119 @@ export class ScheduleServiceEnhanced {
   ): Promise<any[]> {
     const client = supabase || createClient()
 
-    console.log('[getTodayChecklist] Attempting to fetch today\'s checklist:', {
+    console.log('[getTodayChecklist] Fetching today\'s checklist:', {
       userId: userContext.userId,
       showAll,
       role: userContext.role
     })
 
     try {
-      // Try the new function signature first
-      const { data, error } = await client.rpc('get_today_checklist', {
-        p_user_id: userContext.userId,
-        p_show_all: showAll
-      })
+      // Skip RPC call completely - go directly to optimized query
+      // RPC function doesn't exist in current migration, using direct query instead
+      const today = format(new Date(), 'yyyy-MM-dd')
 
-      if (!error && data) {
-        console.log('[getTodayChecklist] Successfully fetched with new signature:', data.length, 'items')
-        return data
+      console.log('[getTodayChecklist] Querying for today and overdue schedules up to:', today)
+
+      let query = client
+        .from('schedules')
+        .select(`
+          id,
+          patient_id,
+          item_id,
+          next_due_date,
+          interval_weeks,
+          notes,
+          status,
+          created_at,
+          updated_at,
+          patients!inner (
+            id,
+            name,
+            care_type,
+            doctor_id,
+            patient_number
+          ),
+          items!inner (
+            id,
+            name,
+            category
+          )
+        `)
+        .lte('next_due_date', today)  // Less than or equal to today (includes overdue)
+        .eq('status', 'active')
+
+      // Apply role-based filtering
+      if (!showAll && userContext.role !== 'admin') {
+        if (userContext.role === 'doctor') {
+          query = query.eq('patients.doctor_id', userContext.userId)
+        } else if (userContext.role === 'nurse' && userContext.careType) {
+          query = query.eq('patients.care_type', userContext.careType)
+        }
       }
 
-      // If there's an error about function not existing, fall back to direct query
-      if (error?.message?.includes('function') || error?.message?.includes('exist')) {
-        console.log('[getTodayChecklist] RPC function issue, falling back to direct query')
-
-        // Fallback: Query schedules directly for today and overdue
-        const today = format(new Date(), 'yyyy-MM-dd')
-
-        console.log('[getTodayChecklist] Fallback query for today and overdue schedules up to:', today)
-
-        let query = client
-          .from('schedules')
-          .select(`
-            id,
-            patient_id,
-            item_id,
-            next_due_date,
-            interval_weeks,
-            notes,
-            status,
-            created_at,
-            updated_at,
-            patients!inner (
-              id,
-              name,
-              care_type,
-              doctor_id,
-              patient_number
-            ),
-            items!inner (
-              id,
-              name,
-              category
-            )
-          `)
-          .lte('next_due_date', today)  // Less than or equal to today (includes overdue)
-          .eq('status', 'active')
-
-        // Apply role-based filtering
-        if (!showAll && userContext.role !== 'admin') {
-          if (userContext.role === 'doctor') {
-            query = query.eq('patients.doctor_id', userContext.userId)
-          } else if (userContext.role === 'nurse' && userContext.careType) {
-            query = query.eq('patients.care_type', userContext.careType)
-          }
-        }
-
-        const { data: schedules, error: queryError } = await query as {
-          data: Array<{
+      const { data: schedules, error: queryError } = await query as {
+        data: Array<{
+          id: string
+          patient_id: string
+          item_id: string
+          next_due_date: string
+          interval_weeks: number
+          notes: string | null
+          status: string
+          created_at: string
+          updated_at: string
+          patients: {
             id: string
-            patient_id: string
-            item_id: string
-            next_due_date: string
-            interval_weeks: number
-            notes: string | null
-            status: string
-            created_at: string
-            updated_at: string
-            patients: {
-              id: string
-              name: string
-              care_type: string
-              doctor_id: string | null
-              patient_number: string
-            }
-            items: {
-              id: string
-              name: string
-              category: string
-            }
-          }> | null
-          error: any
-        }
+            name: string
+            care_type: string
+            doctor_id: string | null
+            patient_number: string
+          }
+          items: {
+            id: string
+            name: string
+            category: string
+          }
+        }> | null
+        error: any
+      }
 
-        if (queryError) {
-          throw queryError
-        }
+      if (queryError) {
+        throw queryError
+      }
 
-        console.log('[getTodayChecklist] Fallback query successful:', schedules?.length || 0, 'items')
+      console.log('[getTodayChecklist] Query successful:', schedules?.length || 0, 'items')
 
-        // Transform the data to match expected format used by UI
-        return (schedules || []).map(s => ({
-          // Map 'id' to 'schedule_id' to match ScheduleWithDetails type
-          schedule_id: s.id,  // IMPORTANT: UI expects schedule_id, not id
-          // Keep both naming conventions for compatibility
-          id: s.id,
-          patient_id: s.patient_id,
-          patientId: s.patient_id,
-          item_id: s.item_id,
-          itemId: s.item_id,
-          next_due_date: s.next_due_date,
-          nextDueDate: s.next_due_date,
-          interval_weeks: s.interval_weeks,
-          intervalWeeks: s.interval_weeks,
-          status: s.status,
-          notes: s.notes,
-          created_at: s.created_at,
-          createdAt: s.created_at,
-          updated_at: s.updated_at,
-          updatedAt: s.updated_at,
-          // Add flat fields for UI compatibility
-          patient_name: s.patients?.name || '',
-          patient_care_type: s.patients?.care_type || '',
-          patient_number: s.patients?.patient_number || '',
-          item_name: s.items?.name || '',
-          item_category: s.items?.category || '',
-          doctor_id: s.patients?.doctor_id || null,
-          doctor_name: null, // Not available in direct query
-          // Nested patient object
-          patient: s.patients ? {
+      // Transform the data to match expected format used by UI
+      return (schedules || []).map(s => ({
+        // Map 'id' to 'schedule_id' to match ScheduleWithDetails type
+        schedule_id: s.id,  // IMPORTANT: UI expects schedule_id, not id
+        // Keep both naming conventions for compatibility
+        id: s.id,
+        patient_id: s.patient_id,
+        patientId: s.patient_id,
+        item_id: s.item_id,
+        itemId: s.item_id,
+        next_due_date: s.next_due_date,
+        nextDueDate: s.next_due_date,
+        interval_weeks: s.interval_weeks,
+        intervalWeeks: s.interval_weeks,
+        status: s.status,
+        notes: s.notes,
+        created_at: s.created_at,
+        createdAt: s.created_at,
+        updated_at: s.updated_at,
+        updatedAt: s.updated_at,
+        // Add flat fields for UI compatibility
+        patient_name: s.patients?.name || '',
+        patient_care_type: s.patients?.care_type || '',
+        patient_number: s.patients?.patient_number || '',
+        item_name: s.items?.name || '',
+        item_category: s.items?.category || '',
+        doctor_id: s.patients?.doctor_id || null,
+        doctor_name: null, // Not available in direct query
+        // Nested patient object
+        patient: s.patients ? {
             id: s.patients.id,
             name: s.patients.name,
             care_type: s.patients.care_type,
@@ -380,10 +366,6 @@ export class ScheduleServiceEnhanced {
             category: s.items.category
           } : null
         }))
-      }
-
-      // Other errors, throw them
-      throw error
 
     } catch (error: any) {
       console.error('Error fetching today checklist:', {

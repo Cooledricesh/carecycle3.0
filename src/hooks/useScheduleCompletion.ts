@@ -49,17 +49,17 @@ export function useScheduleCompletion(): UseScheduleCompletionReturn {
 
     // Optimistic update: immediately remove from schedule list UI
     // Note: Calendar view shows both scheduled and completed items, so we skip optimistic update there
-    const scheduleId = selectedSchedule.id
+    const scheduleId = selectedSchedule.schedule_id
     queryClient.setQueriesData({ queryKey: ['schedules'] }, (old: any) => {
       if (!old) return old
       if (Array.isArray(old)) {
-        return old.filter((s: any) => s.id !== scheduleId)
+        return old.filter((s: any) => s.schedule_id !== scheduleId)
       }
       return old
     })
 
     try {
-      await scheduleService.markAsCompleted(selectedSchedule.id, {
+      await scheduleService.markAsCompleted(selectedSchedule.schedule_id, {
         executedDate: executionDate,
         notes: executionNotes,
         executedBy: user.id
@@ -67,7 +67,7 @@ export function useScheduleCompletion(): UseScheduleCompletionReturn {
 
       toast({
         title: "완료 처리 성공",
-        description: `${selectedSchedule.patient?.name}님의 ${selectedSchedule.item?.name} 일정이 완료 처리되었습니다.`,
+        description: `${selectedSchedule.patient_name}님의 ${selectedSchedule.item_name} 일정이 완료 처리되었습니다.`,
       })
 
       reset()

@@ -1,5 +1,6 @@
 'use client'
 
+import React from 'react'
 import { z } from 'zod'
 import type { ScheduleFilter } from './filter-types'
 
@@ -302,15 +303,16 @@ export class FilterPersistence {
  * Hook to use filter persistence
  */
 export function useFilterPersistence(userId: string, userRole: string) {
-  const persistenceRef = React.useRef<FilterPersistence>()
+  const persistence = React.useMemo(
+    () => new FilterPersistence(userId, userRole),
+    [userId, userRole]
+  )
 
   React.useEffect(() => {
-    persistenceRef.current = new FilterPersistence(userId, userRole)
-
     return () => {
-      persistenceRef.current?.destroy()
+      persistence.destroy()
     }
-  }, [userId, userRole])
+  }, [persistence])
 
-  return persistenceRef.current
+  return persistence
 }

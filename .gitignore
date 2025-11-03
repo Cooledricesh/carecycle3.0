@@ -167,3 +167,5 @@ MOBILE_UI_TODO.md
 
 # Playwright MCP test artifacts (테스트 아티팩트)
 .playwright-mcp/
+
+repomix-output.xml

@@ -223,8 +223,7 @@ export function PatientRegistrationModal({
       await restoration.restorePatient(restoration.state.inactivePatient.id, {
         updateInfo: {
           name: formData.name,
-          careType: formData.careType,
-          doctorId: (profile?.role === 'admin' || profile?.role === 'doctor' || profile?.role === 'nurse') ? formData.doctorId : null
+          careType: formData.careType
         }
       })
 
@@ -270,7 +269,6 @@ export function PatientRegistrationModal({
       await restoration.createWithArchive(formData.patientNumber, {
         name: formData.name,
         careType: formData.careType,
-        doctorId: (profile?.role === 'admin' || profile?.role === 'doctor' || profile?.role === 'nurse') ? formData.doctorId : null,
         metadata: {}
       })
 
