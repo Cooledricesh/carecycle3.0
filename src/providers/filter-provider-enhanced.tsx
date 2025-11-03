@@ -103,50 +103,55 @@ export function FilterProviderEnhanced({
   const [optimisticFilters, setOptimisticFilters] = useState<ScheduleFilter | null>(null)
   const [filterError, setFilterError] = useState<string | null>(null)
 
-  // Initialize persistence layer
+  // Initialize persistence layer and filters when user context is ready
   useEffect(() => {
-    if (!enablePersistence || !userContext) return
+    if (!userContext || isInitializedRef.current) return
 
-    persistenceRef.current = new FilterPersistence(userContext.id, userContext.role)
+    let cancelled = false
 
-    // Load persisted filters
-    if (!isInitializedRef.current) {
-      persistenceRef.current.loadFilters().then(persisted => {
-        if (persisted && !isInitializedRef.current) {
-          setFiltersInternal(persisted)
-          isInitializedRef.current = true
-        }
-      })
-    }
+    const initializeAsync = async () => {
+      let initialFilters: ScheduleFilter | null = null
 
-    // Setup multi-tab sync
-    if (enableMultiTab) {
-      const unsubscribe = persistenceRef.current.onFilterChange((newFilters) => {
-        console.log('[FilterProvider] Received filter change from other tab:', newFilters)
-        setFiltersInternal(newFilters)
-        // Invalidate queries to refresh data
-        queryClient.invalidateQueries({ queryKey: ['schedules'] })
-      })
+      // Initialize persistence
+      if (enablePersistence) {
+        persistenceRef.current = new FilterPersistence(userContext.id, userContext.role)
 
-      return () => {
-        unsubscribe()
-        persistenceRef.current?.destroy()
+        // Try to load persisted filters first
+        initialFilters = await persistenceRef.current.loadFilters()
       }
-    }
 
-    return () => {
-      persistenceRef.current?.destroy()
-    }
-  }, [userContext, enablePersistence, enableMultiTab, queryClient])
+      // If cancelled during async operation, bail out
+      if (cancelled) return
 
-  // Initialize filters when user context is ready
-  useEffect(() => {
-    if (userContext && !isInitializedRef.current) {
-      const initialFilters = initializeFilters()
-      setFiltersInternal(initialFilters)
+      // Use persisted filters if available, otherwise use initialization logic
+      const resolved = initialFilters ?? initializeFilters()
+      setFiltersInternal(resolved)
       isInitializedRef.current = true
     }
-  }, [userContext, initializeFilters])
+
+    initializeAsync()
+
+    // Setup multi-tab sync after initialization
+    const setupSync = () => {
+      if (enableMultiTab && persistenceRef.current) {
+        return persistenceRef.current.onFilterChange((newFilters) => {
+          console.log('[FilterProvider] Received filter change from other tab:', newFilters)
+          setFiltersInternal(newFilters)
+          // Invalidate queries to refresh data
+          queryClient.invalidateQueries({ queryKey: ['schedules'] })
+        })
+      }
+      return () => {}
+    }
+
+    const unsubscribe = setupSync()
+
+    return () => {
+      cancelled = true
+      unsubscribe()
+      persistenceRef.current?.destroy()
+    }
+  }, [userContext, enablePersistence, enableMultiTab, queryClient, initializeFilters])
 
   // Sync filters to URL when they change
   // eslint-disable-next-line react-hooks/exhaustive-deps

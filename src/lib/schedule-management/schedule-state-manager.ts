@@ -187,8 +187,8 @@ export class ScheduleStateManager {
 
       // 6. Calculate missed executions if needed
       let missedExecutions = 0
-      if (options.handleMissed !== 'skip' && schedule.updated_at) {
-        const pausedDate = new Date(schedule.updated_at)
+      if (options.handleMissed !== 'skip' && schedule.updatedAt) {
+        const pausedDate = new Date(schedule.updatedAt)
         const missed = this.calculator.getMissedExecutions(
           schedule,
           pausedDate,

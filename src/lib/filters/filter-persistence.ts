@@ -303,15 +303,16 @@ export class FilterPersistence {
  * Hook to use filter persistence
  */
 export function useFilterPersistence(userId: string, userRole: string) {
-  const persistenceRef = React.useRef<FilterPersistence | undefined>(undefined)
+  const persistence = React.useMemo(
+    () => new FilterPersistence(userId, userRole),
+    [userId, userRole]
+  )
 
   React.useEffect(() => {
-    persistenceRef.current = new FilterPersistence(userId, userRole)
-
     return () => {
-      persistenceRef.current?.destroy()
+      persistence.destroy()
     }
-  }, [userId, userRole])
+  }, [persistence])
 
-  return persistenceRef.current
+  return persistence
 }
