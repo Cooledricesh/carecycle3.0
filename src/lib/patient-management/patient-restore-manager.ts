@@ -20,12 +20,14 @@ export interface RestorePatientOptions {
   updateInfo?: {
     name?: string
     careType?: string
+    doctorId?: string | null
   }
 }
 
 export interface CreateWithArchiveOptions {
   name: string
   careType?: string
+  doctorId?: string | null
   metadata?: Record<string, any>
 }
 

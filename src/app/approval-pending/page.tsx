@@ -17,8 +17,8 @@ interface UserProfile {
   created_at: string
 }
 
-export default function ApprovalPendingPage(): Promise<JSX.Element> {
-  return Promise.resolve(<ApprovalPendingPageContent />)
+export default async function ApprovalPendingPage(): Promise<React.ReactElement> {
+  return <ApprovalPendingPageContent />
 }
 
 function ApprovalPendingPageContent() {

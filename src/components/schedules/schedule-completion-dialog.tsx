@@ -86,7 +86,7 @@ export function ScheduleCompletionDialog({
             <div className="text-xs sm:text-sm text-gray-600">
               <p>다음 예정일: {
                 (() => {
-                  const nextDate = addWeeks(executionDate, schedule.interval_weeks);
+                  const nextDate = addWeeks(new Date(executionDate), schedule.interval_weeks);
                   return nextDate ? safeFormatDate(nextDate, 'yyyy년 MM월 dd일') : '계산 오류';
                 })()
               } ({schedule.interval_weeks}주 후, 자동 계산됨)</p>

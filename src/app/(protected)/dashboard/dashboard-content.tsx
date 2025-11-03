@@ -62,8 +62,16 @@ export default function DashboardContent() {
   } = useScheduleCompletion();
 
   // Use React Query hooks for data fetching
-  const { data: todaySchedules = [], isLoading: todayLoading, refetch: refetchToday } = useFilteredTodayChecklist();
-  const { data: upcomingSchedules = [], isLoading: upcomingLoading, refetch: refetchUpcoming } = useFilteredUpcomingSchedules(7);
+  const todayQuery = useFilteredTodayChecklist();
+  const upcomingQuery = useFilteredUpcomingSchedules(7);
+
+  // Ensure data is always an array
+  const todaySchedules = Array.isArray(todayQuery.data) ? todayQuery.data : [];
+  const upcomingSchedules = Array.isArray(upcomingQuery.data) ? upcomingQuery.data : [];
+  const todayLoading = todayQuery.isLoading;
+  const upcomingLoading = upcomingQuery.isLoading;
+  const refetchToday = todayQuery.refetch;
+  const refetchUpcoming = upcomingQuery.refetch;
 
   // Get all schedules for additional calculations
   const { schedules: allSchedules = [], isLoading: allLoading, refetch: refetchAll } = useFilteredSchedules();
@@ -78,10 +86,10 @@ export default function DashboardContent() {
   // Pause schedule handler
   const handlePause = async (schedule: ScheduleWithDetails) => {
     try {
-      await scheduleService.pauseSchedule(schedule.id, { reason: '수동 보류' });
+      await scheduleService.pauseSchedule(schedule.schedule_id, { reason: '수동 보류' });
       toast({
         title: "보류 완료",
-        description: `${schedule.patient?.name}님의 ${schedule.item?.name} 스케줄이 보류되었습니다.`,
+        description: `${schedule.patient_name}님의 ${schedule.item_name} 스케줄이 보류되었습니다.`,
       });
       refreshData();
     } catch (error) {
@@ -97,13 +105,13 @@ export default function DashboardContent() {
   // Resume schedule handler
   const handleResume = async (schedule: ScheduleWithDetails) => {
     try {
-      await scheduleService.resumeSchedule(schedule.id, {
+      await scheduleService.resumeSchedule(schedule.schedule_id, {
         strategy: 'next_cycle',
         handleMissed: 'skip'
       });
       toast({
         title: "재개 완료",
-        description: `${schedule.patient?.name}님의 ${schedule.item?.name} 스케줄이 재개되었습니다.`,
+        description: `${schedule.patient_name}님의 ${schedule.item_name} 스케줄이 재개되었습니다.`,
       });
       refreshData();
     } catch (error) {
@@ -233,7 +241,7 @@ export default function DashboardContent() {
   // 2. 미완료 누적 (오늘 이전의 미완료 항목)
   const overdueCount = allSchedules.filter(schedule => {
     if (schedule.status !== 'active') return false;
-    const dueDate = safeParse(schedule.nextDueDate);
+    const dueDate = safeParse(schedule.next_due_date);
     if (!dueDate) return false;
     return format(dueDate, 'yyyy-MM-dd') < todayStr;
   }).length;
@@ -316,8 +324,8 @@ export default function DashboardContent() {
           </CardHeader>
           <CardContent className={isMobile ? 'p-4 pt-0' : ''}>
             <div className="space-y-3 sm:space-y-4">
-              {todaySchedules.map((schedule) => {
-                const dueDate = safeParse(schedule.nextDueDate);
+              {todaySchedules.map((schedule, index) => {
+                const dueDate = safeParse(schedule.next_due_date);
                 // Use date boundaries for accurate day calculation
                 const rawDaysOverdue = dueDate ? getDaysDifference(startOfDay(new Date()), startOfDay(dueDate)) : null;
                 // Clamp to prevent negative values (future dates shouldn't appear as overdue)
@@ -325,7 +333,7 @@ export default function DashboardContent() {
 
                 return (
                   <div
-                    key={schedule.id}
+                    key={schedule.schedule_id || `today-${index}`}
                     className={`
                       ${isMobile ? 'flex-col space-y-3' : 'flex items-center justify-between'}
                       p-3 sm:p-4 border rounded-lg bg-red-50 border-red-200
@@ -334,7 +342,7 @@ export default function DashboardContent() {
                     <div className={isMobile ? 'space-y-2' : ''}>
                       <div className="flex items-start justify-between">
                         <h4 className="font-medium text-sm sm:text-base">
-                          {schedule.patient?.name || '환자 정보 없음'}
+                          {schedule.patient_name || '환자 정보 없음'}
                         </h4>
                         {isMobile && daysOverdue !== null && (
                           <span className={`px-2 py-1 text-xs rounded shrink-0 ml-2 ${
@@ -348,55 +356,55 @@ export default function DashboardContent() {
                           </span>
                         )}
                       </div>
-                    <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-600">
-                      {(() => {
-                        const IconComponent = getScheduleCategoryIcon(schedule.item?.category);
-                        return IconComponent ? (
-                          <IconComponent className={`h-4 w-4 ${getScheduleCategoryColor(schedule.item?.category)}`} />
-                        ) : null;
-                      })()}
-                      <span>{schedule.item?.name || '항목 정보 없음'}</span>
-                      <span className={`px-2 py-0.5 rounded-full text-xs ${getScheduleCategoryBgColor(schedule.item?.category)} ${getScheduleCategoryColor(schedule.item?.category)}`}>
-                        {getScheduleCategoryLabel(schedule.item?.category)}
-                      </span>
-                    </div>
-                    <p className="text-xs text-red-600">
-                      예정일: {safeFormatDate(schedule.nextDueDate, 'yyyy년 MM월 dd일')}
-                      {schedule.intervalWeeks && (
-                        <span className={isMobile ? 'block' : 'inline'}>
-                          {isMobile ? '' : ' • '}{schedule.intervalWeeks}주 주기
+                      <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-600">
+                        {(() => {
+                          const IconComponent = getScheduleCategoryIcon(schedule.item_category);
+                          return IconComponent ? (
+                            <IconComponent className={`h-4 w-4 ${getScheduleCategoryColor(schedule.item_category)}`} />
+                          ) : null;
+                        })()}
+                        <span>{schedule.item_name || '항목 정보 없음'}</span>
+                        <span className={`px-2 py-0.5 rounded-full text-xs ${getScheduleCategoryBgColor(schedule.item_category)} ${getScheduleCategoryColor(schedule.item_category)}`}>
+                          {getScheduleCategoryLabel(schedule.item_category)}
                         </span>
+                      </div>
+                      <p className="text-xs text-red-600">
+                        예정일: {safeFormatDate(schedule.next_due_date, 'yyyy년 MM월 dd일')}
+                        {schedule.interval_weeks && (
+                          <span className={isMobile ? 'block' : 'inline'}>
+                            {isMobile ? '' : ' • '}{schedule.interval_weeks}주 주기
+                          </span>
+                        )}
+                      </p>
+                      {schedule.notes && (
+                        <p className="text-xs text-gray-500">{schedule.notes}</p>
                       )}
-                    </p>
-                    {schedule.notes && (
-                      <p className="text-xs text-gray-500">{schedule.notes}</p>
-                    )}
+                    </div>
+                    <div className={`flex items-center ${isMobile ? 'w-full' : 'gap-2'}`}>
+                      <ScheduleActionButtons
+                        schedule={schedule}
+                        variant='default'
+                        showStatus={false}
+                        showButtonLabels={true}  // 명시적으로 라벨 표시
+                        onComplete={() => handleComplete(schedule)}
+                        onPause={() => handlePause(schedule)}
+                        onResume={() => handleResume(schedule)}
+                        onEdit={() => setEditingSchedule(schedule)}
+                        onDelete={() => handleDelete(schedule)}
+                      />
+                      {!isMobile && daysOverdue !== null && (
+                        <Badge className={
+                          daysOverdue === 0
+                            ? "bg-orange-100 text-orange-700"
+                            : daysOverdue > 0
+                            ? "bg-red-100 text-red-700"
+                            : "bg-blue-100 text-blue-700"
+                        }>
+                          {daysOverdue === 0 ? '오늘' : daysOverdue > 0 ? `${daysOverdue}일 연체` : '예정'}
+                        </Badge>
+                      )}
+                    </div>
                   </div>
-                  <div className={`flex items-center ${isMobile ? 'w-full' : 'gap-2'}`}>
-                    <ScheduleActionButtons
-                      schedule={schedule}
-                      variant='default'
-                      showStatus={false}
-                      showButtonLabels={true}  // 명시적으로 라벨 표시
-                      onComplete={() => handleComplete(schedule)}
-                      onPause={() => handlePause(schedule)}
-                      onResume={() => handleResume(schedule)}
-                      onEdit={() => setEditingSchedule(schedule)}
-                      onDelete={() => handleDelete(schedule)}
-                    />
-                    {!isMobile && daysOverdue !== null && (
-                      <Badge className={
-                        daysOverdue === 0
-                          ? "bg-orange-100 text-orange-700"
-                          : daysOverdue > 0
-                          ? "bg-red-100 text-red-700"
-                          : "bg-blue-100 text-blue-700"
-                      }>
-                        {daysOverdue === 0 ? '오늘' : daysOverdue > 0 ? `${daysOverdue}일 연체` : '예정'}
-                      </Badge>
-                    )}
-                  </div>
-                </div>
                 );
               })}
             </div>
@@ -424,23 +432,23 @@ export default function DashboardContent() {
             </div>
           ) : (
             <div className="space-y-3 sm:space-y-4">
-              {upcomingSchedules.map((schedule) => {
-                const dueDate = safeParse(schedule.nextDueDate);
+              {upcomingSchedules.map((schedule, index) => {
+                const dueDate = safeParse(schedule.next_due_date);
                 // Use date boundaries for accurate day calculation
                 const daysUntil = dueDate ? getDaysDifference(startOfDay(dueDate), startOfDay(new Date())) : null;
-                
+
                 return (
                   <div
-                    key={schedule.id}
+                    key={schedule.schedule_id || `upcoming-${index}`}
                     className={`
                       ${isMobile ? 'flex-col space-y-3' : 'flex items-center justify-between'}
-                      p-3 sm:p-4 border rounded-lg ${getScheduleCardBgColor(schedule.item?.category)}
+                      p-3 sm:p-4 border rounded-lg ${getScheduleCardBgColor(schedule.item_category)}
                     `}
                   >
                     <div className={isMobile ? 'space-y-2' : ''}>
                       <div className="flex items-start justify-between">
                         <h4 className="font-medium text-sm sm:text-base">
-                          {schedule.patient?.name || '환자 정보 없음'}
+                          {schedule.patient_name || '환자 정보 없음'}
                         </h4>
                         {isMobile && daysUntil !== null && (
                           <span className={`px-2 py-1 text-xs rounded shrink-0 ml-2 ${
@@ -461,21 +469,21 @@ export default function DashboardContent() {
                       </div>
                       <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-600">
                         {(() => {
-                          const IconComponent = getScheduleCategoryIcon(schedule.item?.category);
+                          const IconComponent = getScheduleCategoryIcon(schedule.item_category);
                           return IconComponent ? (
-                            <IconComponent className={`h-4 w-4 ${getScheduleCategoryColor(schedule.item?.category)}`} />
+                            <IconComponent className={`h-4 w-4 ${getScheduleCategoryColor(schedule.item_category)}`} />
                           ) : null;
                         })()}
-                        <span>{schedule.item?.name || '항목 정보 없음'}</span>
-                        <span className={`px-2 py-0.5 rounded-full text-xs ${getScheduleCategoryBgColor(schedule.item?.category)} ${getScheduleCategoryColor(schedule.item?.category)}`}>
-                          {getScheduleCategoryLabel(schedule.item?.category)}
+                        <span>{schedule.item_name || '항목 정보 없음'}</span>
+                        <span className={`px-2 py-0.5 rounded-full text-xs ${getScheduleCategoryBgColor(schedule.item_category)} ${getScheduleCategoryColor(schedule.item_category)}`}>
+                          {getScheduleCategoryLabel(schedule.item_category)}
                         </span>
                       </div>
                       <p className="text-xs text-gray-500">
-                        예정일: {safeFormatDate(schedule.nextDueDate, 'yyyy년 MM월 dd일')}
-                        {schedule.intervalWeeks && (
+                        예정일: {safeFormatDate(schedule.next_due_date, 'yyyy년 MM월 dd일')}
+                        {schedule.interval_weeks && (
                           <span className={isMobile ? 'block' : 'inline'}>
-                            {isMobile ? '' : ' • '}{schedule.intervalWeeks}주 주기
+                            {isMobile ? '' : ' • '}{schedule.interval_weeks}주 주기
                           </span>
                         )}
                       </p>
@@ -495,26 +503,19 @@ export default function DashboardContent() {
                         onEdit={() => setEditingSchedule(schedule)}
                         onDelete={() => handleDelete(schedule)}
                       />
-                      {!isMobile && (() => {
-                        if (schedule.status === 'paused') {
-                          return (
-                            <Badge className="bg-gray-100 text-gray-600">
-                              {daysUntil !== null && (
-                                <>
-                                  {daysUntil < 0 ? `${Math.abs(daysUntil)}일 전` : daysUntil === 0 ? '오늘' : daysUntil === 1 ? '내일' : `${daysUntil}일 후`}
-                                  {' (보류)'}
-                                </>
-                              )}
-                            </Badge>
-                          );
-                        }
-                        const statusInfo = getScheduleStatusLabel(schedule);
-                        return (
-                          <Badge className={getStatusBadgeClass(statusInfo.variant)}>
-                            {statusInfo.label}
+                      {!isMobile && (
+                        schedule.status === 'paused' ? (
+                          <Badge className="bg-gray-100 text-gray-600">
+                            {daysUntil !== null ? (
+                              `${daysUntil < 0 ? `${Math.abs(daysUntil)}일 전` : daysUntil === 0 ? '오늘' : daysUntil === 1 ? '내일' : `${daysUntil}일 후`} (보류)`
+                            ) : '보류'}
                           </Badge>
-                        );
-                      })()}
+                        ) : (
+                          <Badge className={getStatusBadgeClass(getScheduleStatusLabel(schedule).variant)}>
+                            {getScheduleStatusLabel(schedule).label}
+                          </Badge>
+                        )
+                      )}
                     </div>
                   </div>
                 );
@@ -560,15 +561,15 @@ export default function DashboardContent() {
           <AlertDialogHeader>
             <AlertDialogTitle>스케줄 삭제 확인</AlertDialogTitle>
             <AlertDialogDescription>
-              {scheduleToDelete && (
-                <>
+              {scheduleToDelete ? (
+                <span>
                   <strong>{scheduleToDelete.patient_name}</strong>님의{' '}
                   <strong>{scheduleToDelete.item_name}</strong> 스케줄을 삭제하시겠습니까?
                   <br />
                   <br />
                   이 작업은 되돌릴 수 없습니다.
-                </>
-              )}
+                </span>
+              ) : null}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

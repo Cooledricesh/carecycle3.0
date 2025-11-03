@@ -110,8 +110,7 @@ export function CalendarView({ className }: CalendarViewProps) {
     while (currentDay <= calendarEnd) {
       // 날짜별 스케줄 필터링
       const schedulesByDay = schedules.filter(schedule => {
-        // 두 가지 형식 모두 확인
-        const dueDateValue = schedule.next_due_date || schedule.nextDueDate;
+        const dueDateValue = schedule.next_due_date;
         if (!dueDateValue) {
           return false;
         }
@@ -137,7 +136,7 @@ export function CalendarView({ className }: CalendarViewProps) {
     if (!selectedDate) return [];
 
     const daySchedules = schedules.filter(schedule => {
-      const dueDateValue = schedule.next_due_date || schedule.nextDueDate;
+      const dueDateValue = schedule.next_due_date;
       if (!dueDateValue) return false;
       const scheduleDate = safeParse(dueDateValue);
       return scheduleDate && isSameDay(scheduleDate, selectedDate);
@@ -155,7 +154,7 @@ export function CalendarView({ className }: CalendarViewProps) {
     const weekEnd = endOfWeek(today, { locale: ko });
 
     const monthSchedules = schedules.filter(schedule => {
-      const dueDateValue = schedule.next_due_date || schedule.nextDueDate;
+      const dueDateValue = schedule.next_due_date;
       if (!dueDateValue) return false;
       const scheduleDate = safeParse(dueDateValue);
       return scheduleDate && scheduleDate >= monthStart && scheduleDate <= monthEnd;
@@ -205,7 +204,7 @@ export function CalendarView({ className }: CalendarViewProps) {
     // RPC 함수에서 이미 가져온 데이터에서 completed 타입만 필터링
     const completedSchedules = schedules.filter(schedule => {
       const displayType = (schedule as any).display_type;
-      const dueDateValue = schedule.next_due_date || schedule.nextDueDate;
+      const dueDateValue = schedule.next_due_date;
 
       if (!dueDateValue || displayType !== 'completed') return false;
 
@@ -662,7 +661,7 @@ export function CalendarView({ className }: CalendarViewProps) {
                 {selectedDateSchedules.map((schedule, index) => {
                   const displayType = (schedule as any).display_type || 'scheduled';
                   const executionId = (schedule as any).execution_id;
-                  const scheduleId = schedule.id || schedule.schedule_id;
+                  const scheduleId = schedule.schedule_id;
                   // Create unique key based on display type and relevant ID
                   const uniqueKey = displayType === 'completed' && executionId
                     ? `execution-${executionId}`

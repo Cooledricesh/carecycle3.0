@@ -359,11 +359,11 @@ export class ScheduleStateManager {
    * @returns 일시정지 기간 (주)
    */
   getPauseDuration(schedule: Schedule): number | null {
-    if (schedule.status !== 'paused' || !schedule.updated_at) {
+    if (schedule.status !== 'paused' || !schedule.updatedAt) {
       return null
     }
 
-    const pausedDate = new Date(schedule.updated_at)
+    const pausedDate = new Date(schedule.updatedAt)
     const now = new Date()
 
     return differenceInWeeks(now, pausedDate)

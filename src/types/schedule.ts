@@ -1,6 +1,6 @@
 'use client'
 
-import { Database, ScheduleStatus } from '@/lib/database.types'
+import { Database, ScheduleStatus, ItemCategory } from '@/lib/database.types'
 import { Patient } from './patient'
 import { Item } from './item'
 
@@ -51,7 +51,7 @@ export interface ScheduleWithDetails {
   doctor_name: string
   item_id: string
   item_name: string
-  item_category: string
+  item_category: ItemCategory
   next_due_date: string
   status: string
   interval_weeks: number

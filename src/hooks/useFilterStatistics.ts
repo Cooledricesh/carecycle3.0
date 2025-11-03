@@ -3,14 +3,14 @@
 import { useEffect, useState } from 'react'
 import { scheduleServiceEnhanced } from '@/services/scheduleServiceEnhanced'
 import { FilterStatistics } from '@/services/filters'
-import type { UserProfile } from '@/types/user'
+import type { Profile } from '@/hooks/useProfile'
 
 interface UseFilterStatisticsReturn {
   statistics: FilterStatistics | null
   urgentCount: number
 }
 
-export function useFilterStatistics(profile: UserProfile | null | undefined): UseFilterStatisticsReturn {
+export function useFilterStatistics(profile: Profile | null | undefined): UseFilterStatisticsReturn {
   const [statistics, setStatistics] = useState<FilterStatistics | null>(null)
   const [urgentCount, setUrgentCount] = useState(0)
 

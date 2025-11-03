@@ -257,7 +257,7 @@ export function ScheduleResumeDialog({
             onClick={handleConfirm}
             disabled={
               (strategy === 'custom' && !customDate) ||
-              (schedule.endDate && isAfter(startOfDay(previewDate), startOfDay(new Date(schedule.endDate))))
+              (schedule.endDate ? isAfter(startOfDay(previewDate), startOfDay(new Date(schedule.endDate))) : false)
             }
           >
             재개
