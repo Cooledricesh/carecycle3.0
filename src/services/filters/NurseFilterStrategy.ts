@@ -17,6 +17,7 @@ export class NurseFilterStrategy implements FilterStrategy {
 
     // For calendar views with date range, use the calendar-specific function
     if (filters.dateRange?.start && filters.dateRange?.end) {
+      // TODO: Add proper RPC type definition in database.types.ts to remove 'as any'
       const { data: calendarData, error: calendarError } = await (supabase as any).rpc('get_calendar_schedules_filtered', {
         p_start_date: filters.dateRange.start,
         p_end_date: filters.dateRange.end,
@@ -71,6 +72,7 @@ export class NurseFilterStrategy implements FilterStrategy {
     }
 
     // Try regular RPC for non-calendar views
+    // TODO: Add proper RPC type definition in database.types.ts to remove 'as any'
     const { data, error } = await (supabase as any).rpc('get_filtered_schedules', {
       p_user_id: userContext.userId,
       p_show_all: filters.showAll || false,
