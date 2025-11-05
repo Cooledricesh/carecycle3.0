@@ -1,7 +1,7 @@
 # Medical Scheduling System - API Reference
 
 **Version**: 1.2.0
-**Last Updated**: September 30, 2025
+**Last Updated**: November 2025
 
 ## Overview
 
@@ -128,23 +128,57 @@ When Row Level Security prevents an operation, the system provides a robust fall
 
 ## Endpoints
 
-### Authentication
+### Authentication Endpoints
 
-[Previous authentication sections remain the same]
+See the authentication section above for detailed authentication flow.
 
 ### Patients
 
 #### List Patients
 
-[Previous implementation remains the same]
+Get a paginated list of patients with optional filtering.
+
+```http
+GET /patients
+Authorization: Bearer YOUR_ACCESS_TOKEN
+```
+
+**Query Parameters:**
+- `page` (number): Page number for pagination
+- `limit` (number): Items per page (default: 20)
+- `search` (string): Search by name or patient number
+- `isActive` (boolean): Filter by active status
+- `doctorId` (string): Filter by assigned doctor
 
 #### Create Patient
 
-[Previous implementation remains the same]
+Create a new patient record.
+
+```http
+POST /patients
+Authorization: Bearer YOUR_ACCESS_TOKEN
+Content-Type: application/json
+```
+
+**Request Body:**
+```json
+{
+  "name": "John Doe",
+  "patientNumber": "P12345",
+  "doctorId": "doctor-uuid",
+  "careType": "외래",
+  "isActive": true
+}
+```
 
 #### Get Patient Details
 
-[Previous implementation remains the same]
+Retrieve detailed information about a specific patient.
+
+```http
+GET /patients/{id}
+Authorization: Bearer YOUR_ACCESS_TOKEN
+```
 
 #### Update Patient (Enhanced)
 
@@ -228,7 +262,21 @@ Content-Type: application/json
 
 #### Delete Patient (Soft Delete)
 
-[Previous implementation remains the same]
+Mark a patient as inactive instead of permanently deleting.
+
+```http
+DELETE /patients/{id}
+Authorization: Bearer YOUR_ACCESS_TOKEN
+```
+
+**Response:**
+```json
+{
+  "id": "patient-uuid",
+  "isActive": false,
+  "message": "Patient archived successfully"
+}
+```
 
 #### Assign Doctor to Patient (Flexible Assignment)
 

@@ -1,5 +1,7 @@
 # 🔴 QUICK REFERENCE: Error Check Commands
 
+> **📚 For detailed explanations**: See [LINT_AND_TYPE_ENFORCEMENT.md](./LINT_AND_TYPE_ENFORCEMENT.md)
+
 ## 📋 Copy-Paste Commands
 
 ### 🟢 START OF TASK
