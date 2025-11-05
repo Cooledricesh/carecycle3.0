@@ -89,6 +89,19 @@ temp/
 # Supabase local data (if any)
 .supabase/
 
+# Supabase temporary files and cache
+supabase/.temp/
+
+# Database backups (contains sensitive production data)
+backups/
+**/backups/
+*.backup.sql
+*_backup.sql
+
+# Migration planning and internal documentation
+supabase/migrations/*.md
+!supabase/migrations/README.md
+
 # MCP Configuration (CONTAINS API KEYS - NEVER COMMIT)
 .mcp.json
 *.mcp.json
