@@ -403,14 +403,40 @@ This document tracks all database migrations applied to the production Supabase 
 ## Migration File Organization
 
 ### Main Directory (`/supabase/migrations/`)
-- **Total Files**: 18 SQL files
-- **Status**: Active migrations
-- **Latest**: 20251227000002 (December 27, 2025)
+- **Total Files**: 17 active SQL migration files
+- **Status**: Active migrations applied to production database
+- **Latest**: 20250929032910 (September 29, 2025)
 
 ### Archive Directory (`/supabase/migrations/archive/`)
-- **Total Files**: 76 SQL files
-- **Purpose**: Historical migrations, superseded versions, experimental migrations
-- **Status**: Reference only, will be reorganized in Phase 2.2
+The archive directory preserves historical migration files for reference and maintains project history. Files are organized into three categories:
+
+#### `archive/deprecated/`
+**Purpose**: Migrations that have been replaced or are no longer valid
+- **Examples**: Initial schema attempts, migrations superseded by complete rewrites
+- **Status**: Not to be applied to new databases
+- **Reason for preservation**: Historical context, understanding of early design decisions
+
+#### `archive/superseded/`
+**Purpose**: Migrations that were improved upon by later, better versions
+- **Examples**: Performance optimization attempts, RLS policy iterations, schema refinements
+- **Count**: Majority of archived files (~60+ migrations)
+- **Status**: Reference only - replaced by more efficient or correct implementations
+- **Reason for preservation**:
+  - Documents the iterative development process
+  - Shows evolution of security policies and performance optimizations
+  - Provides context for why certain architectural decisions were made
+
+#### `archive/experimental/`
+**Purpose**: Test migrations and proof-of-concept implementations
+- **Examples**: Pre-migration validation scripts, experimental concurrent index strategies
+- **Status**: Never applied to production
+- **Reason for preservation**: Useful patterns and techniques that might be adapted for future features
+
+### Archive Management Policy
+- **DO NOT DELETE**: Archive files are part of project history and ADR (Architecture Decision Records)
+- **DO NOT APPLY**: Archived migrations should never be run on any database
+- **DO REFERENCE**: Use archived files to understand the "why" behind current implementations
+- **DO DOCUMENT**: When creating new migrations that supersede existing ones, move old versions to appropriate archive folder with clear naming
 
 ---
 

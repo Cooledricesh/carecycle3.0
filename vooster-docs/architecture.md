@@ -105,62 +105,211 @@ graph TB
 4. **폴백 모드** → Polling Timer → API Fetch → Cache Update
 
 ### 코드 구성 & 컨벤션
-**도메인 기반 구성 전략**
-- **도메인 분리**: 사용자 관리, 일정 관리, 알림 등 비즈니스 도메인별로 코드 분리.
-- **계층 기반 아키텍처**: 프레젠테이션 계층 (UI 컴포넌트), 비즈니스 로직 계층 (서비스), 데이터 접근 계층 (데이터베이스 쿼리)으로 분리.
-- **기능 기반 모듈**: 환자 등록, 일정 생성, 체크리스트 관리 등 기능별로 모듈화.
-- **공유 컴포넌트**: 공통 유틸리티, 타입, 재사용 가능한 컴포넌트는 shared 모듈에 저장.
+
+**하이브리드 아키텍처 전략 (Hybrid Architecture)**
+
+현재 프로젝트는 **기능/계층 기반 아키텍처**와 **도메인 기반 아키텍처**를 혼합한 하이브리드 구조를 채택하고 있습니다. 이는 프로젝트의 성장 과정에서 점진적으로 발전한 결과로, 각 접근법의 장점을 활용하여 유연성과 확장성을 동시에 확보합니다.
+
+#### 아키텍처 구성 원칙
+1. **기능/계층 기반 구조** (Primary):
+   - **app/**: Next.js 라우팅 구조에 따른 페이지 조직
+   - **components/**: 도메인별로 그룹화된 UI 컴포넌트
+   - **hooks/**: 전역 재사용 가능한 커스텀 훅
+   - **lib/**: 기술적 관심사별로 분리된 유틸리티 (supabase, realtime, monitoring 등)
+   - **services/**: 데이터 액세스 계층
+   - **types/**: 전역 타입 정의
+
+2. **도메인 기반 하위 조직** (Secondary):
+   - `components/` 내부: patients/, schedules/, dashboard/, admin/ 등 도메인별 폴더
+   - `lib/` 내부: patient-management/, schedule-management/, filters/ 등 도메인별 비즈니스 로직
+   - `services/` 내부: patientService, scheduleService 등 도메인별 API 계층
+
+3. **아키텍처 선택 이유**:
+   - **초기 MVP 단계**: 빠른 프로토타입을 위한 기능/계층 기반 구조 채택
+   - **점진적 성장**: 복잡도 증가에 따라 도메인별 그룹화 필요성 대두
+   - **실용적 접근**: 전체 리팩토링 대신 하이브리드 구조로 점진적 개선
+   - **향후 방향**: 필요에 따라 완전한 도메인 기반 구조로 전환 가능
+
+#### 계층 간 의존성 규칙
+```
+Pages (app/)
+  → Components (components/)
+    → Hooks (hooks/)
+      → Services (services/)
+        → Lib (lib/)
+          → Types (types/)
+```
 
 **실제 구현된 파일 & 폴더 구조**
 ```
 src/
-├── app/                          # Next.js 15 App Router
-│   ├── (app)/                   # 인증된 앱 레이아웃
-│   │   ├── dashboard/           # 대시보드
+├── app/                          # Next.js 15 App Router (기능/계층 기반)
+│   ├── (protected)/             # 인증된 앱 레이아웃 (수정됨: (app) → (protected))
+│   │   ├── dashboard/           # 대시보드 페이지
 │   │   │   ├── page.tsx        # 메인 대시보드
-│   │   │   └── patients/       # 환자 관리
+│   │   │   ├── patients/       # 환자 관리 페이지
+│   │   │   ├── schedules/      # 스케줄 관리 페이지
+│   │   │   ├── calendar/       # 캘린더 페이지
+│   │   │   ├── items/          # 항목 관리 페이지
+│   │   │   └── profile/        # 프로필 페이지
 │   │   ├── admin/              # 관리자 페이지
-│   │   └── debug/              # 성능 모니터링
-│   ├── auth/                    # 인증 페이지
-│   │   ├── signin/
-│   │   └── callback/
-│   └── api/                     # API 라우트
-│       └── patients/
-├── components/                   # 재사용 컴포넌트
-│   ├── ui/                     # shadcn/ui 기본
-│   ├── patients/               # 환자 관련
+│   │   │   ├── page.tsx        # 관리자 대시보드
+│   │   │   └── users/          # 사용자 관리
+│   │   └── debug/              # 성능 모니터링 & 디버그
+│   │       ├── page.tsx        # 디버그 대시보드
+│   │       └── profile/        # 프로필 디버그
+│   ├── auth/                    # 인증 페이지 (비보호)
+│   │   ├── signin/             # 로그인
+│   │   ├── signup/             # 회원가입
+│   │   ├── forgot-password/    # 비밀번호 찾기
+│   │   └── callback/           # OAuth 콜백
+│   ├── api/                     # API 라우트 (기능별 조직)
+│   │   ├── auth/               # 인증 API
+│   │   ├── patients/           # 환자 API
+│   │   ├── admin/              # 관리자 API
+│   │   └── v1/                 # 버저닝된 API
+│   ├── actions/                 # Server Actions
+│   │   └── items.ts
+│   ├── api-docs/                # API 문서 페이지
+│   ├── approval-pending/        # 승인 대기 페이지
+│   └── page.tsx                 # 랜딩 페이지
+│
+├── components/                   # 재사용 컴포넌트 (도메인 기반 하위 조직)
+│   ├── ui/                     # shadcn/ui 기본 컴포넌트
+│   ├── patients/               # 환자 관련 컴포넌트
 │   │   ├── patient-registration-modal.tsx
-│   │   └── patient-delete-dialog.tsx
-│   ├── schedules/              # 스케줄 관련
-│   │   └── schedule-create-modal.tsx
-│   └── dashboard/              # 대시보드 관련
-│       └── realtime-provider.tsx
-├── hooks/                        # 커스텀 훅
+│   │   ├── patient-delete-dialog.tsx
+│   │   └── patient-form.tsx
+│   ├── schedules/              # 스케줄 관련 컴포넌트
+│   │   ├── schedule-create-modal.tsx
+│   │   └── schedule-edit-form.tsx
+│   ├── dashboard/              # 대시보드 관련 컴포넌트
+│   │   └── realtime-provider.tsx
+│   ├── admin/                  # 관리자 컴포넌트
+│   ├── calendar/               # 캘린더 컴포넌트
+│   ├── filters/                # 필터 컴포넌트
+│   ├── auth/                   # 인증 컴포넌트
+│   ├── app-shell/              # 앱 레이아웃 컴포넌트
+│   └── landing/                # 랜딩 페이지 컴포넌트
+│
+├── hooks/                        # 커스텀 훅 (기능/계층 기반)
 │   ├── usePatients.ts          # 환자 데이터 훅
 │   ├── useSchedules.ts         # 스케줄 데이터 훅
 │   ├── useRealtimeEvents.ts    # 실시간 이벤트
 │   ├── useOptimisticMutation.ts # 낙관적 업데이트
-│   └── useFallbackPolling.ts   # 폴백 폴링
-├── lib/                          # 라이브러리 & 유틸
-│   ├── supabase/               # Supabase 클라이언트
+│   ├── useFallbackPolling.ts   # 폴백 폴링
+│   └── useFilters.ts           # 필터 상태 관리
+│
+├── lib/                          # 라이브러리 & 유틸 (혼합: 기술적 + 도메인)
+│   ├── supabase/               # Supabase 클라이언트 (기술적)
 │   │   ├── singleton.ts       # 클라이언트 싱글톤
 │   │   ├── client.ts          # 브라우저 클라이언트
 │   │   └── server.ts          # 서버 클라이언트
-│   ├── realtime/               # 실시간 아키텍처
-│   │   ├── event-manager.ts   # 이벤트 버스
-│   │   └── connection-manager.ts # 연결 관리
-│   ├── monitoring/             # 성능 모니터링
+│   ├── patient-management/     # 환자 관리 비즈니스 로직 (도메인)
+│   ├── schedule-management/    # 스케줄 관리 비즈니스 로직 (도메인)
+│   ├── filters/                # 필터 로직 (도메인)
+│   ├── events/                 # 이벤트 시스템 (기술적)
+│   ├── monitoring/             # 성능 모니터링 (기술적)
 │   │   └── performance-monitor.ts
-│   └── database.types.ts       # Supabase 타입
-├── services/                     # API 서비스 계층
-│   ├── patientService.ts
-│   └── scheduleService.ts
-├── providers/                    # Context Providers
-│   └── auth-provider.tsx
-├── types/                        # TypeScript 타입
+│   ├── api/                    # API 헬퍼 (기술적)
+│   ├── utils/                  # 유틸리티 함수 (기술적)
+│   ├── database.types.ts       # Supabase 자동 생성 타입
+│   ├── database-utils.ts       # DB 유틸리티
+│   ├── date-utils.ts           # 날짜 유틸리티
+│   ├── error-mapper.ts         # 에러 매핑
+│   ├── query-keys.ts           # React Query 키 관리
+│   └── utils.ts                # 공통 유틸리티
+│
+├── services/                     # API 서비스 계층 (도메인 기반)
+│   ├── patientService.ts       # 환자 CRUD
+│   ├── scheduleService.ts      # 스케줄 CRUD
+│   ├── scheduleServiceEnhanced.ts # 향상된 스케줄 로직
+│   ├── optimizedScheduleService.ts # 최적화된 스케줄 로직
+│   ├── executionService.ts     # 시행 관리
+│   ├── itemService.ts          # 항목 관리
+│   ├── activityService.ts      # 활동 로그
+│   └── filters/                # 필터 서비스
+│
+├── providers/                    # Context Providers (기능/계층)
+│   ├── auth-provider.tsx       # 인증 상태
+│   └── filter-provider.tsx     # 필터 상태
+│
+├── schemas/                      # Zod 스키마 (도메인 기반)
 │   ├── patient.ts
-│   └── schedule.ts
-└── middleware.ts                 # Next.js 미들웨어
+│   ├── schedule.ts
+│   └── user.ts
+│
+├── types/                        # TypeScript 타입 (도메인 기반)
+│   ├── patient.ts              # 환자 타입
+│   ├── schedule.ts             # 스케줄 타입
+│   ├── execution.ts            # 시행 타입
+│   ├── activity.ts             # 활동 타입
+│   ├── item.ts                 # 항목 타입
+│   └── index.ts                # 타입 re-export
+│
+└── middleware.ts                 # Next.js 인증 미들웨어
+```
+
+#### 하이브리드 아키텍처 다이어그램
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Presentation Layer                       │
+│  ┌───────────────────────────────────────────────────────┐  │
+│  │  app/ (Pages - 기능/라우트 기반)                        │  │
+│  │  ├── (protected)/dashboard/                           │  │
+│  │  ├── (protected)/admin/                               │  │
+│  │  ├── auth/                                             │  │
+│  │  └── api/                                              │  │
+│  └───────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────┘
+                          ↓
+┌─────────────────────────────────────────────────────────────┐
+│                    Component Layer                          │
+│  ┌───────────────────────────────────────────────────────┐  │
+│  │  components/ (도메인별 그룹화)                          │  │
+│  │  ├── patients/  ├── schedules/  ├── admin/            │  │
+│  │  ├── dashboard/ ├── calendar/   ├── filters/          │  │
+│  │  └── ui/ (공통 재사용 컴포넌트)                         │  │
+│  └───────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────┘
+                          ↓
+┌─────────────────────────────────────────────────────────────┐
+│                    Business Logic Layer                     │
+│  ┌──────────────────┐  ┌──────────────────────────────────┐ │
+│  │  hooks/          │  │  lib/ (혼합)                     │ │
+│  │  (기능 기반)      │  │  ├── patient-management/ (도메인)│ │
+│  │  ├── usePatients │  │  ├── schedule-management/ (도메인│ │
+│  │  ├── useSchedules│  │  ├── filters/ (도메인)           │ │
+│  │  └── useRealtime │  │  ├── events/ (기술적)            │ │
+│  │                  │  │  └── monitoring/ (기술적)        │ │
+│  └──────────────────┘  └──────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────┘
+                          ↓
+┌─────────────────────────────────────────────────────────────┐
+│                    Data Access Layer                        │
+│  ┌───────────────────────────────────────────────────────┐  │
+│  │  services/ (도메인별 서비스)                            │  │
+│  │  ├── patientService.ts                                │  │
+│  │  ├── scheduleService.ts                               │  │
+│  │  ├── executionService.ts                              │  │
+│  │  └── activityService.ts                               │  │
+│  └───────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────┘
+                          ↓
+┌─────────────────────────────────────────────────────────────┐
+│                    Infrastructure Layer                     │
+│  ┌───────────────────────────────────────────────────────┐  │
+│  │  lib/supabase/ (Supabase 클라이언트)                   │  │
+│  │  ├── client.ts (브라우저)                              │  │
+│  │  ├── server.ts (서버)                                  │  │
+│  │  └── singleton.ts (싱글톤 관리)                        │  │
+│  └───────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────┘
+                          ↓
+┌─────────────────────────────────────────────────────────────┐
+│              Supabase (PostgreSQL + Auth + Realtime)        │
+└─────────────────────────────────────────────────────────────┘
 ```
 
 ### 데이터 흐름 & 통신 패턴

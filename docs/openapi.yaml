@@ -28,10 +28,10 @@ tags:
     description: Patient management operations
   - name: Schedules
     description: Medical schedule management
-  - name: Items
-    description: Medical items and procedures
-  - name: Dashboard
-    description: Dashboard statistics and metrics
+  - name: Admin
+    description: Administrative operations (admin role required)
+  - name: Health
+    description: System health monitoring
 
 paths:
   /auth/login:
@@ -57,8 +57,7 @@ paths:
                   example: staff@hospital.com
                 password:
                   type: string
-                  format: password
-                  minLength: 8
+                  minLength: 6
                   example: SecurePass123!
       responses:
         '200':
@@ -70,12 +69,14 @@ paths:
                 properties:
                   user:
                     $ref: '#/components/schemas/User'
+                  profile:
+                    $ref: '#/components/schemas/Profile'
                   session:
                     $ref: '#/components/schemas/Session'
-        '401':
-          $ref: '#/components/responses/UnauthorizedError'
         '400':
           $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
 
   /auth/logout:
     post:
@@ -93,14 +94,19 @@ paths:
                 properties:
                   message:
                     type: string
-                    example: Successfully logged out
+                    example: Logged out successfully
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
 
-  /auth/refresh:
+  /auth/signup:
     post:
       tags:
         - Authentication
-      summary: Refresh access token
-      description: Exchange refresh token for new access token
+      summary: User registration
+      description: Create a new user account
+      security: []
       requestBody:
         required: true
         content:
@@ -108,93 +114,152 @@ paths:
             schema:
               type: object
               required:
-                - refreshToken
+                - email
+                - password
+                - name
               properties:
-                refreshToken:
+                email:
                   type: string
-                  example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+                  format: email
+                  example: newuser@hospital.com
+                password:
+                  type: string
+                  minLength: 6
+                  example: SecurePass123!
+                name:
+                  type: string
+                  minLength: 1
+                  example: John Doe
+                role:
+                  type: string
+                  enum: [nurse, admin, doctor]
+                  default: nurse
+                care_type:
+                  type: string
+                  enum: ['외래', '입원', '낮병원']
+                  description: Required for nurse role
+                phone:
+                  type: string
+                  example: '+82-10-1234-5678'
       responses:
         '200':
-          description: Token refreshed successfully
+          description: Account created successfully
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  accessToken:
+                  user:
+                    $ref: '#/components/schemas/User'
+                  session:
+                    $ref: '#/components/schemas/Session'
+                  message:
                     type: string
-                  refreshToken:
-                    type: string
-                  expiresIn:
-                    type: integer
-                    example: 3600
+                    example: Account created successfully. Please check your email for verification.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
 
-  /patients:
+  /auth/profile:
     get:
       tags:
-        - Patients
-      summary: List all patients
-      description: Retrieve a list of all active patients with optional filtering
-      parameters:
-        - in: query
-          name: search
-          schema:
-            type: string
-          description: Search patients by name or patient number
-        - in: query
-          name: department
-          schema:
-            type: string
-          description: Filter by department
-        - in: query
-          name: careType
-          schema:
-            type: string
-          description: Filter by care type
-        - in: query
-          name: isActive
-          schema:
-            type: boolean
-          description: Filter by active status
-        - $ref: '#/components/parameters/LimitParam'
-        - $ref: '#/components/parameters/OffsetParam'
+        - Authentication
+      summary: Get current user profile
+      description: Retrieve profile information for authenticated user
       responses:
         '200':
-          description: List of patients
+          description: Profile retrieved successfully
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  data:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/Patient'
-                  total:
-                    type: integer
-                    example: 100
-                  limit:
-                    type: integer
-                    example: 20
-                  offset:
-                    type: integer
-                    example: 0
+                  profile:
+                    $ref: '#/components/schemas/Profile'
         '401':
           $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
 
-    post:
+    patch:
       tags:
-        - Patients
-      summary: Create a new patient
-      description: Register a new patient in the system
+        - Authentication
+      summary: Update user profile
+      description: Update profile information for authenticated user
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PatientCreateInput'
+              type: object
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                care_type:
+                  type: string
+                  enum: ['외래', '입원', '낮병원']
+                phone:
+                  type: string
       responses:
-        '201':
+        '200':
+          description: Profile updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  profile:
+                    $ref: '#/components/schemas/Profile'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /patients:
+    post:
+      tags:
+        - Patients
+      summary: Create a new patient
+      description: Register a new patient in the system. Requires approved user status.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - patientNumber
+              properties:
+                name:
+                  type: string
+                  pattern: '^[가-힣a-zA-Z\s]+$'
+                  minLength: 1
+                  maxLength: 100
+                  example: 홍길동
+                patientNumber:
+                  type: string
+                  pattern: '^[A-Z0-9]{1,50}$'
+                  minLength: 1
+                  maxLength: 50
+                  example: P12345
+                careType:
+                  type: string
+                  enum: ['외래', '입원', '낮병원']
+                isActive:
+                  type: boolean
+                  default: true
+                metadata:
+                  type: object
+                  additionalProperties: true
+      responses:
+        '200':
           description: Patient created successfully
           content:
             application/json:
@@ -204,38 +269,31 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          description: Forbidden - User not approved or inactive
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '409':
           description: Conflict - Patient number already exists
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
 
-  /patients/{id}:
-    get:
-      tags:
-        - Patients
-      summary: Get patient by ID
-      description: Retrieve detailed information about a specific patient
-      parameters:
-        - $ref: '#/components/parameters/PatientIdParam'
-      responses:
-        '200':
-          description: Patient details
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PatientDetail'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '401':
-          $ref: '#/components/responses/UnauthorizedError'
-
+  /patients/{id}/update:
     put:
       tags:
         - Patients
       summary: Update patient
-      description: Update patient information
+      description: |
+        Update patient information. Access control:
+        - Admin: Can update all fields including doctor assignment
+        - Nurse: Can update basic fields and care-related fields for patients in their care_type
+        - Doctor: Can update basic fields for their assigned patients only
       parameters:
         - $ref: '#/components/parameters/PatientIdParam'
       requestBody:
@@ -243,7 +301,36 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PatientUpdateInput'
+              type: object
+              properties:
+                name:
+                  type: string
+                  pattern: '^[가-힣a-zA-Z\s]+$'
+                  minLength: 1
+                  maxLength: 100
+                patientNumber:
+                  type: string
+                  pattern: '^[A-Z0-9]{1,50}$'
+                  minLength: 1
+                  maxLength: 50
+                careType:
+                  type: string
+                  enum: ['외래', '입원', '낮병원']
+                  description: Only updatable by nurse and admin roles
+                department:
+                  type: string
+                  maxLength: 50
+                  description: Only updatable by nurse and admin roles
+                doctorId:
+                  type: string
+                  format: uuid
+                  nullable: true
+                  description: Only updatable by admin role
+                isActive:
+                  type: boolean
+                metadata:
+                  type: object
+                  additionalProperties: true
       responses:
         '200':
           description: Patient updated successfully
@@ -251,68 +338,94 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Patient'
-        '404':
-          $ref: '#/components/responses/NotFound'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/UnauthorizedError'
-
-    delete:
-      tags:
-        - Patients
-      summary: Delete patient
-      description: Soft delete a patient (marks as inactive)
-      parameters:
-        - $ref: '#/components/parameters/PatientIdParam'
-      responses:
-        '204':
-          description: Patient deleted successfully
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '401':
-          $ref: '#/components/responses/UnauthorizedError'
-
-  /patients/{id}/schedules:
-    get:
-      tags:
-        - Patients
-        - Schedules
-      summary: Get patient schedules
-      description: Retrieve all schedules for a specific patient
-      parameters:
-        - $ref: '#/components/parameters/PatientIdParam'
-        - in: query
-          name: status
-          schema:
-            type: string
-            enum: [active, completed, cancelled, all]
-          description: Filter by schedule status
-      responses:
-        '200':
-          description: List of patient schedules
+        '403':
+          description: Forbidden - Insufficient permissions
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Schedule'
+                $ref: '#/components/schemas/Error'
         '404':
           $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /patients/{id}/update-doctor:
+    post:
+      tags:
+        - Patients
+      summary: Update patient's doctor
+      description: Assign or remove a doctor for a patient. Admin role required.
+      parameters:
+        - $ref: '#/components/parameters/PatientIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - doctorId
+              properties:
+                doctorId:
+                  type: string
+                  format: uuid
+                  nullable: true
+                  description: Doctor ID to assign, or null to remove assignment
+      responses:
+        '200':
+          description: Doctor assignment updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Patient'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          description: Forbidden - Admin role required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
 
-  /schedules:
+  /patients/{id}/delete:
+    post:
+      tags:
+        - Patients
+      summary: Delete patient
+      description: Soft delete a patient (marks as inactive). Triggers cascade deletion of related schedules via database trigger.
+      parameters:
+        - $ref: '#/components/parameters/PatientIdParam'
+      responses:
+        '200':
+          description: Patient deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /v1/schedules:
     get:
       tags:
         - Schedules
       summary: List schedules
-      description: Retrieve schedules with various filtering options
+      description: Retrieve paginated list of schedules with filtering options
       parameters:
-        - in: query
-          name: type
-          schema:
-            type: string
-            enum: [today, upcoming, overdue, all]
-          description: Schedule type filter
         - in: query
           name: patientId
           schema:
@@ -320,55 +433,159 @@ paths:
             format: uuid
           description: Filter by patient ID
         - in: query
+          name: itemId
+          schema:
+            type: string
+            format: uuid
+          description: Filter by item ID
+        - in: query
           name: status
           schema:
             type: string
-            enum: [active, completed, cancelled]
-          description: Filter by status
+            enum: [active, paused, completed]
+          description: Filter by schedule status
         - in: query
-          name: daysAhead
+          name: startDate
+          schema:
+            type: string
+            format: date-time
+          description: Filter schedules starting from this date
+        - in: query
+          name: endDate
+          schema:
+            type: string
+            format: date-time
+          description: Filter schedules ending before this date
+        - in: query
+          name: page
           schema:
             type: integer
             minimum: 1
-            maximum: 90
-            default: 7
-          description: Number of days to look ahead for upcoming schedules
+            default: 1
+          description: Page number for pagination
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+          description: Number of items per page
+        - in: query
+          name: sort
+          schema:
+            type: string
+            default: created_at
+          description: Field to sort by
+        - in: query
+          name: order
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+          description: Sort order
       responses:
         '200':
-          description: List of schedules
+          description: Schedules retrieved successfully
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Schedule'
-        '401':
-          $ref: '#/components/responses/UnauthorizedError'
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Schedule'
+                  pagination:
+                    type: object
+                    properties:
+                      page:
+                        type: integer
+                      limit:
+                        type: integer
+                      total:
+                        type: integer
+                      totalPages:
+                        type: integer
+                  message:
+                    type: string
+                    example: Schedules retrieved successfully
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
 
     post:
       tags:
         - Schedules
       summary: Create schedule
-      description: Create a new medical schedule
+      description: Create a new schedule for a patient
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ScheduleCreateInput'
+              type: object
+              required:
+                - patientId
+                - itemId
+                - intervalType
+                - intervalValue
+                - startDate
+              properties:
+                patientId:
+                  type: string
+                  format: uuid
+                itemId:
+                  type: string
+                  format: uuid
+                intervalType:
+                  type: string
+                  enum: [days, weeks, months]
+                intervalValue:
+                  type: integer
+                  minimum: 1
+                startDate:
+                  type: string
+                  format: date-time
+                endDate:
+                  type: string
+                  format: date-time
+                notes:
+                  type: string
       responses:
-        '201':
+        '200':
           description: Schedule created successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Schedule'
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Schedule'
+                  message:
+                    type: string
         '400':
           $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          description: Patient or item not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
 
-  /schedules/{id}:
+  /v1/schedules/{id}:
     get:
       tags:
         - Schedules
@@ -378,15 +595,30 @@ paths:
         - $ref: '#/components/parameters/ScheduleIdParam'
       responses:
         '200':
-          description: Schedule details
+          description: Schedule retrieved successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ScheduleDetail'
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/ScheduleDetail'
+                  message:
+                    type: string
+        '400':
+          description: Invalid schedule ID format
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '404':
           $ref: '#/components/responses/NotFound'
-        '401':
-          $ref: '#/components/responses/UnauthorizedError'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
 
     put:
       tags:
@@ -400,42 +632,162 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ScheduleUpdateInput'
+              type: object
+              properties:
+                intervalType:
+                  type: string
+                  enum: [days, weeks, months]
+                intervalValue:
+                  type: integer
+                  minimum: 1
+                startDate:
+                  type: string
+                  format: date-time
+                endDate:
+                  type: string
+                  format: date-time
+                status:
+                  type: string
+                  enum: [active, paused, completed]
+                notes:
+                  type: string
       responses:
         '200':
           description: Schedule updated successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Schedule'
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Schedule'
+                  message:
+                    type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '404':
           $ref: '#/components/responses/NotFound'
-        '401':
-          $ref: '#/components/responses/UnauthorizedError'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
 
     delete:
       tags:
         - Schedules
-      summary: Cancel schedule
-      description: Cancel a schedule (soft delete)
+      summary: Delete schedule
+      description: Soft delete a schedule (marks as completed)
       parameters:
         - $ref: '#/components/parameters/ScheduleIdParam'
       responses:
-        '204':
-          description: Schedule cancelled successfully
+        '200':
+          description: Schedule deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: null
+                  message:
+                    type: string
+        '400':
+          description: Invalid schedule ID format
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '404':
           $ref: '#/components/responses/NotFound'
-        '401':
-          $ref: '#/components/responses/UnauthorizedError'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
 
-  /schedules/{id}/complete:
+  /health:
+    get:
+      tags:
+        - Health
+      summary: Health check
+      description: Check system health status including database and auth service
+      security: []
+      responses:
+        '200':
+          description: Health check completed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      status:
+                        type: string
+                        enum: [healthy, degraded, unhealthy]
+                      timestamp:
+                        type: string
+                        format: date-time
+                      uptime:
+                        type: integer
+                        description: Uptime in milliseconds
+                      checks:
+                        type: object
+                        properties:
+                          database:
+                            type: object
+                            properties:
+                              status:
+                                type: string
+                                enum: [up, down]
+                              responseTime:
+                                type: integer
+                                description: Response time in milliseconds
+                              error:
+                                type: string
+                          auth:
+                            type: object
+                            properties:
+                              status:
+                                type: string
+                                enum: [up, down]
+                              error:
+                                type: string
+                          realtime:
+                            type: object
+                            properties:
+                              status:
+                                type: string
+                                enum: [connected, disconnected, reconnecting]
+                              activeChannels:
+                                type: integer
+                      environment:
+                        type: string
+                        example: development
+                      version:
+                        type: string
+                        example: 1.0.0
+                  message:
+                    type: string
+        '503':
+          description: Service unavailable - system unhealthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /admin/users/update:
     post:
       tags:
-        - Schedules
-      summary: Mark schedule as completed
-      description: Mark a schedule as completed and optionally create next occurrence
-      parameters:
-        - $ref: '#/components/parameters/ScheduleIdParam'
+        - Admin
+      summary: Update user
+      description: Update user role and care type. Admin role required.
       requestBody:
         required: true
         content:
@@ -443,106 +795,268 @@ paths:
             schema:
               type: object
               required:
-                - executedDate
-                - executedBy
+                - userId
               properties:
-                executedDate:
-                  type: string
-                  format: date-time
-                executedBy:
+                userId:
                   type: string
                   format: uuid
-                notes:
+                role:
                   type: string
-                createNext:
-                  type: boolean
-                  default: true
-                  description: Whether to create the next scheduled occurrence
+                  enum: [admin, nurse, doctor]
+                care_type:
+                  type: string
+                  enum: ['외래', '입원', '낮병원']
+                  nullable: true
       responses:
         '200':
-          description: Schedule marked as completed
+          description: User updated successfully
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  completedSchedule:
-                    $ref: '#/components/schemas/Schedule'
-                  nextSchedule:
-                    $ref: '#/components/schemas/Schedule'
-        '404':
-          $ref: '#/components/responses/NotFound'
+                  data:
+                    $ref: '#/components/schemas/Profile'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          description: Forbidden - Admin access required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
 
-  /dashboard/stats:
-    get:
+  /admin/delete-user:
+    post:
       tags:
-        - Dashboard
-      summary: Get dashboard statistics
-      description: Retrieve statistics for the dashboard
+        - Admin
+      summary: Delete user
+      description: Permanently delete a user account. Admin role required. Cannot delete own account or last admin.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - userId
+              properties:
+                userId:
+                  type: string
+                  format: uuid
       responses:
         '200':
-          description: Dashboard statistics
+          description: User deleted successfully
           content:
             application/json:
               schema:
                 type: object
                 properties:
+                  message:
+                    type: string
+                    example: User deleted successfully
+                  userId:
+                    type: string
+                    format: uuid
+        '400':
+          description: Bad request - Cannot delete own account or last admin
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          description: Forbidden - Admin access required or invalid origin
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Target user not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /admin/activity/stats:
+    get:
+      tags:
+        - Admin
+      summary: Get activity statistics
+      description: Retrieve system activity statistics. Admin role required.
+      responses:
+        '200':
+          description: Statistics retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  totalUsers:
+                    type: integer
+                  activeUsers:
+                    type: integer
                   totalPatients:
                     type: integer
-                    example: 150
                   activePatients:
                     type: integer
-                    example: 120
-                  todaySchedules:
+                  totalSchedules:
                     type: integer
-                    example: 45
-                  overdueSchedules:
+                  activeSchedules:
                     type: integer
-                    example: 5
-                  upcomingSchedules:
-                    type: integer
-                    example: 230
-                  completionRate:
-                    type: number
-                    format: float
-                    example: 0.92
                   recentActivities:
                     type: array
                     items:
-                      $ref: '#/components/schemas/Activity'
+                      type: object
+                      properties:
+                        timestamp:
+                          type: string
+                          format: date-time
+                        action:
+                          type: string
+                        user_id:
+                          type: string
+                          format: uuid
+                        details:
+                          type: object
         '401':
           $ref: '#/components/responses/UnauthorizedError'
-
-  /items:
-    get:
-      tags:
-        - Items
-      summary: List medical items
-      description: Retrieve list of medical items and procedures
-      parameters:
-        - in: query
-          name: category
-          schema:
-            type: string
-          description: Filter by category
-        - in: query
-          name: search
-          schema:
-            type: string
-          description: Search items by name
-      responses:
-        '200':
-          description: List of medical items
+        '403':
+          description: Forbidden - Admin access required
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/MedicalItem'
+                $ref: '#/components/schemas/Error'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    options:
+      tags:
+        - Admin
+      summary: CORS preflight
+      description: Handle OPTIONS requests for CORS
+      security: []
+      responses:
+        '200':
+          description: CORS headers returned
+
+  /admin/activity/logs:
+    get:
+      tags:
+        - Admin
+      summary: Get audit logs
+      description: Retrieve system audit logs with filtering. Admin role required.
+      parameters:
+        - in: query
+          name: startDate
+          schema:
+            type: string
+            format: date
+          description: Filter logs from this date
+        - in: query
+          name: endDate
+          schema:
+            type: string
+            format: date
+          description: Filter logs until this date
+        - in: query
+          name: userId
+          schema:
+            type: string
+            format: uuid
+          description: Filter by user ID
+        - in: query
+          name: tableName
+          schema:
+            type: string
+          description: Filter by table name
+        - in: query
+          name: operation
+          schema:
+            type: string
+            enum: [INSERT, UPDATE, DELETE]
+          description: Filter by operation type
+        - in: query
+          name: page
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Audit logs retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  logs:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          format: uuid
+                        table_name:
+                          type: string
+                        operation:
+                          type: string
+                        user_id:
+                          type: string
+                          format: uuid
+                        timestamp:
+                          type: string
+                          format: date-time
+                        old_data:
+                          type: object
+                        new_data:
+                          type: object
+                  pagination:
+                    type: object
+                    properties:
+                      page:
+                        type: integer
+                      limit:
+                        type: integer
+                      total:
+                        type: integer
+                      totalPages:
+                        type: integer
         '401':
           $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          description: Forbidden - Admin access required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    options:
+      tags:
+        - Admin
+      summary: CORS preflight
+      description: Handle OPTIONS requests for CORS
+      security: []
+      responses:
+        '200':
+          description: CORS headers returned
 
 components:
   securitySchemes:
@@ -571,27 +1085,24 @@ components:
         format: uuid
       description: Schedule unique identifier
 
-    LimitParam:
-      in: query
-      name: limit
-      schema:
-        type: integer
-        minimum: 1
-        maximum: 100
-        default: 20
-      description: Maximum number of items to return
-
-    OffsetParam:
-      in: query
-      name: offset
-      schema:
-        type: integer
-        minimum: 0
-        default: 0
-      description: Number of items to skip
-
   schemas:
     User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    Profile:
       type: object
       properties:
         id:
@@ -605,26 +1116,38 @@ components:
         role:
           type: string
           enum: [nurse, admin, doctor]
-        createdAt:
+        care_type:
+          type: string
+          enum: ['외래', '입원', '낮병원']
+          nullable: true
+        phone:
+          type: string
+          nullable: true
+        approval_status:
+          type: string
+          enum: [pending, approved, rejected]
+        is_active:
+          type: boolean
+        created_at:
           type: string
           format: date-time
-        updatedAt:
+        updated_at:
           type: string
           format: date-time
 
     Session:
       type: object
       properties:
-        accessToken:
+        access_token:
           type: string
-        refreshToken:
+        refresh_token:
           type: string
-        expiresIn:
+        expires_in:
           type: integer
           example: 3600
-        tokenType:
+        token_type:
           type: string
-          example: Bearer
+          example: bearer
 
     Patient:
       type: object
@@ -634,81 +1157,33 @@ components:
           format: uuid
         name:
           type: string
-          example: John Doe
-        patientNumber:
+        patient_number:
           type: string
-          example: P12345
+        care_type:
+          type: string
+          enum: ['외래', '입원', '낮병원']
+          nullable: true
         department:
           type: string
-          example: Oncology
-        careType:
+          nullable: true
+        doctor_id:
           type: string
-          example: Chemotherapy
-        isActive:
-          type: boolean
-          default: true
-        createdAt:
-          type: string
-          format: date-time
-        updatedAt:
-          type: string
-          format: date-time
-
-    PatientDetail:
-      allOf:
-        - $ref: '#/components/schemas/Patient'
-        - type: object
-          properties:
-            metadata:
-              type: object
-              additionalProperties: true
-            schedules:
-              type: array
-              items:
-                $ref: '#/components/schemas/Schedule'
-            recentActivities:
-              type: array
-              items:
-                $ref: '#/components/schemas/Activity'
-
-    PatientCreateInput:
-      type: object
-      required:
-        - name
-        - patientNumber
-      properties:
-        name:
-          type: string
-          minLength: 1
-          maxLength: 100
-        patientNumber:
-          type: string
-          pattern: '^[A-Z][0-9]{5}$'
-          example: P12345
-        department:
-          type: string
-        careType:
-          type: string
-        metadata:
-          type: object
-          additionalProperties: true
-
-    PatientUpdateInput:
-      type: object
-      properties:
-        name:
-          type: string
-          minLength: 1
-          maxLength: 100
-        department:
-          type: string
-        careType:
-          type: string
-        isActive:
+          format: uuid
+          nullable: true
+        is_active:
           type: boolean
         metadata:
           type: object
           additionalProperties: true
+        created_by:
+          type: string
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
 
     Schedule:
       type: object
@@ -716,179 +1191,83 @@ components:
         id:
           type: string
           format: uuid
-        patientId:
+        patient_id:
           type: string
           format: uuid
-        itemId:
+        item_id:
           type: string
           format: uuid
-        itemName:
+        interval_type:
           type: string
-          example: Blood Test
-        intervalType:
-          type: string
-          enum: [daily, weekly, monthly, custom]
-        intervalDays:
+          enum: [days, weeks, months]
+        interval_value:
           type: integer
-          minimum: 1
-        startDate:
+        start_date:
           type: string
-          format: date
-        endDate:
+          format: date-time
+        end_date:
           type: string
-          format: date
-        nextDueDate:
-          type: string
-          format: date
+          format: date-time
+          nullable: true
         status:
           type: string
-          enum: [active, completed, cancelled]
-        priority:
+          enum: [active, paused, completed]
+        notes:
           type: string
-          enum: [low, medium, high]
-        createdAt:
-          type: string
-          format: date-time
-        updatedAt:
+          nullable: true
+        created_at:
           type: string
           format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        patients:
+          type: object
+          properties:
+            name:
+              type: string
+            patient_number:
+              type: string
+        items:
+          type: object
+          properties:
+            name:
+              type: string
+            category:
+              type: string
 
     ScheduleDetail:
       allOf:
         - $ref: '#/components/schemas/Schedule'
         - type: object
           properties:
-            patient:
-              $ref: '#/components/schemas/Patient'
-            item:
-              $ref: '#/components/schemas/MedicalItem'
-            executionHistory:
+            events:
               type: array
               items:
-                $ref: '#/components/schemas/Execution'
-
-    ScheduleCreateInput:
-      type: object
-      required:
-        - patientId
-        - itemId
-        - intervalType
-        - startDate
-      properties:
-        patientId:
-          type: string
-          format: uuid
-        itemId:
-          type: string
-          format: uuid
-        intervalType:
-          type: string
-          enum: [daily, weekly, monthly, custom]
-        intervalDays:
-          type: integer
-          minimum: 1
-          description: Required when intervalType is 'custom'
-        startDate:
-          type: string
-          format: date
-        endDate:
-          type: string
-          format: date
-        priority:
-          type: string
-          enum: [low, medium, high]
-          default: medium
-        notes:
-          type: string
-
-    ScheduleUpdateInput:
-      type: object
-      properties:
-        intervalType:
-          type: string
-          enum: [daily, weekly, monthly, custom]
-        intervalDays:
-          type: integer
-          minimum: 1
-        nextDueDate:
-          type: string
-          format: date
-        endDate:
-          type: string
-          format: date
-        priority:
-          type: string
-          enum: [low, medium, high]
-        status:
-          type: string
-          enum: [active, completed, cancelled]
-        notes:
-          type: string
-
-    MedicalItem:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-        name:
-          type: string
-          example: Complete Blood Count
-        category:
-          type: string
-          example: Laboratory Test
-        description:
-          type: string
-        defaultInterval:
-          type: integer
-          description: Default interval in days
-        isActive:
-          type: boolean
-        createdAt:
-          type: string
-          format: date-time
-
-    Execution:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-        scheduleId:
-          type: string
-          format: uuid
-        executedDate:
-          type: string
-          format: date-time
-        executedBy:
-          type: string
-          format: uuid
-        notes:
-          type: string
-        createdAt:
-          type: string
-          format: date-time
-
-    Activity:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-        type:
-          type: string
-          enum: [patient_created, schedule_created, schedule_completed, patient_updated]
-        description:
-          type: string
-        userId:
-          type: string
-          format: uuid
-        timestamp:
-          type: string
-          format: date-time
-        metadata:
-          type: object
-          additionalProperties: true
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  schedule_id:
+                    type: string
+                    format: uuid
+                  event_date:
+                    type: string
+                    format: date
+                  status:
+                    type: string
+                  executed_by:
+                    type: string
+                    format: uuid
+                    nullable: true
+                  executed_at:
+                    type: string
+                    format: date-time
+                    nullable: true
+                  notes:
+                    type: string
+                    nullable: true
 
     Error:
       type: object
@@ -913,8 +1292,6 @@ components:
           example:
             error: Unauthorized
             code: AUTH_REQUIRED
-            details:
-              message: Valid authentication token required
 
     NotFound:
       description: Resource not found
@@ -925,8 +1302,6 @@ components:
           example:
             error: Not Found
             code: RESOURCE_NOT_FOUND
-            details:
-              message: The requested resource was not found
 
     BadRequest:
       description: Invalid request parameters
@@ -941,3 +1316,25 @@ components:
               fields:
                 - field: email
                   message: Invalid email format
+
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: Internal server error
+            code: INTERNAL_ERROR
+
+    RateLimitExceeded:
+      description: Too many requests
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: Too many requests
+            code: RATE_LIMIT_EXCEEDED
+            details:
+              retryAfter: 60
