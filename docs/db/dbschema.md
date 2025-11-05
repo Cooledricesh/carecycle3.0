@@ -1,9 +1,9 @@
 # Comprehensive Database Schema Documentation
 
-**Last Updated**: September 30, 2025
-**Schema Version**: 2.7.0 (Current Production State - Verified)
-**Migration Count**: 26+ migrations applied
-**Direct DB Verification**: 2025-09-30
+**Last Updated**: November 5, 2025
+**Schema Version**: 3.0.0 (Current Production State - Verified)
+**Migration Count**: 62 migrations applied
+**Direct DB Verification**: 2025-11-05
 
 ## Overview
 
@@ -171,6 +171,8 @@ This document provides a complete and accurate description of the medical schedu
 | skipped_reason | text | NULL | Reason if skipped |
 | is_rescheduled | boolean | DEFAULT false | Rescheduling flag |
 | original_date | date | NULL | Original date if rescheduled |
+| doctor_id_at_completion | uuid | NULL REFERENCES profiles(id) | Doctor ID at execution time |
+| care_type_at_completion | text | NULL | Care type at execution time |
 | created_at | timestamptz | DEFAULT now() | Creation timestamp |
 | updated_at | timestamptz | DEFAULT now() | Last update timestamp |
 
@@ -236,8 +238,8 @@ This document provides a complete and accurate description of the medical schedu
 | reason | text | Change reason |
 
 ### 8. audit_logs
-**Purpose**: System-wide audit logging  
-**Created**: 2025-08-16 | **Enhanced**: 2025-09-02
+**Purpose**: System-wide audit logging
+**Created**: 2025-08-16 | **Enhanced**: 2025-09-02 | **Enhanced**: Added user_name column to preserve username even if user is deleted
 
 | Column | Type | Description |
 |--------|------|-------------|
@@ -249,6 +251,7 @@ This document provides a complete and accurate description of the medical schedu
 | new_values | jsonb | New values |
 | user_id | uuid | User performing action |
 | user_email | text | User email |
+| user_name | text | Username at time of action |
 | user_role | text | User role |
 | timestamp | timestamptz | Operation timestamp |
 | ip_address | inet | Client IP address |
@@ -317,6 +320,11 @@ This document provides a complete and accurate description of the medical schedu
 
 #### today_checklist
 **Purpose**: Today's scheduled items (from types file)
+
+#### calendar_monthly_summary
+**Purpose**: Monthly statistics for calendar dashboard
+**Created**: December 2025
+**Columns**: Month, total schedules, completed, pending, completion rate
 
 ---
 
@@ -429,6 +437,39 @@ This document provides a complete and accurate description of the medical schedu
 #### get_today_checklist(nurse_id)
 **Purpose**: Today's due items for specific nurse
 
+### Calendar Functions
+
+#### get_calendar_schedules()
+**Purpose**: Combined view of schedules and completed executions for calendar display
+**Created**: December 2025
+**Returns**: TABLE with schedule data and execution history
+**Usage**: Calendar component data source
+
+#### get_calendar_schedules_filtered(p_user_id, p_care_types, p_date_start, p_date_end)
+**Purpose**: Filtered calendar view with role-based access
+**Created**: December 2025
+**Returns**: Filtered calendar data
+
+#### get_schedule_statistics(p_schedule_id)
+**Purpose**: Execution statistics for individual schedules
+**Created**: December 2025
+**Returns**: TABLE with completion rate, total executions, etc.
+
+### Admin Functions
+
+#### admin_delete_user(p_user_id, p_admin_id)
+**Purpose**: Admin function to delete users with cascade
+**Security**: Admin only, prevents self-deletion
+**Created**: September 2025
+
+#### update_user_role(p_user_id, p_new_role)
+**Purpose**: Admin function to change user roles
+**Security**: Admin only
+
+#### update_user_care_type(p_user_id, p_care_type)
+**Purpose**: Update user's care type assignment
+**Security**: Admin only
+
 ---
 
 ## Indexes
@@ -482,6 +523,13 @@ This document provides a complete and accurate description of the medical schedu
 - `idx_executions_planned` (planned_date)
 - `idx_executions_status` (status)
 - `idx_executions_executed_by` (executed_by)
+- `idx_executions_for_calendar` (executed_date, schedule_id, status) WHERE status = 'completed'
+- `idx_executions_calendar_range` (executed_date, schedule_id) INCLUDE (executed_by, notes) WHERE status = 'completed'
+- `idx_executions_active_status` (planned_date, status) WHERE status IN ('planned', 'overdue')
+- `idx_executions_schedule_join` (schedule_id, executed_date DESC) WHERE status = 'completed'
+- `idx_executions_schedule_status` (schedule_id, status) WHERE status = 'planned'
+- `idx_schedule_executions_care_type_completion` (care_type_at_completion, executed_date)
+- `idx_schedule_executions_doctor_completion` (doctor_id_at_completion, executed_date)
 
 ### Additional Indexes
 
@@ -719,11 +767,12 @@ CREATE TYPE appointment_type AS ENUM ('consultation', 'treatment', 'follow_up', 
 - **Performance Indexes**: Added multiple indexes for filtering optimization
 - **Materialized View**: dashboard_schedule_summary for performance
 
-### Phase 6: Schedule History Preservation (December 25, 2025)
+### Phase 6: Schedule History Preservation (December 2025)
 - **Calendar History Function**: Added get_calendar_schedules for combined schedule/execution views
 - **Performance Indexes**: Added idx_executions_for_calendar, idx_executions_calendar_range
 - **Statistics Function**: Added get_schedule_statistics for execution analytics
 - **Monthly Summary View**: Added calendar_monthly_summary for dashboard metrics
+- **Execution Tracking**: Added doctor_id_at_completion and care_type_at_completion columns
 - **UI Enhancement**: Visual distinction for completed schedules in calendar
 
 ### Phase 7: Enhanced Patient Management (September 29-30, 2025)
@@ -733,9 +782,9 @@ CREATE TYPE appointment_type AS ENUM ('consultation', 'treatment', 'follow_up', 
 - **Simplified Item Categories**: Reduced from 5 to 3 categories (injection, test, other)
 - **Custom Item Creation**: Enhanced validation and schema for item management
 
-**Total Migrations**: 26+ applied migrations
-**Current Status**: Production-ready with flexible doctor assignment and simplified item management
-**Database Verification**: Direct verification performed on 2025-09-30
+**Total Migrations**: 62 applied migrations
+**Current Status**: Production-ready with calendar integration and execution tracking
+**Database Verification**: Direct verification performed on 2025-11-05
 
 ---
 
@@ -795,14 +844,14 @@ CREATE TYPE appointment_type AS ENUM ('consultation', 'treatment', 'follow_up', 
 
 ---
 
-**Document Version**: 2.1.0
+**Document Version**: 3.0.0
 **Schema Accuracy**: Directly verified against production database
-**Last Verified**: September 30, 2025
-**Verification Method**: Direct SQL queries against production database and git history
+**Last Verified**: November 5, 2025
+**Verification Method**: Direct SQL queries against production database via Supabase MCP
 
-*This document reflects the actual production database state as verified through direct database inspection on 2025-09-30. Major updates include:*
-- *Flexible doctor assignment system allowing pre-registration assignment*
-- *Simplified item categories (reduced from 5 to 3)*
-- *Auto-linking mechanism for doctor-patient relationships*
-- *Enhanced validation schemas for item creation*
-- *Patient doctor view for unified assignment tracking*
+*This document reflects the actual production database state as verified through direct database inspection on 2025-11-05. Major updates since v2.7.0 include:*
+- *Calendar integration system with execution history tracking*
+- *Execution context preservation (doctor/care_type at completion)*
+- *Enhanced admin user management functions*
+- *Monthly statistics views for dashboard*
+- *Comprehensive performance indexes for calendar queries*

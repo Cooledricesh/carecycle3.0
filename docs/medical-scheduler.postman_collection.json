@@ -85,7 +85,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"user\": {\n    \"id\": \"123e4567-e89b-12d3-a456-426614174000\",\n    \"email\": \"user@example.com\",\n    \"name\": \"string\",\n    \"role\": \"nurse\",\n    \"createdAt\": \"2025-01-01T00:00:00Z\",\n    \"updatedAt\": \"2025-01-01T00:00:00Z\"\n  },\n  \"session\": {\n    \"accessToken\": \"string\",\n    \"refreshToken\": \"string\",\n    \"expiresIn\": 3600,\n    \"tokenType\": \"Bearer\"\n  }\n}"
+              "body": "{\n  \"user\": {\n    \"id\": \"123e4567-e89b-12d3-a456-426614174000\",\n    \"email\": \"user@example.com\",\n    \"created_at\": \"2025-01-01T00:00:00Z\",\n    \"updated_at\": \"2025-01-01T00:00:00Z\"\n  },\n  \"profile\": {\n    \"id\": \"123e4567-e89b-12d3-a456-426614174000\",\n    \"email\": \"user@example.com\",\n    \"name\": \"string\",\n    \"role\": \"nurse\",\n    \"care_type\": \"외래\",\n    \"phone\": \"string\",\n    \"approval_status\": \"pending\",\n    \"is_active\": true,\n    \"created_at\": \"2025-01-01T00:00:00Z\",\n    \"updated_at\": \"2025-01-01T00:00:00Z\"\n  },\n  \"session\": {\n    \"access_token\": \"string\",\n    \"refresh_token\": \"string\",\n    \"expires_in\": 3600,\n    \"token_type\": \"bearer\"\n  }\n}"
             },
             {
               "name": "400 - undefined",
@@ -131,7 +131,7 @@
               "body": ""
             },
             {
-              "name": "401 - undefined",
+              "name": "500 - undefined",
               "originalRequest": {
                 "method": "POST",
                 "header": [
@@ -164,7 +164,7 @@
                   }
                 }
               },
-              "code": 401,
+              "code": 500,
               "header": [
                 {
                   "key": "Content-Type",
@@ -238,12 +238,84 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"message\": \"Successfully logged out\"\n}"
+              "body": "{\n  \"message\": \"Logged out successfully\"\n}"
+            },
+            {
+              "name": "400 - undefined",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/auth/logout",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "logout"
+                  ]
+                },
+                "description": "End user session and invalidate token",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "code": 400,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": ""
+            },
+            {
+              "name": "500 - undefined",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/auth/logout",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "logout"
+                  ]
+                },
+                "description": "End user session and invalidate token",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "code": 500,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": ""
             }
           ]
         },
         {
-          "name": "Refresh access token",
+          "name": "User registration",
           "request": {
             "method": "POST",
             "header": [
@@ -253,29 +325,22 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/auth/refresh",
+              "raw": "{{baseUrl}}/auth/signup",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "auth",
-                "refresh"
+                "signup"
               ]
             },
-            "description": "Exchange refresh token for new access token",
+            "description": "Create a new user account",
             "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{access_token}}",
-                  "type": "string"
-                }
-              ]
+              "type": "noauth"
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"refreshToken\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\"\n}",
+              "raw": "{\n  \"email\": \"newuser@hospital.com\",\n  \"password\": \"SecurePass123!\",\n  \"name\": \"John Doe\",\n  \"role\": \"nurse\",\n  \"care_type\": \"외래\",\n  \"phone\": \"+82-10-1234-5678\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -285,7 +350,7 @@
           },
           "response": [
             {
-              "name": "200 - Token refreshed successfully",
+              "name": "200 - Account created successfully",
               "originalRequest": {
                 "method": "POST",
                 "header": [
@@ -295,29 +360,22 @@
                   }
                 ],
                 "url": {
-                  "raw": "{{baseUrl}}/auth/refresh",
+                  "raw": "{{baseUrl}}/auth/signup",
                   "host": [
                     "{{baseUrl}}"
                   ],
                   "path": [
                     "auth",
-                    "refresh"
+                    "signup"
                   ]
                 },
-                "description": "Exchange refresh token for new access token",
+                "description": "Create a new user account",
                 "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{access_token}}",
-                      "type": "string"
-                    }
-                  ]
+                  "type": "noauth"
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"refreshToken\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\"\n}",
+                  "raw": "{\n  \"email\": \"newuser@hospital.com\",\n  \"password\": \"SecurePass123!\",\n  \"name\": \"John Doe\",\n  \"role\": \"nurse\",\n  \"care_type\": \"외래\",\n  \"phone\": \"+82-10-1234-5678\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -325,7 +383,7 @@
                   }
                 }
               },
-              "status": "Token refreshed successfully",
+              "status": "Account created successfully",
               "code": 200,
               "header": [
                 {
@@ -333,56 +391,112 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"accessToken\": \"string\",\n  \"refreshToken\": \"string\",\n  \"expiresIn\": 3600\n}"
+              "body": "{\n  \"user\": {\n    \"id\": \"123e4567-e89b-12d3-a456-426614174000\",\n    \"email\": \"user@example.com\",\n    \"created_at\": \"2025-01-01T00:00:00Z\",\n    \"updated_at\": \"2025-01-01T00:00:00Z\"\n  },\n  \"session\": {\n    \"access_token\": \"string\",\n    \"refresh_token\": \"string\",\n    \"expires_in\": 3600,\n    \"token_type\": \"bearer\"\n  },\n  \"message\": \"Account created successfully. Please check your email for verification.\"\n}"
+            },
+            {
+              "name": "400 - undefined",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/auth/signup",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "signup"
+                  ]
+                },
+                "description": "Create a new user account",
+                "auth": {
+                  "type": "noauth"
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"newuser@hospital.com\",\n  \"password\": \"SecurePass123!\",\n  \"name\": \"John Doe\",\n  \"role\": \"nurse\",\n  \"care_type\": \"외래\",\n  \"phone\": \"+82-10-1234-5678\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "code": 400,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": ""
+            },
+            {
+              "name": "500 - undefined",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/auth/signup",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "signup"
+                  ]
+                },
+                "description": "Create a new user account",
+                "auth": {
+                  "type": "noauth"
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"newuser@hospital.com\",\n  \"password\": \"SecurePass123!\",\n  \"name\": \"John Doe\",\n  \"role\": \"nurse\",\n  \"care_type\": \"외래\",\n  \"phone\": \"+82-10-1234-5678\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "code": 500,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": ""
             }
           ]
-        }
-      ]
-    },
-    {
-      "name": "Patients",
-      "item": [
+        },
         {
-          "name": "List all patients",
+          "name": "Get current user profile",
           "request": {
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/patients",
+              "raw": "{{baseUrl}}/auth/profile",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "patients"
-              ],
-              "query": [
-                {
-                  "key": "search",
-                  "value": "",
-                  "description": "Search patients by name or patient number",
-                  "disabled": true
-                },
-                {
-                  "key": "department",
-                  "value": "",
-                  "description": "Filter by department",
-                  "disabled": true
-                },
-                {
-                  "key": "careType",
-                  "value": "",
-                  "description": "Filter by care type",
-                  "disabled": true
-                },
-                {
-                  "key": "isActive",
-                  "value": "",
-                  "description": "Filter by active status",
-                  "disabled": true
-                }
+                "auth",
+                "profile"
               ]
             },
-            "description": "Retrieve a list of all active patients with optional filtering",
+            "description": "Retrieve profile information for authenticated user",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -396,46 +510,21 @@
           },
           "response": [
             {
-              "name": "200 - List of patients",
+              "name": "200 - Profile retrieved successfully",
               "originalRequest": {
                 "method": "GET",
                 "header": [],
                 "url": {
-                  "raw": "{{baseUrl}}/patients",
+                  "raw": "{{baseUrl}}/auth/profile",
                   "host": [
                     "{{baseUrl}}"
                   ],
                   "path": [
-                    "patients"
-                  ],
-                  "query": [
-                    {
-                      "key": "search",
-                      "value": "",
-                      "description": "Search patients by name or patient number",
-                      "disabled": true
-                    },
-                    {
-                      "key": "department",
-                      "value": "",
-                      "description": "Filter by department",
-                      "disabled": true
-                    },
-                    {
-                      "key": "careType",
-                      "value": "",
-                      "description": "Filter by care type",
-                      "disabled": true
-                    },
-                    {
-                      "key": "isActive",
-                      "value": "",
-                      "description": "Filter by active status",
-                      "disabled": true
-                    }
+                    "auth",
+                    "profile"
                   ]
                 },
-                "description": "Retrieve a list of all active patients with optional filtering",
+                "description": "Retrieve profile information for authenticated user",
                 "auth": {
                   "type": "bearer",
                   "bearer": [
@@ -447,7 +536,7 @@
                   ]
                 }
               },
-              "status": "List of patients",
+              "status": "Profile retrieved successfully",
               "code": 200,
               "header": [
                 {
@@ -455,7 +544,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"data\": [\n    {\n      \"id\": \"123e4567-e89b-12d3-a456-426614174000\",\n      \"name\": \"John Doe\",\n      \"patientNumber\": \"P12345\",\n      \"department\": \"Oncology\",\n      \"careType\": \"Chemotherapy\",\n      \"isActive\": true,\n      \"createdAt\": \"2025-01-01T00:00:00Z\",\n      \"updatedAt\": \"2025-01-01T00:00:00Z\"\n    }\n  ],\n  \"total\": 100,\n  \"limit\": 20,\n  \"offset\": 0\n}"
+              "body": "{\n  \"profile\": {\n    \"id\": \"123e4567-e89b-12d3-a456-426614174000\",\n    \"email\": \"user@example.com\",\n    \"name\": \"string\",\n    \"role\": \"nurse\",\n    \"care_type\": \"외래\",\n    \"phone\": \"string\",\n    \"approval_status\": \"pending\",\n    \"is_active\": true,\n    \"created_at\": \"2025-01-01T00:00:00Z\",\n    \"updated_at\": \"2025-01-01T00:00:00Z\"\n  }\n}"
             },
             {
               "name": "401 - undefined",
@@ -463,41 +552,16 @@
                 "method": "GET",
                 "header": [],
                 "url": {
-                  "raw": "{{baseUrl}}/patients",
+                  "raw": "{{baseUrl}}/auth/profile",
                   "host": [
                     "{{baseUrl}}"
                   ],
                   "path": [
-                    "patients"
-                  ],
-                  "query": [
-                    {
-                      "key": "search",
-                      "value": "",
-                      "description": "Search patients by name or patient number",
-                      "disabled": true
-                    },
-                    {
-                      "key": "department",
-                      "value": "",
-                      "description": "Filter by department",
-                      "disabled": true
-                    },
-                    {
-                      "key": "careType",
-                      "value": "",
-                      "description": "Filter by care type",
-                      "disabled": true
-                    },
-                    {
-                      "key": "isActive",
-                      "value": "",
-                      "description": "Filter by active status",
-                      "disabled": true
-                    }
+                    "auth",
+                    "profile"
                   ]
                 },
-                "description": "Retrieve a list of all active patients with optional filtering",
+                "description": "Retrieve profile information for authenticated user",
                 "auth": {
                   "type": "bearer",
                   "bearer": [
@@ -517,9 +581,331 @@
                 }
               ],
               "body": ""
+            },
+            {
+              "name": "404 - undefined",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/auth/profile",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "profile"
+                  ]
+                },
+                "description": "Retrieve profile information for authenticated user",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "code": 404,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": ""
+            },
+            {
+              "name": "500 - undefined",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/auth/profile",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "profile"
+                  ]
+                },
+                "description": "Retrieve profile information for authenticated user",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "code": 500,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": ""
             }
           ]
         },
+        {
+          "name": "Update user profile",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/profile",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "profile"
+              ]
+            },
+            "description": "Update profile information for authenticated user",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"string\",\n  \"care_type\": \"외래\",\n  \"phone\": \"string\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "200 - Profile updated successfully",
+              "originalRequest": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/auth/profile",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "profile"
+                  ]
+                },
+                "description": "Update profile information for authenticated user",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"string\",\n  \"care_type\": \"외래\",\n  \"phone\": \"string\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Profile updated successfully",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"profile\": {\n    \"id\": \"123e4567-e89b-12d3-a456-426614174000\",\n    \"email\": \"user@example.com\",\n    \"name\": \"string\",\n    \"role\": \"nurse\",\n    \"care_type\": \"외래\",\n    \"phone\": \"string\",\n    \"approval_status\": \"pending\",\n    \"is_active\": true,\n    \"created_at\": \"2025-01-01T00:00:00Z\",\n    \"updated_at\": \"2025-01-01T00:00:00Z\"\n  }\n}"
+            },
+            {
+              "name": "400 - undefined",
+              "originalRequest": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/auth/profile",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "profile"
+                  ]
+                },
+                "description": "Update profile information for authenticated user",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"string\",\n  \"care_type\": \"외래\",\n  \"phone\": \"string\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "code": 400,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": ""
+            },
+            {
+              "name": "401 - undefined",
+              "originalRequest": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/auth/profile",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "profile"
+                  ]
+                },
+                "description": "Update profile information for authenticated user",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"string\",\n  \"care_type\": \"외래\",\n  \"phone\": \"string\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "code": 401,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": ""
+            },
+            {
+              "name": "500 - undefined",
+              "originalRequest": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/auth/profile",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "profile"
+                  ]
+                },
+                "description": "Update profile information for authenticated user",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"string\",\n  \"care_type\": \"외래\",\n  \"phone\": \"string\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "code": 500,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": ""
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Patients",
+      "item": [
         {
           "name": "Create a new patient",
           "request": {
@@ -539,7 +925,7 @@
                 "patients"
               ]
             },
-            "description": "Register a new patient in the system",
+            "description": "Register a new patient in the system. Requires approved user status.",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -552,7 +938,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"string\",\n  \"patientNumber\": \"P12345\",\n  \"department\": \"string\",\n  \"careType\": \"string\",\n  \"metadata\": {}\n}",
+              "raw": "{\n  \"name\": \"홍길동\",\n  \"patientNumber\": \"P12345\",\n  \"careType\": \"외래\",\n  \"isActive\": true,\n  \"metadata\": {}\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -562,7 +948,7 @@
           },
           "response": [
             {
-              "name": "201 - Patient created successfully",
+              "name": "200 - Patient created successfully",
               "originalRequest": {
                 "method": "POST",
                 "header": [
@@ -580,7 +966,7 @@
                     "patients"
                   ]
                 },
-                "description": "Register a new patient in the system",
+                "description": "Register a new patient in the system. Requires approved user status.",
                 "auth": {
                   "type": "bearer",
                   "bearer": [
@@ -593,7 +979,7 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"name\": \"string\",\n  \"patientNumber\": \"P12345\",\n  \"department\": \"string\",\n  \"careType\": \"string\",\n  \"metadata\": {}\n}",
+                  "raw": "{\n  \"name\": \"홍길동\",\n  \"patientNumber\": \"P12345\",\n  \"careType\": \"외래\",\n  \"isActive\": true,\n  \"metadata\": {}\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -602,14 +988,14 @@
                 }
               },
               "status": "Patient created successfully",
-              "code": 201,
+              "code": 200,
               "header": [
                 {
                   "key": "Content-Type",
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"id\": \"123e4567-e89b-12d3-a456-426614174000\",\n  \"name\": \"John Doe\",\n  \"patientNumber\": \"P12345\",\n  \"department\": \"Oncology\",\n  \"careType\": \"Chemotherapy\",\n  \"isActive\": true,\n  \"createdAt\": \"2025-01-01T00:00:00Z\",\n  \"updatedAt\": \"2025-01-01T00:00:00Z\"\n}"
+              "body": "{\n  \"id\": \"123e4567-e89b-12d3-a456-426614174000\",\n  \"name\": \"string\",\n  \"patient_number\": \"string\",\n  \"care_type\": \"외래\",\n  \"department\": \"string\",\n  \"doctor_id\": \"123e4567-e89b-12d3-a456-426614174000\",\n  \"is_active\": true,\n  \"metadata\": {},\n  \"created_by\": \"123e4567-e89b-12d3-a456-426614174000\",\n  \"created_at\": \"2025-01-01T00:00:00Z\",\n  \"updated_at\": \"2025-01-01T00:00:00Z\"\n}"
             },
             {
               "name": "400 - undefined",
@@ -630,7 +1016,7 @@
                     "patients"
                   ]
                 },
-                "description": "Register a new patient in the system",
+                "description": "Register a new patient in the system. Requires approved user status.",
                 "auth": {
                   "type": "bearer",
                   "bearer": [
@@ -643,7 +1029,7 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"name\": \"string\",\n  \"patientNumber\": \"P12345\",\n  \"department\": \"string\",\n  \"careType\": \"string\",\n  \"metadata\": {}\n}",
+                  "raw": "{\n  \"name\": \"홍길동\",\n  \"patientNumber\": \"P12345\",\n  \"careType\": \"외래\",\n  \"isActive\": true,\n  \"metadata\": {}\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -679,7 +1065,7 @@
                     "patients"
                   ]
                 },
-                "description": "Register a new patient in the system",
+                "description": "Register a new patient in the system. Requires approved user status.",
                 "auth": {
                   "type": "bearer",
                   "bearer": [
@@ -692,7 +1078,7 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"name\": \"string\",\n  \"patientNumber\": \"P12345\",\n  \"department\": \"string\",\n  \"careType\": \"string\",\n  \"metadata\": {}\n}",
+                  "raw": "{\n  \"name\": \"홍길동\",\n  \"patientNumber\": \"P12345\",\n  \"careType\": \"외래\",\n  \"isActive\": true,\n  \"metadata\": {}\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -708,6 +1094,56 @@
                 }
               ],
               "body": ""
+            },
+            {
+              "name": "403 - Forbidden - User not approved or inactive",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/patients",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "patients"
+                  ]
+                },
+                "description": "Register a new patient in the system. Requires approved user status.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"홍길동\",\n  \"patientNumber\": \"P12345\",\n  \"careType\": \"외래\",\n  \"isActive\": true,\n  \"metadata\": {}\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Forbidden - User not approved or inactive",
+              "code": 403,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": \"string\",\n  \"code\": \"string\",\n  \"details\": {}\n}"
             },
             {
               "name": "409 - Conflict - Patient number already exists",
@@ -728,7 +1164,7 @@
                     "patients"
                   ]
                 },
-                "description": "Register a new patient in the system",
+                "description": "Register a new patient in the system. Requires approved user status.",
                 "auth": {
                   "type": "bearer",
                   "bearer": [
@@ -741,7 +1177,7 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"name\": \"string\",\n  \"patientNumber\": \"P12345\",\n  \"department\": \"string\",\n  \"careType\": \"string\",\n  \"metadata\": {}\n}",
+                  "raw": "{\n  \"name\": \"홍길동\",\n  \"patientNumber\": \"P12345\",\n  \"careType\": \"외래\",\n  \"isActive\": true,\n  \"metadata\": {}\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -758,53 +1194,27 @@
                 }
               ],
               "body": "{\n  \"error\": \"string\",\n  \"code\": \"string\",\n  \"details\": {}\n}"
-            }
-          ]
-        },
-        {
-          "name": "Get patient by ID",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/patients/{id}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "patients",
-                "{id}"
-              ]
             },
-            "description": "Retrieve detailed information about a specific patient",
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{access_token}}",
-                  "type": "string"
-                }
-              ]
-            }
-          },
-          "response": [
             {
-              "name": "200 - Patient details",
+              "name": "500 - undefined",
               "originalRequest": {
-                "method": "GET",
-                "header": [],
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
                 "url": {
-                  "raw": "{{baseUrl}}/patients/{id}",
+                  "raw": "{{baseUrl}}/patients",
                   "host": [
                     "{{baseUrl}}"
                   ],
                   "path": [
-                    "patients",
-                    "{id}"
+                    "patients"
                   ]
                 },
-                "description": "Retrieve detailed information about a specific patient",
+                "description": "Register a new patient in the system. Requires approved user status.",
                 "auth": {
                   "type": "bearer",
                   "bearer": [
@@ -814,82 +1224,18 @@
                       "type": "string"
                     }
                   ]
-                }
-              },
-              "status": "Patient details",
-              "code": 200,
-              "header": [
-                {
-                  "key": "Content-Type",
-                  "value": "application/json"
-                }
-              ],
-              "body": "{\n  \"id\": \"123e4567-e89b-12d3-a456-426614174000\",\n  \"name\": \"John Doe\",\n  \"patientNumber\": \"P12345\",\n  \"department\": \"Oncology\",\n  \"careType\": \"Chemotherapy\",\n  \"isActive\": true,\n  \"createdAt\": \"2025-01-01T00:00:00Z\",\n  \"updatedAt\": \"2025-01-01T00:00:00Z\",\n  \"metadata\": {},\n  \"schedules\": [\n    {\n      \"id\": \"123e4567-e89b-12d3-a456-426614174000\",\n      \"patientId\": \"123e4567-e89b-12d3-a456-426614174000\",\n      \"itemId\": \"123e4567-e89b-12d3-a456-426614174000\",\n      \"itemName\": \"Blood Test\",\n      \"intervalType\": \"daily\",\n      \"intervalDays\": 1,\n      \"startDate\": \"2025-01-01\",\n      \"endDate\": \"2025-01-01\",\n      \"nextDueDate\": \"2025-01-01\",\n      \"status\": \"active\",\n      \"priority\": \"low\",\n      \"createdAt\": \"2025-01-01T00:00:00Z\",\n      \"updatedAt\": \"2025-01-01T00:00:00Z\"\n    }\n  ],\n  \"recentActivities\": [\n    {\n      \"id\": \"123e4567-e89b-12d3-a456-426614174000\",\n      \"type\": \"patient_created\",\n      \"description\": \"string\",\n      \"userId\": \"123e4567-e89b-12d3-a456-426614174000\",\n      \"timestamp\": \"2025-01-01T00:00:00Z\",\n      \"metadata\": {}\n    }\n  ]\n}"
-            },
-            {
-              "name": "401 - undefined",
-              "originalRequest": {
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "{{baseUrl}}/patients/{id}",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "patients",
-                    "{id}"
-                  ]
                 },
-                "description": "Retrieve detailed information about a specific patient",
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{access_token}}",
-                      "type": "string"
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"홍길동\",\n  \"patientNumber\": \"P12345\",\n  \"careType\": \"외래\",\n  \"isActive\": true,\n  \"metadata\": {}\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
                     }
-                  ]
+                  }
                 }
               },
-              "code": 401,
-              "header": [
-                {
-                  "key": "Content-Type",
-                  "value": "application/json"
-                }
-              ],
-              "body": ""
-            },
-            {
-              "name": "404 - undefined",
-              "originalRequest": {
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "{{baseUrl}}/patients/{id}",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "patients",
-                    "{id}"
-                  ]
-                },
-                "description": "Retrieve detailed information about a specific patient",
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{access_token}}",
-                      "type": "string"
-                    }
-                  ]
-                }
-              },
-              "code": 404,
+              "code": 500,
               "header": [
                 {
                   "key": "Content-Type",
@@ -911,16 +1257,17 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/patients/{id}",
+              "raw": "{{baseUrl}}/patients/{id}/update",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "patients",
-                "{id}"
+                "{id}",
+                "update"
               ]
             },
-            "description": "Update patient information",
+            "description": "Update patient information. Access control:\n- Admin: Can update all fields including doctor assignment\n- Nurse: Can update basic fields and care-related fields for patients in their care_type\n- Doctor: Can update basic fields for their assigned patients only\n",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -933,7 +1280,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"string\",\n  \"department\": \"string\",\n  \"careType\": \"string\",\n  \"isActive\": true,\n  \"metadata\": {}\n}",
+              "raw": "{\n  \"name\": \"pattern-value\",\n  \"patientNumber\": \"pattern-value\",\n  \"careType\": \"외래\",\n  \"department\": \"string\",\n  \"doctorId\": \"123e4567-e89b-12d3-a456-426614174000\",\n  \"isActive\": true,\n  \"metadata\": {}\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -953,16 +1300,17 @@
                   }
                 ],
                 "url": {
-                  "raw": "{{baseUrl}}/patients/{id}",
+                  "raw": "{{baseUrl}}/patients/{id}/update",
                   "host": [
                     "{{baseUrl}}"
                   ],
                   "path": [
                     "patients",
-                    "{id}"
+                    "{id}",
+                    "update"
                   ]
                 },
-                "description": "Update patient information",
+                "description": "Update patient information. Access control:\n- Admin: Can update all fields including doctor assignment\n- Nurse: Can update basic fields and care-related fields for patients in their care_type\n- Doctor: Can update basic fields for their assigned patients only\n",
                 "auth": {
                   "type": "bearer",
                   "bearer": [
@@ -975,7 +1323,7 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"name\": \"string\",\n  \"department\": \"string\",\n  \"careType\": \"string\",\n  \"isActive\": true,\n  \"metadata\": {}\n}",
+                  "raw": "{\n  \"name\": \"pattern-value\",\n  \"patientNumber\": \"pattern-value\",\n  \"careType\": \"외래\",\n  \"department\": \"string\",\n  \"doctorId\": \"123e4567-e89b-12d3-a456-426614174000\",\n  \"isActive\": true,\n  \"metadata\": {}\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -991,10 +1339,10 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"id\": \"123e4567-e89b-12d3-a456-426614174000\",\n  \"name\": \"John Doe\",\n  \"patientNumber\": \"P12345\",\n  \"department\": \"Oncology\",\n  \"careType\": \"Chemotherapy\",\n  \"isActive\": true,\n  \"createdAt\": \"2025-01-01T00:00:00Z\",\n  \"updatedAt\": \"2025-01-01T00:00:00Z\"\n}"
+              "body": "{\n  \"id\": \"123e4567-e89b-12d3-a456-426614174000\",\n  \"name\": \"string\",\n  \"patient_number\": \"string\",\n  \"care_type\": \"외래\",\n  \"department\": \"string\",\n  \"doctor_id\": \"123e4567-e89b-12d3-a456-426614174000\",\n  \"is_active\": true,\n  \"metadata\": {},\n  \"created_by\": \"123e4567-e89b-12d3-a456-426614174000\",\n  \"created_at\": \"2025-01-01T00:00:00Z\",\n  \"updated_at\": \"2025-01-01T00:00:00Z\"\n}"
             },
             {
-              "name": "401 - undefined",
+              "name": "400 - undefined",
               "originalRequest": {
                 "method": "PUT",
                 "header": [
@@ -1004,16 +1352,17 @@
                   }
                 ],
                 "url": {
-                  "raw": "{{baseUrl}}/patients/{id}",
+                  "raw": "{{baseUrl}}/patients/{id}/update",
                   "host": [
                     "{{baseUrl}}"
                   ],
                   "path": [
                     "patients",
-                    "{id}"
+                    "{id}",
+                    "update"
                   ]
                 },
-                "description": "Update patient information",
+                "description": "Update patient information. Access control:\n- Admin: Can update all fields including doctor assignment\n- Nurse: Can update basic fields and care-related fields for patients in their care_type\n- Doctor: Can update basic fields for their assigned patients only\n",
                 "auth": {
                   "type": "bearer",
                   "bearer": [
@@ -1026,7 +1375,58 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"name\": \"string\",\n  \"department\": \"string\",\n  \"careType\": \"string\",\n  \"isActive\": true,\n  \"metadata\": {}\n}",
+                  "raw": "{\n  \"name\": \"pattern-value\",\n  \"patientNumber\": \"pattern-value\",\n  \"careType\": \"외래\",\n  \"department\": \"string\",\n  \"doctorId\": \"123e4567-e89b-12d3-a456-426614174000\",\n  \"isActive\": true,\n  \"metadata\": {}\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "code": 400,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": ""
+            },
+            {
+              "name": "401 - undefined",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/patients/{id}/update",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "patients",
+                    "{id}",
+                    "update"
+                  ]
+                },
+                "description": "Update patient information. Access control:\n- Admin: Can update all fields including doctor assignment\n- Nurse: Can update basic fields and care-related fields for patients in their care_type\n- Doctor: Can update basic fields for their assigned patients only\n",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"pattern-value\",\n  \"patientNumber\": \"pattern-value\",\n  \"careType\": \"외래\",\n  \"department\": \"string\",\n  \"doctorId\": \"123e4567-e89b-12d3-a456-426614174000\",\n  \"isActive\": true,\n  \"metadata\": {}\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -1044,7 +1444,7 @@
               "body": ""
             },
             {
-              "name": "404 - undefined",
+              "name": "403 - Forbidden - Insufficient permissions",
               "originalRequest": {
                 "method": "PUT",
                 "header": [
@@ -1054,16 +1454,17 @@
                   }
                 ],
                 "url": {
-                  "raw": "{{baseUrl}}/patients/{id}",
+                  "raw": "{{baseUrl}}/patients/{id}/update",
                   "host": [
                     "{{baseUrl}}"
                   ],
                   "path": [
                     "patients",
-                    "{id}"
+                    "{id}",
+                    "update"
                   ]
                 },
-                "description": "Update patient information",
+                "description": "Update patient information. Access control:\n- Admin: Can update all fields including doctor assignment\n- Nurse: Can update basic fields and care-related fields for patients in their care_type\n- Doctor: Can update basic fields for their assigned patients only\n",
                 "auth": {
                   "type": "bearer",
                   "bearer": [
@@ -1076,7 +1477,59 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"name\": \"string\",\n  \"department\": \"string\",\n  \"careType\": \"string\",\n  \"isActive\": true,\n  \"metadata\": {}\n}",
+                  "raw": "{\n  \"name\": \"pattern-value\",\n  \"patientNumber\": \"pattern-value\",\n  \"careType\": \"외래\",\n  \"department\": \"string\",\n  \"doctorId\": \"123e4567-e89b-12d3-a456-426614174000\",\n  \"isActive\": true,\n  \"metadata\": {}\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Forbidden - Insufficient permissions",
+              "code": 403,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": \"string\",\n  \"code\": \"string\",\n  \"details\": {}\n}"
+            },
+            {
+              "name": "404 - undefined",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/patients/{id}/update",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "patients",
+                    "{id}",
+                    "update"
+                  ]
+                },
+                "description": "Update patient information. Access control:\n- Admin: Can update all fields including doctor assignment\n- Nurse: Can update basic fields and care-related fields for patients in their care_type\n- Doctor: Can update basic fields for their assigned patients only\n",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"pattern-value\",\n  \"patientNumber\": \"pattern-value\",\n  \"careType\": \"외래\",\n  \"department\": \"string\",\n  \"doctorId\": \"123e4567-e89b-12d3-a456-426614174000\",\n  \"isActive\": true,\n  \"metadata\": {}\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -1092,53 +1545,29 @@
                 }
               ],
               "body": ""
-            }
-          ]
-        },
-        {
-          "name": "Delete patient",
-          "request": {
-            "method": "DELETE",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/patients/{id}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "patients",
-                "{id}"
-              ]
             },
-            "description": "Soft delete a patient (marks as inactive)",
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{access_token}}",
-                  "type": "string"
-                }
-              ]
-            }
-          },
-          "response": [
             {
-              "name": "204 - Patient deleted successfully",
+              "name": "500 - undefined",
               "originalRequest": {
-                "method": "DELETE",
-                "header": [],
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
                 "url": {
-                  "raw": "{{baseUrl}}/patients/{id}",
+                  "raw": "{{baseUrl}}/patients/{id}/update",
                   "host": [
                     "{{baseUrl}}"
                   ],
                   "path": [
                     "patients",
-                    "{id}"
+                    "{id}",
+                    "update"
                   ]
                 },
-                "description": "Soft delete a patient (marks as inactive)",
+                "description": "Update patient information. Access control:\n- Admin: Can update all fields including doctor assignment\n- Nurse: Can update basic fields and care-related fields for patients in their care_type\n- Doctor: Can update basic fields for their assigned patients only\n",
                 "auth": {
                   "type": "bearer",
                   "bearer": [
@@ -1148,82 +1577,18 @@
                       "type": "string"
                     }
                   ]
-                }
-              },
-              "status": "Patient deleted successfully",
-              "code": 204,
-              "header": [
-                {
-                  "key": "Content-Type",
-                  "value": "application/json"
-                }
-              ],
-              "body": ""
-            },
-            {
-              "name": "401 - undefined",
-              "originalRequest": {
-                "method": "DELETE",
-                "header": [],
-                "url": {
-                  "raw": "{{baseUrl}}/patients/{id}",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "patients",
-                    "{id}"
-                  ]
                 },
-                "description": "Soft delete a patient (marks as inactive)",
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{access_token}}",
-                      "type": "string"
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"pattern-value\",\n  \"patientNumber\": \"pattern-value\",\n  \"careType\": \"외래\",\n  \"department\": \"string\",\n  \"doctorId\": \"123e4567-e89b-12d3-a456-426614174000\",\n  \"isActive\": true,\n  \"metadata\": {}\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
                     }
-                  ]
+                  }
                 }
               },
-              "code": 401,
-              "header": [
-                {
-                  "key": "Content-Type",
-                  "value": "application/json"
-                }
-              ],
-              "body": ""
-            },
-            {
-              "name": "404 - undefined",
-              "originalRequest": {
-                "method": "DELETE",
-                "header": [],
-                "url": {
-                  "raw": "{{baseUrl}}/patients/{id}",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "patients",
-                    "{id}"
-                  ]
-                },
-                "description": "Soft delete a patient (marks as inactive)",
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{access_token}}",
-                      "type": "string"
-                    }
-                  ]
-                }
-              },
-              "code": 404,
+              "code": 500,
               "header": [
                 {
                   "key": "Content-Type",
@@ -1235,365 +1600,7 @@
           ]
         },
         {
-          "name": "Get patient schedules",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/patients/{id}/schedules",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "patients",
-                "{id}",
-                "schedules"
-              ],
-              "query": [
-                {
-                  "key": "status",
-                  "value": "",
-                  "description": "Filter by schedule status",
-                  "disabled": true
-                }
-              ]
-            },
-            "description": "Retrieve all schedules for a specific patient",
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{access_token}}",
-                  "type": "string"
-                }
-              ]
-            }
-          },
-          "response": [
-            {
-              "name": "200 - List of patient schedules",
-              "originalRequest": {
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "{{baseUrl}}/patients/{id}/schedules",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "patients",
-                    "{id}",
-                    "schedules"
-                  ],
-                  "query": [
-                    {
-                      "key": "status",
-                      "value": "",
-                      "description": "Filter by schedule status",
-                      "disabled": true
-                    }
-                  ]
-                },
-                "description": "Retrieve all schedules for a specific patient",
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{access_token}}",
-                      "type": "string"
-                    }
-                  ]
-                }
-              },
-              "status": "List of patient schedules",
-              "code": 200,
-              "header": [
-                {
-                  "key": "Content-Type",
-                  "value": "application/json"
-                }
-              ],
-              "body": "[\n  {\n    \"id\": \"123e4567-e89b-12d3-a456-426614174000\",\n    \"patientId\": \"123e4567-e89b-12d3-a456-426614174000\",\n    \"itemId\": \"123e4567-e89b-12d3-a456-426614174000\",\n    \"itemName\": \"Blood Test\",\n    \"intervalType\": \"daily\",\n    \"intervalDays\": 1,\n    \"startDate\": \"2025-01-01\",\n    \"endDate\": \"2025-01-01\",\n    \"nextDueDate\": \"2025-01-01\",\n    \"status\": \"active\",\n    \"priority\": \"low\",\n    \"createdAt\": \"2025-01-01T00:00:00Z\",\n    \"updatedAt\": \"2025-01-01T00:00:00Z\"\n  }\n]"
-            },
-            {
-              "name": "401 - undefined",
-              "originalRequest": {
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "{{baseUrl}}/patients/{id}/schedules",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "patients",
-                    "{id}",
-                    "schedules"
-                  ],
-                  "query": [
-                    {
-                      "key": "status",
-                      "value": "",
-                      "description": "Filter by schedule status",
-                      "disabled": true
-                    }
-                  ]
-                },
-                "description": "Retrieve all schedules for a specific patient",
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{access_token}}",
-                      "type": "string"
-                    }
-                  ]
-                }
-              },
-              "code": 401,
-              "header": [
-                {
-                  "key": "Content-Type",
-                  "value": "application/json"
-                }
-              ],
-              "body": ""
-            },
-            {
-              "name": "404 - undefined",
-              "originalRequest": {
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "{{baseUrl}}/patients/{id}/schedules",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "patients",
-                    "{id}",
-                    "schedules"
-                  ],
-                  "query": [
-                    {
-                      "key": "status",
-                      "value": "",
-                      "description": "Filter by schedule status",
-                      "disabled": true
-                    }
-                  ]
-                },
-                "description": "Retrieve all schedules for a specific patient",
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{access_token}}",
-                      "type": "string"
-                    }
-                  ]
-                }
-              },
-              "code": 404,
-              "header": [
-                {
-                  "key": "Content-Type",
-                  "value": "application/json"
-                }
-              ],
-              "body": ""
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "name": "Schedules",
-      "item": [
-        {
-          "name": "List schedules",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/schedules",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "schedules"
-              ],
-              "query": [
-                {
-                  "key": "type",
-                  "value": "",
-                  "description": "Schedule type filter",
-                  "disabled": true
-                },
-                {
-                  "key": "patientId",
-                  "value": "",
-                  "description": "Filter by patient ID",
-                  "disabled": true
-                },
-                {
-                  "key": "status",
-                  "value": "",
-                  "description": "Filter by status",
-                  "disabled": true
-                },
-                {
-                  "key": "daysAhead",
-                  "value": "",
-                  "description": "Number of days to look ahead for upcoming schedules",
-                  "disabled": true
-                }
-              ]
-            },
-            "description": "Retrieve schedules with various filtering options",
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{access_token}}",
-                  "type": "string"
-                }
-              ]
-            }
-          },
-          "response": [
-            {
-              "name": "200 - List of schedules",
-              "originalRequest": {
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "{{baseUrl}}/schedules",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "schedules"
-                  ],
-                  "query": [
-                    {
-                      "key": "type",
-                      "value": "",
-                      "description": "Schedule type filter",
-                      "disabled": true
-                    },
-                    {
-                      "key": "patientId",
-                      "value": "",
-                      "description": "Filter by patient ID",
-                      "disabled": true
-                    },
-                    {
-                      "key": "status",
-                      "value": "",
-                      "description": "Filter by status",
-                      "disabled": true
-                    },
-                    {
-                      "key": "daysAhead",
-                      "value": "",
-                      "description": "Number of days to look ahead for upcoming schedules",
-                      "disabled": true
-                    }
-                  ]
-                },
-                "description": "Retrieve schedules with various filtering options",
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{access_token}}",
-                      "type": "string"
-                    }
-                  ]
-                }
-              },
-              "status": "List of schedules",
-              "code": 200,
-              "header": [
-                {
-                  "key": "Content-Type",
-                  "value": "application/json"
-                }
-              ],
-              "body": "[\n  {\n    \"id\": \"123e4567-e89b-12d3-a456-426614174000\",\n    \"patientId\": \"123e4567-e89b-12d3-a456-426614174000\",\n    \"itemId\": \"123e4567-e89b-12d3-a456-426614174000\",\n    \"itemName\": \"Blood Test\",\n    \"intervalType\": \"daily\",\n    \"intervalDays\": 1,\n    \"startDate\": \"2025-01-01\",\n    \"endDate\": \"2025-01-01\",\n    \"nextDueDate\": \"2025-01-01\",\n    \"status\": \"active\",\n    \"priority\": \"low\",\n    \"createdAt\": \"2025-01-01T00:00:00Z\",\n    \"updatedAt\": \"2025-01-01T00:00:00Z\"\n  }\n]"
-            },
-            {
-              "name": "401 - undefined",
-              "originalRequest": {
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "{{baseUrl}}/schedules",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "schedules"
-                  ],
-                  "query": [
-                    {
-                      "key": "type",
-                      "value": "",
-                      "description": "Schedule type filter",
-                      "disabled": true
-                    },
-                    {
-                      "key": "patientId",
-                      "value": "",
-                      "description": "Filter by patient ID",
-                      "disabled": true
-                    },
-                    {
-                      "key": "status",
-                      "value": "",
-                      "description": "Filter by status",
-                      "disabled": true
-                    },
-                    {
-                      "key": "daysAhead",
-                      "value": "",
-                      "description": "Number of days to look ahead for upcoming schedules",
-                      "disabled": true
-                    }
-                  ]
-                },
-                "description": "Retrieve schedules with various filtering options",
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{access_token}}",
-                      "type": "string"
-                    }
-                  ]
-                }
-              },
-              "code": 401,
-              "header": [
-                {
-                  "key": "Content-Type",
-                  "value": "application/json"
-                }
-              ],
-              "body": ""
-            }
-          ]
-        },
-        {
-          "name": "Create schedule",
+          "name": "Update patient's doctor",
           "request": {
             "method": "POST",
             "header": [
@@ -1603,15 +1610,17 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/schedules",
+              "raw": "{{baseUrl}}/patients/{id}/update-doctor",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "schedules"
+                "patients",
+                "{id}",
+                "update-doctor"
               ]
             },
-            "description": "Create a new medical schedule",
+            "description": "Assign or remove a doctor for a patient. Admin role required.",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -1624,7 +1633,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"patientId\": \"123e4567-e89b-12d3-a456-426614174000\",\n  \"itemId\": \"123e4567-e89b-12d3-a456-426614174000\",\n  \"intervalType\": \"daily\",\n  \"intervalDays\": 1,\n  \"startDate\": \"2025-01-01\",\n  \"endDate\": \"2025-01-01\",\n  \"priority\": \"low\",\n  \"notes\": \"string\"\n}",
+              "raw": "{\n  \"doctorId\": \"123e4567-e89b-12d3-a456-426614174000\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1634,7 +1643,7 @@
           },
           "response": [
             {
-              "name": "201 - Schedule created successfully",
+              "name": "200 - Doctor assignment updated successfully",
               "originalRequest": {
                 "method": "POST",
                 "header": [
@@ -1644,15 +1653,17 @@
                   }
                 ],
                 "url": {
-                  "raw": "{{baseUrl}}/schedules",
+                  "raw": "{{baseUrl}}/patients/{id}/update-doctor",
                   "host": [
                     "{{baseUrl}}"
                   ],
                   "path": [
-                    "schedules"
+                    "patients",
+                    "{id}",
+                    "update-doctor"
                   ]
                 },
-                "description": "Create a new medical schedule",
+                "description": "Assign or remove a doctor for a patient. Admin role required.",
                 "auth": {
                   "type": "bearer",
                   "bearer": [
@@ -1665,7 +1676,7 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"patientId\": \"123e4567-e89b-12d3-a456-426614174000\",\n  \"itemId\": \"123e4567-e89b-12d3-a456-426614174000\",\n  \"intervalType\": \"daily\",\n  \"intervalDays\": 1,\n  \"startDate\": \"2025-01-01\",\n  \"endDate\": \"2025-01-01\",\n  \"priority\": \"low\",\n  \"notes\": \"string\"\n}",
+                  "raw": "{\n  \"doctorId\": \"123e4567-e89b-12d3-a456-426614174000\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -1673,15 +1684,15 @@
                   }
                 }
               },
-              "status": "Schedule created successfully",
-              "code": 201,
+              "status": "Doctor assignment updated successfully",
+              "code": 200,
               "header": [
                 {
                   "key": "Content-Type",
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"id\": \"123e4567-e89b-12d3-a456-426614174000\",\n  \"patientId\": \"123e4567-e89b-12d3-a456-426614174000\",\n  \"itemId\": \"123e4567-e89b-12d3-a456-426614174000\",\n  \"itemName\": \"Blood Test\",\n  \"intervalType\": \"daily\",\n  \"intervalDays\": 1,\n  \"startDate\": \"2025-01-01\",\n  \"endDate\": \"2025-01-01\",\n  \"nextDueDate\": \"2025-01-01\",\n  \"status\": \"active\",\n  \"priority\": \"low\",\n  \"createdAt\": \"2025-01-01T00:00:00Z\",\n  \"updatedAt\": \"2025-01-01T00:00:00Z\"\n}"
+              "body": "{\n  \"id\": \"123e4567-e89b-12d3-a456-426614174000\",\n  \"name\": \"string\",\n  \"patient_number\": \"string\",\n  \"care_type\": \"외래\",\n  \"department\": \"string\",\n  \"doctor_id\": \"123e4567-e89b-12d3-a456-426614174000\",\n  \"is_active\": true,\n  \"metadata\": {},\n  \"created_by\": \"123e4567-e89b-12d3-a456-426614174000\",\n  \"created_at\": \"2025-01-01T00:00:00Z\",\n  \"updated_at\": \"2025-01-01T00:00:00Z\"\n}"
             },
             {
               "name": "400 - undefined",
@@ -1694,15 +1705,17 @@
                   }
                 ],
                 "url": {
-                  "raw": "{{baseUrl}}/schedules",
+                  "raw": "{{baseUrl}}/patients/{id}/update-doctor",
                   "host": [
                     "{{baseUrl}}"
                   ],
                   "path": [
-                    "schedules"
+                    "patients",
+                    "{id}",
+                    "update-doctor"
                   ]
                 },
-                "description": "Create a new medical schedule",
+                "description": "Assign or remove a doctor for a patient. Admin role required.",
                 "auth": {
                   "type": "bearer",
                   "bearer": [
@@ -1715,7 +1728,7 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"patientId\": \"123e4567-e89b-12d3-a456-426614174000\",\n  \"itemId\": \"123e4567-e89b-12d3-a456-426614174000\",\n  \"intervalType\": \"daily\",\n  \"intervalDays\": 1,\n  \"startDate\": \"2025-01-01\",\n  \"endDate\": \"2025-01-01\",\n  \"priority\": \"low\",\n  \"notes\": \"string\"\n}",
+                  "raw": "{\n  \"doctorId\": \"123e4567-e89b-12d3-a456-426614174000\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -1743,15 +1756,17 @@
                   }
                 ],
                 "url": {
-                  "raw": "{{baseUrl}}/schedules",
+                  "raw": "{{baseUrl}}/patients/{id}/update-doctor",
                   "host": [
                     "{{baseUrl}}"
                   ],
                   "path": [
-                    "schedules"
+                    "patients",
+                    "{id}",
+                    "update-doctor"
                   ]
                 },
-                "description": "Create a new medical schedule",
+                "description": "Assign or remove a doctor for a patient. Admin role required.",
                 "auth": {
                   "type": "bearer",
                   "bearer": [
@@ -1764,7 +1779,7 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"patientId\": \"123e4567-e89b-12d3-a456-426614174000\",\n  \"itemId\": \"123e4567-e89b-12d3-a456-426614174000\",\n  \"intervalType\": \"daily\",\n  \"intervalDays\": 1,\n  \"startDate\": \"2025-01-01\",\n  \"endDate\": \"2025-01-01\",\n  \"priority\": \"low\",\n  \"notes\": \"string\"\n}",
+                  "raw": "{\n  \"doctorId\": \"123e4567-e89b-12d3-a456-426614174000\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -1773,6 +1788,1008 @@
                 }
               },
               "code": 401,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": ""
+            },
+            {
+              "name": "403 - Forbidden - Admin role required",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/patients/{id}/update-doctor",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "patients",
+                    "{id}",
+                    "update-doctor"
+                  ]
+                },
+                "description": "Assign or remove a doctor for a patient. Admin role required.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"doctorId\": \"123e4567-e89b-12d3-a456-426614174000\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Forbidden - Admin role required",
+              "code": 403,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": \"string\",\n  \"code\": \"string\",\n  \"details\": {}\n}"
+            },
+            {
+              "name": "500 - undefined",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/patients/{id}/update-doctor",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "patients",
+                    "{id}",
+                    "update-doctor"
+                  ]
+                },
+                "description": "Assign or remove a doctor for a patient. Admin role required.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"doctorId\": \"123e4567-e89b-12d3-a456-426614174000\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "code": 500,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": ""
+            }
+          ]
+        },
+        {
+          "name": "Delete patient",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/patients/{id}/delete",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "patients",
+                "{id}",
+                "delete"
+              ]
+            },
+            "description": "Soft delete a patient (marks as inactive). Triggers cascade deletion of related schedules via database trigger.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "200 - Patient deleted successfully",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/patients/{id}/delete",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "patients",
+                    "{id}",
+                    "delete"
+                  ]
+                },
+                "description": "Soft delete a patient (marks as inactive). Triggers cascade deletion of related schedules via database trigger.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "Patient deleted successfully",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true\n}"
+            },
+            {
+              "name": "401 - undefined",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/patients/{id}/delete",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "patients",
+                    "{id}",
+                    "delete"
+                  ]
+                },
+                "description": "Soft delete a patient (marks as inactive). Triggers cascade deletion of related schedules via database trigger.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "code": 401,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": ""
+            },
+            {
+              "name": "500 - undefined",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/patients/{id}/delete",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "patients",
+                    "{id}",
+                    "delete"
+                  ]
+                },
+                "description": "Soft delete a patient (marks as inactive). Triggers cascade deletion of related schedules via database trigger.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "code": 500,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": ""
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Schedules",
+      "item": [
+        {
+          "name": "List schedules",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/schedules",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "schedules"
+              ],
+              "query": [
+                {
+                  "key": "patientId",
+                  "value": "",
+                  "description": "Filter by patient ID",
+                  "disabled": true
+                },
+                {
+                  "key": "itemId",
+                  "value": "",
+                  "description": "Filter by item ID",
+                  "disabled": true
+                },
+                {
+                  "key": "status",
+                  "value": "",
+                  "description": "Filter by schedule status",
+                  "disabled": true
+                },
+                {
+                  "key": "startDate",
+                  "value": "",
+                  "description": "Filter schedules starting from this date",
+                  "disabled": true
+                },
+                {
+                  "key": "endDate",
+                  "value": "",
+                  "description": "Filter schedules ending before this date",
+                  "disabled": true
+                },
+                {
+                  "key": "page",
+                  "value": "",
+                  "description": "Page number for pagination",
+                  "disabled": true
+                },
+                {
+                  "key": "limit",
+                  "value": "",
+                  "description": "Number of items per page",
+                  "disabled": true
+                },
+                {
+                  "key": "sort",
+                  "value": "",
+                  "description": "Field to sort by",
+                  "disabled": true
+                },
+                {
+                  "key": "order",
+                  "value": "",
+                  "description": "Sort order",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Retrieve paginated list of schedules with filtering options",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "200 - Schedules retrieved successfully",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/v1/schedules",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "schedules"
+                  ],
+                  "query": [
+                    {
+                      "key": "patientId",
+                      "value": "",
+                      "description": "Filter by patient ID",
+                      "disabled": true
+                    },
+                    {
+                      "key": "itemId",
+                      "value": "",
+                      "description": "Filter by item ID",
+                      "disabled": true
+                    },
+                    {
+                      "key": "status",
+                      "value": "",
+                      "description": "Filter by schedule status",
+                      "disabled": true
+                    },
+                    {
+                      "key": "startDate",
+                      "value": "",
+                      "description": "Filter schedules starting from this date",
+                      "disabled": true
+                    },
+                    {
+                      "key": "endDate",
+                      "value": "",
+                      "description": "Filter schedules ending before this date",
+                      "disabled": true
+                    },
+                    {
+                      "key": "page",
+                      "value": "",
+                      "description": "Page number for pagination",
+                      "disabled": true
+                    },
+                    {
+                      "key": "limit",
+                      "value": "",
+                      "description": "Number of items per page",
+                      "disabled": true
+                    },
+                    {
+                      "key": "sort",
+                      "value": "",
+                      "description": "Field to sort by",
+                      "disabled": true
+                    },
+                    {
+                      "key": "order",
+                      "value": "",
+                      "description": "Sort order",
+                      "disabled": true
+                    }
+                  ]
+                },
+                "description": "Retrieve paginated list of schedules with filtering options",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "Schedules retrieved successfully",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"data\": [\n    {\n      \"id\": \"123e4567-e89b-12d3-a456-426614174000\",\n      \"patient_id\": \"123e4567-e89b-12d3-a456-426614174000\",\n      \"item_id\": \"123e4567-e89b-12d3-a456-426614174000\",\n      \"interval_type\": \"days\",\n      \"interval_value\": 1,\n      \"start_date\": \"2025-01-01T00:00:00Z\",\n      \"end_date\": \"2025-01-01T00:00:00Z\",\n      \"status\": \"active\",\n      \"notes\": \"string\",\n      \"created_at\": \"2025-01-01T00:00:00Z\",\n      \"updated_at\": \"2025-01-01T00:00:00Z\",\n      \"patients\": {\n        \"name\": \"string\",\n        \"patient_number\": \"string\"\n      },\n      \"items\": {\n        \"name\": \"string\",\n        \"category\": \"string\"\n      }\n    }\n  ],\n  \"pagination\": {\n    \"page\": 1,\n    \"limit\": 1,\n    \"total\": 1,\n    \"totalPages\": 1\n  },\n  \"message\": \"Schedules retrieved successfully\"\n}"
+            },
+            {
+              "name": "400 - undefined",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/v1/schedules",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "schedules"
+                  ],
+                  "query": [
+                    {
+                      "key": "patientId",
+                      "value": "",
+                      "description": "Filter by patient ID",
+                      "disabled": true
+                    },
+                    {
+                      "key": "itemId",
+                      "value": "",
+                      "description": "Filter by item ID",
+                      "disabled": true
+                    },
+                    {
+                      "key": "status",
+                      "value": "",
+                      "description": "Filter by schedule status",
+                      "disabled": true
+                    },
+                    {
+                      "key": "startDate",
+                      "value": "",
+                      "description": "Filter schedules starting from this date",
+                      "disabled": true
+                    },
+                    {
+                      "key": "endDate",
+                      "value": "",
+                      "description": "Filter schedules ending before this date",
+                      "disabled": true
+                    },
+                    {
+                      "key": "page",
+                      "value": "",
+                      "description": "Page number for pagination",
+                      "disabled": true
+                    },
+                    {
+                      "key": "limit",
+                      "value": "",
+                      "description": "Number of items per page",
+                      "disabled": true
+                    },
+                    {
+                      "key": "sort",
+                      "value": "",
+                      "description": "Field to sort by",
+                      "disabled": true
+                    },
+                    {
+                      "key": "order",
+                      "value": "",
+                      "description": "Sort order",
+                      "disabled": true
+                    }
+                  ]
+                },
+                "description": "Retrieve paginated list of schedules with filtering options",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "code": 400,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": ""
+            },
+            {
+              "name": "429 - undefined",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/v1/schedules",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "schedules"
+                  ],
+                  "query": [
+                    {
+                      "key": "patientId",
+                      "value": "",
+                      "description": "Filter by patient ID",
+                      "disabled": true
+                    },
+                    {
+                      "key": "itemId",
+                      "value": "",
+                      "description": "Filter by item ID",
+                      "disabled": true
+                    },
+                    {
+                      "key": "status",
+                      "value": "",
+                      "description": "Filter by schedule status",
+                      "disabled": true
+                    },
+                    {
+                      "key": "startDate",
+                      "value": "",
+                      "description": "Filter schedules starting from this date",
+                      "disabled": true
+                    },
+                    {
+                      "key": "endDate",
+                      "value": "",
+                      "description": "Filter schedules ending before this date",
+                      "disabled": true
+                    },
+                    {
+                      "key": "page",
+                      "value": "",
+                      "description": "Page number for pagination",
+                      "disabled": true
+                    },
+                    {
+                      "key": "limit",
+                      "value": "",
+                      "description": "Number of items per page",
+                      "disabled": true
+                    },
+                    {
+                      "key": "sort",
+                      "value": "",
+                      "description": "Field to sort by",
+                      "disabled": true
+                    },
+                    {
+                      "key": "order",
+                      "value": "",
+                      "description": "Sort order",
+                      "disabled": true
+                    }
+                  ]
+                },
+                "description": "Retrieve paginated list of schedules with filtering options",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "code": 429,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": ""
+            },
+            {
+              "name": "500 - undefined",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/v1/schedules",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "schedules"
+                  ],
+                  "query": [
+                    {
+                      "key": "patientId",
+                      "value": "",
+                      "description": "Filter by patient ID",
+                      "disabled": true
+                    },
+                    {
+                      "key": "itemId",
+                      "value": "",
+                      "description": "Filter by item ID",
+                      "disabled": true
+                    },
+                    {
+                      "key": "status",
+                      "value": "",
+                      "description": "Filter by schedule status",
+                      "disabled": true
+                    },
+                    {
+                      "key": "startDate",
+                      "value": "",
+                      "description": "Filter schedules starting from this date",
+                      "disabled": true
+                    },
+                    {
+                      "key": "endDate",
+                      "value": "",
+                      "description": "Filter schedules ending before this date",
+                      "disabled": true
+                    },
+                    {
+                      "key": "page",
+                      "value": "",
+                      "description": "Page number for pagination",
+                      "disabled": true
+                    },
+                    {
+                      "key": "limit",
+                      "value": "",
+                      "description": "Number of items per page",
+                      "disabled": true
+                    },
+                    {
+                      "key": "sort",
+                      "value": "",
+                      "description": "Field to sort by",
+                      "disabled": true
+                    },
+                    {
+                      "key": "order",
+                      "value": "",
+                      "description": "Sort order",
+                      "disabled": true
+                    }
+                  ]
+                },
+                "description": "Retrieve paginated list of schedules with filtering options",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "code": 500,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": ""
+            }
+          ]
+        },
+        {
+          "name": "Create schedule",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/schedules",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "schedules"
+              ]
+            },
+            "description": "Create a new schedule for a patient",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"patientId\": \"123e4567-e89b-12d3-a456-426614174000\",\n  \"itemId\": \"123e4567-e89b-12d3-a456-426614174000\",\n  \"intervalType\": \"days\",\n  \"intervalValue\": 1,\n  \"startDate\": \"2025-01-01T00:00:00Z\",\n  \"endDate\": \"2025-01-01T00:00:00Z\",\n  \"notes\": \"string\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "200 - Schedule created successfully",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/v1/schedules",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "schedules"
+                  ]
+                },
+                "description": "Create a new schedule for a patient",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"patientId\": \"123e4567-e89b-12d3-a456-426614174000\",\n  \"itemId\": \"123e4567-e89b-12d3-a456-426614174000\",\n  \"intervalType\": \"days\",\n  \"intervalValue\": 1,\n  \"startDate\": \"2025-01-01T00:00:00Z\",\n  \"endDate\": \"2025-01-01T00:00:00Z\",\n  \"notes\": \"string\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Schedule created successfully",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"id\": \"123e4567-e89b-12d3-a456-426614174000\",\n    \"patient_id\": \"123e4567-e89b-12d3-a456-426614174000\",\n    \"item_id\": \"123e4567-e89b-12d3-a456-426614174000\",\n    \"interval_type\": \"days\",\n    \"interval_value\": 1,\n    \"start_date\": \"2025-01-01T00:00:00Z\",\n    \"end_date\": \"2025-01-01T00:00:00Z\",\n    \"status\": \"active\",\n    \"notes\": \"string\",\n    \"created_at\": \"2025-01-01T00:00:00Z\",\n    \"updated_at\": \"2025-01-01T00:00:00Z\",\n    \"patients\": {\n      \"name\": \"string\",\n      \"patient_number\": \"string\"\n    },\n    \"items\": {\n      \"name\": \"string\",\n      \"category\": \"string\"\n    }\n  },\n  \"message\": \"string\"\n}"
+            },
+            {
+              "name": "400 - undefined",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/v1/schedules",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "schedules"
+                  ]
+                },
+                "description": "Create a new schedule for a patient",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"patientId\": \"123e4567-e89b-12d3-a456-426614174000\",\n  \"itemId\": \"123e4567-e89b-12d3-a456-426614174000\",\n  \"intervalType\": \"days\",\n  \"intervalValue\": 1,\n  \"startDate\": \"2025-01-01T00:00:00Z\",\n  \"endDate\": \"2025-01-01T00:00:00Z\",\n  \"notes\": \"string\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "code": 400,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": ""
+            },
+            {
+              "name": "404 - Patient or item not found",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/v1/schedules",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "schedules"
+                  ]
+                },
+                "description": "Create a new schedule for a patient",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"patientId\": \"123e4567-e89b-12d3-a456-426614174000\",\n  \"itemId\": \"123e4567-e89b-12d3-a456-426614174000\",\n  \"intervalType\": \"days\",\n  \"intervalValue\": 1,\n  \"startDate\": \"2025-01-01T00:00:00Z\",\n  \"endDate\": \"2025-01-01T00:00:00Z\",\n  \"notes\": \"string\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Patient or item not found",
+              "code": 404,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": \"string\",\n  \"code\": \"string\",\n  \"details\": {}\n}"
+            },
+            {
+              "name": "429 - undefined",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/v1/schedules",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "schedules"
+                  ]
+                },
+                "description": "Create a new schedule for a patient",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"patientId\": \"123e4567-e89b-12d3-a456-426614174000\",\n  \"itemId\": \"123e4567-e89b-12d3-a456-426614174000\",\n  \"intervalType\": \"days\",\n  \"intervalValue\": 1,\n  \"startDate\": \"2025-01-01T00:00:00Z\",\n  \"endDate\": \"2025-01-01T00:00:00Z\",\n  \"notes\": \"string\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "code": 429,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": ""
+            },
+            {
+              "name": "500 - undefined",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/v1/schedules",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "schedules"
+                  ]
+                },
+                "description": "Create a new schedule for a patient",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"patientId\": \"123e4567-e89b-12d3-a456-426614174000\",\n  \"itemId\": \"123e4567-e89b-12d3-a456-426614174000\",\n  \"intervalType\": \"days\",\n  \"intervalValue\": 1,\n  \"startDate\": \"2025-01-01T00:00:00Z\",\n  \"endDate\": \"2025-01-01T00:00:00Z\",\n  \"notes\": \"string\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "code": 500,
               "header": [
                 {
                   "key": "Content-Type",
@@ -1789,11 +2806,12 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/schedules/{id}",
+              "raw": "{{baseUrl}}/v1/schedules/{id}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
+                "v1",
                 "schedules",
                 "{id}"
               ]
@@ -1812,16 +2830,17 @@
           },
           "response": [
             {
-              "name": "200 - Schedule details",
+              "name": "200 - Schedule retrieved successfully",
               "originalRequest": {
                 "method": "GET",
                 "header": [],
                 "url": {
-                  "raw": "{{baseUrl}}/schedules/{id}",
+                  "raw": "{{baseUrl}}/v1/schedules/{id}",
                   "host": [
                     "{{baseUrl}}"
                   ],
                   "path": [
+                    "v1",
                     "schedules",
                     "{id}"
                   ]
@@ -1838,7 +2857,7 @@
                   ]
                 }
               },
-              "status": "Schedule details",
+              "status": "Schedule retrieved successfully",
               "code": 200,
               "header": [
                 {
@@ -1846,19 +2865,20 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"id\": \"123e4567-e89b-12d3-a456-426614174000\",\n  \"patientId\": \"123e4567-e89b-12d3-a456-426614174000\",\n  \"itemId\": \"123e4567-e89b-12d3-a456-426614174000\",\n  \"itemName\": \"Blood Test\",\n  \"intervalType\": \"daily\",\n  \"intervalDays\": 1,\n  \"startDate\": \"2025-01-01\",\n  \"endDate\": \"2025-01-01\",\n  \"nextDueDate\": \"2025-01-01\",\n  \"status\": \"active\",\n  \"priority\": \"low\",\n  \"createdAt\": \"2025-01-01T00:00:00Z\",\n  \"updatedAt\": \"2025-01-01T00:00:00Z\",\n  \"patient\": {\n    \"id\": \"123e4567-e89b-12d3-a456-426614174000\",\n    \"name\": \"John Doe\",\n    \"patientNumber\": \"P12345\",\n    \"department\": \"Oncology\",\n    \"careType\": \"Chemotherapy\",\n    \"isActive\": true,\n    \"createdAt\": \"2025-01-01T00:00:00Z\",\n    \"updatedAt\": \"2025-01-01T00:00:00Z\"\n  },\n  \"item\": {\n    \"id\": \"123e4567-e89b-12d3-a456-426614174000\",\n    \"name\": \"Complete Blood Count\",\n    \"category\": \"Laboratory Test\",\n    \"description\": \"string\",\n    \"defaultInterval\": 1,\n    \"isActive\": true,\n    \"createdAt\": \"2025-01-01T00:00:00Z\"\n  },\n  \"executionHistory\": [\n    {\n      \"id\": \"123e4567-e89b-12d3-a456-426614174000\",\n      \"scheduleId\": \"123e4567-e89b-12d3-a456-426614174000\",\n      \"executedDate\": \"2025-01-01T00:00:00Z\",\n      \"executedBy\": \"123e4567-e89b-12d3-a456-426614174000\",\n      \"notes\": \"string\",\n      \"createdAt\": \"2025-01-01T00:00:00Z\"\n    }\n  ]\n}"
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"id\": \"123e4567-e89b-12d3-a456-426614174000\",\n    \"patient_id\": \"123e4567-e89b-12d3-a456-426614174000\",\n    \"item_id\": \"123e4567-e89b-12d3-a456-426614174000\",\n    \"interval_type\": \"days\",\n    \"interval_value\": 1,\n    \"start_date\": \"2025-01-01T00:00:00Z\",\n    \"end_date\": \"2025-01-01T00:00:00Z\",\n    \"status\": \"active\",\n    \"notes\": \"string\",\n    \"created_at\": \"2025-01-01T00:00:00Z\",\n    \"updated_at\": \"2025-01-01T00:00:00Z\",\n    \"patients\": {\n      \"name\": \"string\",\n      \"patient_number\": \"string\"\n    },\n    \"items\": {\n      \"name\": \"string\",\n      \"category\": \"string\"\n    },\n    \"events\": [\n      {\n        \"id\": \"123e4567-e89b-12d3-a456-426614174000\",\n        \"schedule_id\": \"123e4567-e89b-12d3-a456-426614174000\",\n        \"event_date\": \"2025-01-01\",\n        \"status\": \"string\",\n        \"executed_by\": \"123e4567-e89b-12d3-a456-426614174000\",\n        \"executed_at\": \"2025-01-01T00:00:00Z\",\n        \"notes\": \"string\"\n      }\n    ]\n  },\n  \"message\": \"string\"\n}"
             },
             {
-              "name": "401 - undefined",
+              "name": "400 - Invalid schedule ID format",
               "originalRequest": {
                 "method": "GET",
                 "header": [],
                 "url": {
-                  "raw": "{{baseUrl}}/schedules/{id}",
+                  "raw": "{{baseUrl}}/v1/schedules/{id}",
                   "host": [
                     "{{baseUrl}}"
                   ],
                   "path": [
+                    "v1",
                     "schedules",
                     "{id}"
                   ]
@@ -1875,14 +2895,15 @@
                   ]
                 }
               },
-              "code": 401,
+              "status": "Invalid schedule ID format",
+              "code": 400,
               "header": [
                 {
                   "key": "Content-Type",
                   "value": "application/json"
                 }
               ],
-              "body": ""
+              "body": "{\n  \"error\": \"string\",\n  \"code\": \"string\",\n  \"details\": {}\n}"
             },
             {
               "name": "404 - undefined",
@@ -1890,11 +2911,12 @@
                 "method": "GET",
                 "header": [],
                 "url": {
-                  "raw": "{{baseUrl}}/schedules/{id}",
+                  "raw": "{{baseUrl}}/v1/schedules/{id}",
                   "host": [
                     "{{baseUrl}}"
                   ],
                   "path": [
+                    "v1",
                     "schedules",
                     "{id}"
                   ]
@@ -1912,6 +2934,80 @@
                 }
               },
               "code": 404,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": ""
+            },
+            {
+              "name": "429 - undefined",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/v1/schedules/{id}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "schedules",
+                    "{id}"
+                  ]
+                },
+                "description": "Retrieve detailed information about a specific schedule",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "code": 429,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": ""
+            },
+            {
+              "name": "500 - undefined",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/v1/schedules/{id}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "schedules",
+                    "{id}"
+                  ]
+                },
+                "description": "Retrieve detailed information about a specific schedule",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "code": 500,
               "header": [
                 {
                   "key": "Content-Type",
@@ -1933,11 +3029,12 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/schedules/{id}",
+              "raw": "{{baseUrl}}/v1/schedules/{id}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
+                "v1",
                 "schedules",
                 "{id}"
               ]
@@ -1955,7 +3052,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"intervalType\": \"daily\",\n  \"intervalDays\": 1,\n  \"nextDueDate\": \"2025-01-01\",\n  \"endDate\": \"2025-01-01\",\n  \"priority\": \"low\",\n  \"status\": \"active\",\n  \"notes\": \"string\"\n}",
+              "raw": "{\n  \"intervalType\": \"days\",\n  \"intervalValue\": 1,\n  \"startDate\": \"2025-01-01T00:00:00Z\",\n  \"endDate\": \"2025-01-01T00:00:00Z\",\n  \"status\": \"active\",\n  \"notes\": \"string\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1975,11 +3072,12 @@
                   }
                 ],
                 "url": {
-                  "raw": "{{baseUrl}}/schedules/{id}",
+                  "raw": "{{baseUrl}}/v1/schedules/{id}",
                   "host": [
                     "{{baseUrl}}"
                   ],
                   "path": [
+                    "v1",
                     "schedules",
                     "{id}"
                   ]
@@ -1997,7 +3095,7 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"intervalType\": \"daily\",\n  \"intervalDays\": 1,\n  \"nextDueDate\": \"2025-01-01\",\n  \"endDate\": \"2025-01-01\",\n  \"priority\": \"low\",\n  \"status\": \"active\",\n  \"notes\": \"string\"\n}",
+                  "raw": "{\n  \"intervalType\": \"days\",\n  \"intervalValue\": 1,\n  \"startDate\": \"2025-01-01T00:00:00Z\",\n  \"endDate\": \"2025-01-01T00:00:00Z\",\n  \"status\": \"active\",\n  \"notes\": \"string\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -2013,10 +3111,10 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"id\": \"123e4567-e89b-12d3-a456-426614174000\",\n  \"patientId\": \"123e4567-e89b-12d3-a456-426614174000\",\n  \"itemId\": \"123e4567-e89b-12d3-a456-426614174000\",\n  \"itemName\": \"Blood Test\",\n  \"intervalType\": \"daily\",\n  \"intervalDays\": 1,\n  \"startDate\": \"2025-01-01\",\n  \"endDate\": \"2025-01-01\",\n  \"nextDueDate\": \"2025-01-01\",\n  \"status\": \"active\",\n  \"priority\": \"low\",\n  \"createdAt\": \"2025-01-01T00:00:00Z\",\n  \"updatedAt\": \"2025-01-01T00:00:00Z\"\n}"
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"id\": \"123e4567-e89b-12d3-a456-426614174000\",\n    \"patient_id\": \"123e4567-e89b-12d3-a456-426614174000\",\n    \"item_id\": \"123e4567-e89b-12d3-a456-426614174000\",\n    \"interval_type\": \"days\",\n    \"interval_value\": 1,\n    \"start_date\": \"2025-01-01T00:00:00Z\",\n    \"end_date\": \"2025-01-01T00:00:00Z\",\n    \"status\": \"active\",\n    \"notes\": \"string\",\n    \"created_at\": \"2025-01-01T00:00:00Z\",\n    \"updated_at\": \"2025-01-01T00:00:00Z\",\n    \"patients\": {\n      \"name\": \"string\",\n      \"patient_number\": \"string\"\n    },\n    \"items\": {\n      \"name\": \"string\",\n      \"category\": \"string\"\n    }\n  },\n  \"message\": \"string\"\n}"
             },
             {
-              "name": "401 - undefined",
+              "name": "400 - undefined",
               "originalRequest": {
                 "method": "PUT",
                 "header": [
@@ -2026,11 +3124,12 @@
                   }
                 ],
                 "url": {
-                  "raw": "{{baseUrl}}/schedules/{id}",
+                  "raw": "{{baseUrl}}/v1/schedules/{id}",
                   "host": [
                     "{{baseUrl}}"
                   ],
                   "path": [
+                    "v1",
                     "schedules",
                     "{id}"
                   ]
@@ -2048,7 +3147,7 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"intervalType\": \"daily\",\n  \"intervalDays\": 1,\n  \"nextDueDate\": \"2025-01-01\",\n  \"endDate\": \"2025-01-01\",\n  \"priority\": \"low\",\n  \"status\": \"active\",\n  \"notes\": \"string\"\n}",
+                  "raw": "{\n  \"intervalType\": \"days\",\n  \"intervalValue\": 1,\n  \"startDate\": \"2025-01-01T00:00:00Z\",\n  \"endDate\": \"2025-01-01T00:00:00Z\",\n  \"status\": \"active\",\n  \"notes\": \"string\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -2056,7 +3155,7 @@
                   }
                 }
               },
-              "code": 401,
+              "code": 400,
               "header": [
                 {
                   "key": "Content-Type",
@@ -2076,11 +3175,12 @@
                   }
                 ],
                 "url": {
-                  "raw": "{{baseUrl}}/schedules/{id}",
+                  "raw": "{{baseUrl}}/v1/schedules/{id}",
                   "host": [
                     "{{baseUrl}}"
                   ],
                   "path": [
+                    "v1",
                     "schedules",
                     "{id}"
                   ]
@@ -2098,7 +3198,7 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"intervalType\": \"daily\",\n  \"intervalDays\": 1,\n  \"nextDueDate\": \"2025-01-01\",\n  \"endDate\": \"2025-01-01\",\n  \"priority\": \"low\",\n  \"status\": \"active\",\n  \"notes\": \"string\"\n}",
+                  "raw": "{\n  \"intervalType\": \"days\",\n  \"intervalValue\": 1,\n  \"startDate\": \"2025-01-01T00:00:00Z\",\n  \"endDate\": \"2025-01-01T00:00:00Z\",\n  \"status\": \"active\",\n  \"notes\": \"string\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -2114,25 +3214,128 @@
                 }
               ],
               "body": ""
+            },
+            {
+              "name": "429 - undefined",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/v1/schedules/{id}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "schedules",
+                    "{id}"
+                  ]
+                },
+                "description": "Update schedule information",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"intervalType\": \"days\",\n  \"intervalValue\": 1,\n  \"startDate\": \"2025-01-01T00:00:00Z\",\n  \"endDate\": \"2025-01-01T00:00:00Z\",\n  \"status\": \"active\",\n  \"notes\": \"string\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "code": 429,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": ""
+            },
+            {
+              "name": "500 - undefined",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/v1/schedules/{id}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "schedules",
+                    "{id}"
+                  ]
+                },
+                "description": "Update schedule information",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"intervalType\": \"days\",\n  \"intervalValue\": 1,\n  \"startDate\": \"2025-01-01T00:00:00Z\",\n  \"endDate\": \"2025-01-01T00:00:00Z\",\n  \"status\": \"active\",\n  \"notes\": \"string\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "code": 500,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": ""
             }
           ]
         },
         {
-          "name": "Cancel schedule",
+          "name": "Delete schedule",
           "request": {
             "method": "DELETE",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/schedules/{id}",
+              "raw": "{{baseUrl}}/v1/schedules/{id}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
+                "v1",
                 "schedules",
                 "{id}"
               ]
             },
-            "description": "Cancel a schedule (soft delete)",
+            "description": "Soft delete a schedule (marks as completed)",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -2146,21 +3349,22 @@
           },
           "response": [
             {
-              "name": "204 - Schedule cancelled successfully",
+              "name": "200 - Schedule deleted successfully",
               "originalRequest": {
                 "method": "DELETE",
                 "header": [],
                 "url": {
-                  "raw": "{{baseUrl}}/schedules/{id}",
+                  "raw": "{{baseUrl}}/v1/schedules/{id}",
                   "host": [
                     "{{baseUrl}}"
                   ],
                   "path": [
+                    "v1",
                     "schedules",
                     "{id}"
                   ]
                 },
-                "description": "Cancel a schedule (soft delete)",
+                "description": "Soft delete a schedule (marks as completed)",
                 "auth": {
                   "type": "bearer",
                   "bearer": [
@@ -2172,32 +3376,33 @@
                   ]
                 }
               },
-              "status": "Schedule cancelled successfully",
-              "code": 204,
+              "status": "Schedule deleted successfully",
+              "code": 200,
               "header": [
                 {
                   "key": "Content-Type",
                   "value": "application/json"
                 }
               ],
-              "body": ""
+              "body": "{\n  \"success\": true,\n  \"data\": null,\n  \"message\": \"string\"\n}"
             },
             {
-              "name": "401 - undefined",
+              "name": "400 - Invalid schedule ID format",
               "originalRequest": {
                 "method": "DELETE",
                 "header": [],
                 "url": {
-                  "raw": "{{baseUrl}}/schedules/{id}",
+                  "raw": "{{baseUrl}}/v1/schedules/{id}",
                   "host": [
                     "{{baseUrl}}"
                   ],
                   "path": [
+                    "v1",
                     "schedules",
                     "{id}"
                   ]
                 },
-                "description": "Cancel a schedule (soft delete)",
+                "description": "Soft delete a schedule (marks as completed)",
                 "auth": {
                   "type": "bearer",
                   "bearer": [
@@ -2209,14 +3414,15 @@
                   ]
                 }
               },
-              "code": 401,
+              "status": "Invalid schedule ID format",
+              "code": 400,
               "header": [
                 {
                   "key": "Content-Type",
                   "value": "application/json"
                 }
               ],
-              "body": ""
+              "body": "{\n  \"error\": \"string\",\n  \"code\": \"string\",\n  \"details\": {}\n}"
             },
             {
               "name": "404 - undefined",
@@ -2224,16 +3430,17 @@
                 "method": "DELETE",
                 "header": [],
                 "url": {
-                  "raw": "{{baseUrl}}/schedules/{id}",
+                  "raw": "{{baseUrl}}/v1/schedules/{id}",
                   "host": [
                     "{{baseUrl}}"
                   ],
                   "path": [
+                    "v1",
                     "schedules",
                     "{id}"
                   ]
                 },
-                "description": "Cancel a schedule (soft delete)",
+                "description": "Soft delete a schedule (marks as completed)",
                 "auth": {
                   "type": "bearer",
                   "bearer": [
@@ -2253,11 +3460,175 @@
                 }
               ],
               "body": ""
+            },
+            {
+              "name": "429 - undefined",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/v1/schedules/{id}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "schedules",
+                    "{id}"
+                  ]
+                },
+                "description": "Soft delete a schedule (marks as completed)",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "code": 429,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": ""
+            },
+            {
+              "name": "500 - undefined",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/v1/schedules/{id}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "schedules",
+                    "{id}"
+                  ]
+                },
+                "description": "Soft delete a schedule (marks as completed)",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "code": 500,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": ""
             }
           ]
-        },
+        }
+      ]
+    },
+    {
+      "name": "Health",
+      "item": [
         {
-          "name": "Mark schedule as completed",
+          "name": "Health check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "health"
+              ]
+            },
+            "description": "Check system health status including database and auth service",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": [
+            {
+              "name": "200 - Health check completed",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/health",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "health"
+                  ]
+                },
+                "description": "Check system health status including database and auth service",
+                "auth": {
+                  "type": "noauth"
+                }
+              },
+              "status": "Health check completed",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"status\": \"healthy\",\n    \"timestamp\": \"2025-01-01T00:00:00Z\",\n    \"uptime\": 1,\n    \"checks\": {\n      \"database\": {\n        \"status\": \"up\",\n        \"responseTime\": 1,\n        \"error\": \"string\"\n      },\n      \"auth\": {\n        \"status\": \"up\",\n        \"error\": \"string\"\n      },\n      \"realtime\": {\n        \"status\": \"connected\",\n        \"activeChannels\": 1\n      }\n    },\n    \"environment\": \"development\",\n    \"version\": \"1.0.0\"\n  },\n  \"message\": \"string\"\n}"
+            },
+            {
+              "name": "503 - Service unavailable - system unhealthy",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/health",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "health"
+                  ]
+                },
+                "description": "Check system health status including database and auth service",
+                "auth": {
+                  "type": "noauth"
+                }
+              },
+              "status": "Service unavailable - system unhealthy",
+              "code": 503,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": \"string\",\n  \"code\": \"string\",\n  \"details\": {}\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Admin",
+      "item": [
+        {
+          "name": "Update user",
           "request": {
             "method": "POST",
             "header": [
@@ -2267,17 +3638,17 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/schedules/{id}/complete",
+              "raw": "{{baseUrl}}/admin/users/update",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "schedules",
-                "{id}",
-                "complete"
+                "admin",
+                "users",
+                "update"
               ]
             },
-            "description": "Mark a schedule as completed and optionally create next occurrence",
+            "description": "Update user role and care type. Admin role required.",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -2290,7 +3661,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"executedDate\": \"2025-01-01T00:00:00Z\",\n  \"executedBy\": \"123e4567-e89b-12d3-a456-426614174000\",\n  \"notes\": \"string\",\n  \"createNext\": true\n}",
+              "raw": "{\n  \"userId\": \"123e4567-e89b-12d3-a456-426614174000\",\n  \"role\": \"admin\",\n  \"care_type\": \"외래\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -2300,7 +3671,7 @@
           },
           "response": [
             {
-              "name": "200 - Schedule marked as completed",
+              "name": "200 - User updated successfully",
               "originalRequest": {
                 "method": "POST",
                 "header": [
@@ -2310,17 +3681,17 @@
                   }
                 ],
                 "url": {
-                  "raw": "{{baseUrl}}/schedules/{id}/complete",
+                  "raw": "{{baseUrl}}/admin/users/update",
                   "host": [
                     "{{baseUrl}}"
                   ],
                   "path": [
-                    "schedules",
-                    "{id}",
-                    "complete"
+                    "admin",
+                    "users",
+                    "update"
                   ]
                 },
-                "description": "Mark a schedule as completed and optionally create next occurrence",
+                "description": "Update user role and care type. Admin role required.",
                 "auth": {
                   "type": "bearer",
                   "bearer": [
@@ -2333,7 +3704,7 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"executedDate\": \"2025-01-01T00:00:00Z\",\n  \"executedBy\": \"123e4567-e89b-12d3-a456-426614174000\",\n  \"notes\": \"string\",\n  \"createNext\": true\n}",
+                  "raw": "{\n  \"userId\": \"123e4567-e89b-12d3-a456-426614174000\",\n  \"role\": \"admin\",\n  \"care_type\": \"외래\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -2341,7 +3712,7 @@
                   }
                 }
               },
-              "status": "Schedule marked as completed",
+              "status": "User updated successfully",
               "code": 200,
               "header": [
                 {
@@ -2349,7 +3720,58 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"completedSchedule\": {\n    \"id\": \"123e4567-e89b-12d3-a456-426614174000\",\n    \"patientId\": \"123e4567-e89b-12d3-a456-426614174000\",\n    \"itemId\": \"123e4567-e89b-12d3-a456-426614174000\",\n    \"itemName\": \"Blood Test\",\n    \"intervalType\": \"daily\",\n    \"intervalDays\": 1,\n    \"startDate\": \"2025-01-01\",\n    \"endDate\": \"2025-01-01\",\n    \"nextDueDate\": \"2025-01-01\",\n    \"status\": \"active\",\n    \"priority\": \"low\",\n    \"createdAt\": \"2025-01-01T00:00:00Z\",\n    \"updatedAt\": \"2025-01-01T00:00:00Z\"\n  },\n  \"nextSchedule\": {\n    \"id\": \"123e4567-e89b-12d3-a456-426614174000\",\n    \"patientId\": \"123e4567-e89b-12d3-a456-426614174000\",\n    \"itemId\": \"123e4567-e89b-12d3-a456-426614174000\",\n    \"itemName\": \"Blood Test\",\n    \"intervalType\": \"daily\",\n    \"intervalDays\": 1,\n    \"startDate\": \"2025-01-01\",\n    \"endDate\": \"2025-01-01\",\n    \"nextDueDate\": \"2025-01-01\",\n    \"status\": \"active\",\n    \"priority\": \"low\",\n    \"createdAt\": \"2025-01-01T00:00:00Z\",\n    \"updatedAt\": \"2025-01-01T00:00:00Z\"\n  }\n}"
+              "body": "{\n  \"data\": {\n    \"id\": \"123e4567-e89b-12d3-a456-426614174000\",\n    \"email\": \"user@example.com\",\n    \"name\": \"string\",\n    \"role\": \"nurse\",\n    \"care_type\": \"외래\",\n    \"phone\": \"string\",\n    \"approval_status\": \"pending\",\n    \"is_active\": true,\n    \"created_at\": \"2025-01-01T00:00:00Z\",\n    \"updated_at\": \"2025-01-01T00:00:00Z\"\n  }\n}"
+            },
+            {
+              "name": "400 - undefined",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/admin/users/update",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "users",
+                    "update"
+                  ]
+                },
+                "description": "Update user role and care type. Admin role required.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"userId\": \"123e4567-e89b-12d3-a456-426614174000\",\n  \"role\": \"admin\",\n  \"care_type\": \"외래\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "code": 400,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": ""
             },
             {
               "name": "401 - undefined",
@@ -2362,17 +3784,17 @@
                   }
                 ],
                 "url": {
-                  "raw": "{{baseUrl}}/schedules/{id}/complete",
+                  "raw": "{{baseUrl}}/admin/users/update",
                   "host": [
                     "{{baseUrl}}"
                   ],
                   "path": [
-                    "schedules",
-                    "{id}",
-                    "complete"
+                    "admin",
+                    "users",
+                    "update"
                   ]
                 },
-                "description": "Mark a schedule as completed and optionally create next occurrence",
+                "description": "Update user role and care type. Admin role required.",
                 "auth": {
                   "type": "bearer",
                   "bearer": [
@@ -2385,7 +3807,7 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"executedDate\": \"2025-01-01T00:00:00Z\",\n  \"executedBy\": \"123e4567-e89b-12d3-a456-426614174000\",\n  \"notes\": \"string\",\n  \"createNext\": true\n}",
+                  "raw": "{\n  \"userId\": \"123e4567-e89b-12d3-a456-426614174000\",\n  \"role\": \"admin\",\n  \"care_type\": \"외래\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -2403,7 +3825,7 @@
               "body": ""
             },
             {
-              "name": "404 - undefined",
+              "name": "403 - Forbidden - Admin access required",
               "originalRequest": {
                 "method": "POST",
                 "header": [
@@ -2413,17 +3835,17 @@
                   }
                 ],
                 "url": {
-                  "raw": "{{baseUrl}}/schedules/{id}/complete",
+                  "raw": "{{baseUrl}}/admin/users/update",
                   "host": [
                     "{{baseUrl}}"
                   ],
                   "path": [
-                    "schedules",
-                    "{id}",
-                    "complete"
+                    "admin",
+                    "users",
+                    "update"
                   ]
                 },
-                "description": "Mark a schedule as completed and optionally create next occurrence",
+                "description": "Update user role and care type. Admin role required.",
                 "auth": {
                   "type": "bearer",
                   "bearer": [
@@ -2436,7 +3858,7 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"executedDate\": \"2025-01-01T00:00:00Z\",\n  \"executedBy\": \"123e4567-e89b-12d3-a456-426614174000\",\n  \"notes\": \"string\",\n  \"createNext\": true\n}",
+                  "raw": "{\n  \"userId\": \"123e4567-e89b-12d3-a456-426614174000\",\n  \"role\": \"admin\",\n  \"care_type\": \"외래\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -2444,6 +3866,356 @@
                   }
                 }
               },
+              "status": "Forbidden - Admin access required",
+              "code": 403,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": \"string\",\n  \"code\": \"string\",\n  \"details\": {}\n}"
+            },
+            {
+              "name": "500 - undefined",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/admin/users/update",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "users",
+                    "update"
+                  ]
+                },
+                "description": "Update user role and care type. Admin role required.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"userId\": \"123e4567-e89b-12d3-a456-426614174000\",\n  \"role\": \"admin\",\n  \"care_type\": \"외래\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "code": 500,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": ""
+            }
+          ]
+        },
+        {
+          "name": "Delete user",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/delete-user",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "delete-user"
+              ]
+            },
+            "description": "Permanently delete a user account. Admin role required. Cannot delete own account or last admin.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"123e4567-e89b-12d3-a456-426614174000\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "200 - User deleted successfully",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/admin/delete-user",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "delete-user"
+                  ]
+                },
+                "description": "Permanently delete a user account. Admin role required. Cannot delete own account or last admin.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"userId\": \"123e4567-e89b-12d3-a456-426614174000\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "User deleted successfully",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"message\": \"User deleted successfully\",\n  \"userId\": \"123e4567-e89b-12d3-a456-426614174000\"\n}"
+            },
+            {
+              "name": "400 - Bad request - Cannot delete own account or last admin",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/admin/delete-user",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "delete-user"
+                  ]
+                },
+                "description": "Permanently delete a user account. Admin role required. Cannot delete own account or last admin.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"userId\": \"123e4567-e89b-12d3-a456-426614174000\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Bad request - Cannot delete own account or last admin",
+              "code": 400,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": \"string\",\n  \"code\": \"string\",\n  \"details\": {}\n}"
+            },
+            {
+              "name": "401 - undefined",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/admin/delete-user",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "delete-user"
+                  ]
+                },
+                "description": "Permanently delete a user account. Admin role required. Cannot delete own account or last admin.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"userId\": \"123e4567-e89b-12d3-a456-426614174000\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "code": 401,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": ""
+            },
+            {
+              "name": "403 - Forbidden - Admin access required or invalid origin",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/admin/delete-user",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "delete-user"
+                  ]
+                },
+                "description": "Permanently delete a user account. Admin role required. Cannot delete own account or last admin.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"userId\": \"123e4567-e89b-12d3-a456-426614174000\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Forbidden - Admin access required or invalid origin",
+              "code": 403,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": \"string\",\n  \"code\": \"string\",\n  \"details\": {}\n}"
+            },
+            {
+              "name": "404 - Target user not found",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/admin/delete-user",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "delete-user"
+                  ]
+                },
+                "description": "Permanently delete a user account. Admin role required. Cannot delete own account or last admin.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"userId\": \"123e4567-e89b-12d3-a456-426614174000\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Target user not found",
               "code": 404,
               "header": [
                 {
@@ -2451,31 +4223,77 @@
                   "value": "application/json"
                 }
               ],
+              "body": "{\n  \"error\": \"string\",\n  \"code\": \"string\",\n  \"details\": {}\n}"
+            },
+            {
+              "name": "500 - undefined",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/admin/delete-user",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "delete-user"
+                  ]
+                },
+                "description": "Permanently delete a user account. Admin role required. Cannot delete own account or last admin.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"userId\": \"123e4567-e89b-12d3-a456-426614174000\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "code": 500,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
               "body": ""
             }
           ]
-        }
-      ]
-    },
-    {
-      "name": "Dashboard",
-      "item": [
+        },
         {
-          "name": "Get dashboard statistics",
+          "name": "Get activity statistics",
           "request": {
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/dashboard/stats",
+              "raw": "{{baseUrl}}/admin/activity/stats",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "dashboard",
+                "admin",
+                "activity",
                 "stats"
               ]
             },
-            "description": "Retrieve statistics for the dashboard",
+            "description": "Retrieve system activity statistics. Admin role required.",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -2489,21 +4307,22 @@
           },
           "response": [
             {
-              "name": "200 - Dashboard statistics",
+              "name": "200 - Statistics retrieved successfully",
               "originalRequest": {
                 "method": "GET",
                 "header": [],
                 "url": {
-                  "raw": "{{baseUrl}}/dashboard/stats",
+                  "raw": "{{baseUrl}}/admin/activity/stats",
                   "host": [
                     "{{baseUrl}}"
                   ],
                   "path": [
-                    "dashboard",
+                    "admin",
+                    "activity",
                     "stats"
                   ]
                 },
-                "description": "Retrieve statistics for the dashboard",
+                "description": "Retrieve system activity statistics. Admin role required.",
                 "auth": {
                   "type": "bearer",
                   "bearer": [
@@ -2515,7 +4334,7 @@
                   ]
                 }
               },
-              "status": "Dashboard statistics",
+              "status": "Statistics retrieved successfully",
               "code": 200,
               "header": [
                 {
@@ -2523,7 +4342,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"totalPatients\": 150,\n  \"activePatients\": 120,\n  \"todaySchedules\": 45,\n  \"overdueSchedules\": 5,\n  \"upcomingSchedules\": 230,\n  \"completionRate\": 0.92,\n  \"recentActivities\": [\n    {\n      \"id\": \"123e4567-e89b-12d3-a456-426614174000\",\n      \"type\": \"patient_created\",\n      \"description\": \"string\",\n      \"userId\": \"123e4567-e89b-12d3-a456-426614174000\",\n      \"timestamp\": \"2025-01-01T00:00:00Z\",\n      \"metadata\": {}\n    }\n  ]\n}"
+              "body": "{\n  \"totalUsers\": 1,\n  \"activeUsers\": 1,\n  \"totalPatients\": 1,\n  \"activePatients\": 1,\n  \"totalSchedules\": 1,\n  \"activeSchedules\": 1,\n  \"recentActivities\": [\n    {\n      \"timestamp\": \"2025-01-01T00:00:00Z\",\n      \"action\": \"string\",\n      \"user_id\": \"123e4567-e89b-12d3-a456-426614174000\",\n      \"details\": {}\n    }\n  ]\n}"
             },
             {
               "name": "401 - undefined",
@@ -2531,16 +4350,17 @@
                 "method": "GET",
                 "header": [],
                 "url": {
-                  "raw": "{{baseUrl}}/dashboard/stats",
+                  "raw": "{{baseUrl}}/admin/activity/stats",
                   "host": [
                     "{{baseUrl}}"
                   ],
                   "path": [
-                    "dashboard",
+                    "admin",
+                    "activity",
                     "stats"
                   ]
                 },
-                "description": "Retrieve statistics for the dashboard",
+                "description": "Retrieve system activity statistics. Admin role required.",
                 "auth": {
                   "type": "bearer",
                   "bearer": [
@@ -2560,43 +4380,198 @@
                 }
               ],
               "body": ""
+            },
+            {
+              "name": "403 - Forbidden - Admin access required",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/admin/activity/stats",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "activity",
+                    "stats"
+                  ]
+                },
+                "description": "Retrieve system activity statistics. Admin role required.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "Forbidden - Admin access required",
+              "code": 403,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": \"string\",\n  \"code\": \"string\",\n  \"details\": {}\n}"
+            },
+            {
+              "name": "500 - undefined",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/admin/activity/stats",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "activity",
+                    "stats"
+                  ]
+                },
+                "description": "Retrieve system activity statistics. Admin role required.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "code": 500,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": ""
             }
           ]
-        }
-      ]
-    },
-    {
-      "name": "Items",
-      "item": [
+        },
         {
-          "name": "List medical items",
+          "name": "CORS preflight",
           "request": {
-            "method": "GET",
+            "method": "OPTIONS",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/items",
+              "raw": "{{baseUrl}}/admin/activity/stats",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "items"
+                "admin",
+                "activity",
+                "stats"
+              ]
+            },
+            "description": "Handle OPTIONS requests for CORS",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": [
+            {
+              "name": "200 - CORS headers returned",
+              "originalRequest": {
+                "method": "OPTIONS",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/admin/activity/stats",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "activity",
+                    "stats"
+                  ]
+                },
+                "description": "Handle OPTIONS requests for CORS",
+                "auth": {
+                  "type": "noauth"
+                }
+              },
+              "status": "CORS headers returned",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": ""
+            }
+          ]
+        },
+        {
+          "name": "Get audit logs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/activity/logs",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "activity",
+                "logs"
               ],
               "query": [
                 {
-                  "key": "category",
+                  "key": "startDate",
                   "value": "",
-                  "description": "Filter by category",
+                  "description": "Filter logs from this date",
                   "disabled": true
                 },
                 {
-                  "key": "search",
+                  "key": "endDate",
                   "value": "",
-                  "description": "Search items by name",
+                  "description": "Filter logs until this date",
+                  "disabled": true
+                },
+                {
+                  "key": "userId",
+                  "value": "",
+                  "description": "Filter by user ID",
+                  "disabled": true
+                },
+                {
+                  "key": "tableName",
+                  "value": "",
+                  "description": "Filter by table name",
+                  "disabled": true
+                },
+                {
+                  "key": "operation",
+                  "value": "",
+                  "description": "Filter by operation type",
+                  "disabled": true
+                },
+                {
+                  "key": "page",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "limit",
+                  "value": "",
                   "disabled": true
                 }
               ]
             },
-            "description": "Retrieve list of medical items and procedures",
+            "description": "Retrieve system audit logs with filtering. Admin role required.",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -2610,34 +4585,64 @@
           },
           "response": [
             {
-              "name": "200 - List of medical items",
+              "name": "200 - Audit logs retrieved successfully",
               "originalRequest": {
                 "method": "GET",
                 "header": [],
                 "url": {
-                  "raw": "{{baseUrl}}/items",
+                  "raw": "{{baseUrl}}/admin/activity/logs",
                   "host": [
                     "{{baseUrl}}"
                   ],
                   "path": [
-                    "items"
+                    "admin",
+                    "activity",
+                    "logs"
                   ],
                   "query": [
                     {
-                      "key": "category",
+                      "key": "startDate",
                       "value": "",
-                      "description": "Filter by category",
+                      "description": "Filter logs from this date",
                       "disabled": true
                     },
                     {
-                      "key": "search",
+                      "key": "endDate",
                       "value": "",
-                      "description": "Search items by name",
+                      "description": "Filter logs until this date",
+                      "disabled": true
+                    },
+                    {
+                      "key": "userId",
+                      "value": "",
+                      "description": "Filter by user ID",
+                      "disabled": true
+                    },
+                    {
+                      "key": "tableName",
+                      "value": "",
+                      "description": "Filter by table name",
+                      "disabled": true
+                    },
+                    {
+                      "key": "operation",
+                      "value": "",
+                      "description": "Filter by operation type",
+                      "disabled": true
+                    },
+                    {
+                      "key": "page",
+                      "value": "",
+                      "disabled": true
+                    },
+                    {
+                      "key": "limit",
+                      "value": "",
                       "disabled": true
                     }
                   ]
                 },
-                "description": "Retrieve list of medical items and procedures",
+                "description": "Retrieve system audit logs with filtering. Admin role required.",
                 "auth": {
                   "type": "bearer",
                   "bearer": [
@@ -2649,7 +4654,7 @@
                   ]
                 }
               },
-              "status": "List of medical items",
+              "status": "Audit logs retrieved successfully",
               "code": 200,
               "header": [
                 {
@@ -2657,7 +4662,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "[\n  {\n    \"id\": \"123e4567-e89b-12d3-a456-426614174000\",\n    \"name\": \"Complete Blood Count\",\n    \"category\": \"Laboratory Test\",\n    \"description\": \"string\",\n    \"defaultInterval\": 1,\n    \"isActive\": true,\n    \"createdAt\": \"2025-01-01T00:00:00Z\"\n  }\n]"
+              "body": "{\n  \"logs\": [\n    {\n      \"id\": \"123e4567-e89b-12d3-a456-426614174000\",\n      \"table_name\": \"string\",\n      \"operation\": \"string\",\n      \"user_id\": \"123e4567-e89b-12d3-a456-426614174000\",\n      \"timestamp\": \"2025-01-01T00:00:00Z\",\n      \"old_data\": {},\n      \"new_data\": {}\n    }\n  ],\n  \"pagination\": {\n    \"page\": 1,\n    \"limit\": 1,\n    \"total\": 1,\n    \"totalPages\": 1\n  }\n}"
             },
             {
               "name": "401 - undefined",
@@ -2665,29 +4670,59 @@
                 "method": "GET",
                 "header": [],
                 "url": {
-                  "raw": "{{baseUrl}}/items",
+                  "raw": "{{baseUrl}}/admin/activity/logs",
                   "host": [
                     "{{baseUrl}}"
                   ],
                   "path": [
-                    "items"
+                    "admin",
+                    "activity",
+                    "logs"
                   ],
                   "query": [
                     {
-                      "key": "category",
+                      "key": "startDate",
                       "value": "",
-                      "description": "Filter by category",
+                      "description": "Filter logs from this date",
                       "disabled": true
                     },
                     {
-                      "key": "search",
+                      "key": "endDate",
                       "value": "",
-                      "description": "Search items by name",
+                      "description": "Filter logs until this date",
+                      "disabled": true
+                    },
+                    {
+                      "key": "userId",
+                      "value": "",
+                      "description": "Filter by user ID",
+                      "disabled": true
+                    },
+                    {
+                      "key": "tableName",
+                      "value": "",
+                      "description": "Filter by table name",
+                      "disabled": true
+                    },
+                    {
+                      "key": "operation",
+                      "value": "",
+                      "description": "Filter by operation type",
+                      "disabled": true
+                    },
+                    {
+                      "key": "page",
+                      "value": "",
+                      "disabled": true
+                    },
+                    {
+                      "key": "limit",
+                      "value": "",
                       "disabled": true
                     }
                   ]
                 },
-                "description": "Retrieve list of medical items and procedures",
+                "description": "Retrieve system audit logs with filtering. Admin role required.",
                 "auth": {
                   "type": "bearer",
                   "bearer": [
@@ -2700,6 +4735,220 @@
                 }
               },
               "code": 401,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": ""
+            },
+            {
+              "name": "403 - Forbidden - Admin access required",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/admin/activity/logs",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "activity",
+                    "logs"
+                  ],
+                  "query": [
+                    {
+                      "key": "startDate",
+                      "value": "",
+                      "description": "Filter logs from this date",
+                      "disabled": true
+                    },
+                    {
+                      "key": "endDate",
+                      "value": "",
+                      "description": "Filter logs until this date",
+                      "disabled": true
+                    },
+                    {
+                      "key": "userId",
+                      "value": "",
+                      "description": "Filter by user ID",
+                      "disabled": true
+                    },
+                    {
+                      "key": "tableName",
+                      "value": "",
+                      "description": "Filter by table name",
+                      "disabled": true
+                    },
+                    {
+                      "key": "operation",
+                      "value": "",
+                      "description": "Filter by operation type",
+                      "disabled": true
+                    },
+                    {
+                      "key": "page",
+                      "value": "",
+                      "disabled": true
+                    },
+                    {
+                      "key": "limit",
+                      "value": "",
+                      "disabled": true
+                    }
+                  ]
+                },
+                "description": "Retrieve system audit logs with filtering. Admin role required.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "Forbidden - Admin access required",
+              "code": 403,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"error\": \"string\",\n  \"code\": \"string\",\n  \"details\": {}\n}"
+            },
+            {
+              "name": "500 - undefined",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/admin/activity/logs",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "activity",
+                    "logs"
+                  ],
+                  "query": [
+                    {
+                      "key": "startDate",
+                      "value": "",
+                      "description": "Filter logs from this date",
+                      "disabled": true
+                    },
+                    {
+                      "key": "endDate",
+                      "value": "",
+                      "description": "Filter logs until this date",
+                      "disabled": true
+                    },
+                    {
+                      "key": "userId",
+                      "value": "",
+                      "description": "Filter by user ID",
+                      "disabled": true
+                    },
+                    {
+                      "key": "tableName",
+                      "value": "",
+                      "description": "Filter by table name",
+                      "disabled": true
+                    },
+                    {
+                      "key": "operation",
+                      "value": "",
+                      "description": "Filter by operation type",
+                      "disabled": true
+                    },
+                    {
+                      "key": "page",
+                      "value": "",
+                      "disabled": true
+                    },
+                    {
+                      "key": "limit",
+                      "value": "",
+                      "disabled": true
+                    }
+                  ]
+                },
+                "description": "Retrieve system audit logs with filtering. Admin role required.",
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{access_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "code": 500,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": ""
+            }
+          ]
+        },
+        {
+          "name": "CORS preflight",
+          "request": {
+            "method": "OPTIONS",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/activity/logs",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "activity",
+                "logs"
+              ]
+            },
+            "description": "Handle OPTIONS requests for CORS",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": [
+            {
+              "name": "200 - CORS headers returned",
+              "originalRequest": {
+                "method": "OPTIONS",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/admin/activity/logs",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "activity",
+                    "logs"
+                  ]
+                },
+                "description": "Handle OPTIONS requests for CORS",
+                "auth": {
+                  "type": "noauth"
+                }
+              },
+              "status": "CORS headers returned",
+              "code": 200,
               "header": [
                 {
                   "key": "Content-Type",
