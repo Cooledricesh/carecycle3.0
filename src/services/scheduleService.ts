@@ -243,7 +243,7 @@ export const scheduleService = {
         
         if (error) {
           console.error('[scheduleService.getTodayChecklist] Error:', error)
-          
+
           // Auth error - refresh token and retry
           if ((error.message?.includes('JWT') || error.message?.includes('token') || error.code === 'PGRST301') && retryCount === 0) {
             console.log('[scheduleService] Auth error, refreshing token...')
@@ -254,13 +254,25 @@ export const scheduleService = {
           }
           throw error
         }
-        
+
         let schedules = (data || []).map(item => {
           const schedule = snakeToCamel(item) as any
+          const patients = (item as any).patients
+          const items = (item as any).items
+
           return {
             ...schedule,
-            patient: (item as any).patients ? snakeToCamel((item as any).patients) : null,
-            item: (item as any).items ? snakeToCamel((item as any).items) : null
+            // Add flat fields for UI compatibility (matching scheduleServiceEnhanced pattern)
+            patient_name: patients?.name || '',
+            patient_care_type: patients?.care_type || '',
+            patient_number: patients?.patient_number || '',
+            doctor_id: patients?.doctor_id || null,
+            doctor_name: patients?.doctor_name || '',
+            item_name: items?.name || '',
+            item_category: items?.category || '',
+            // Keep nested objects for backward compatibility
+            patient: patients ? snakeToCamel(patients) : null,
+            item: items ? snakeToCamel(items) : null
           } as ScheduleWithDetails
         })
 
@@ -305,7 +317,7 @@ export const scheduleService = {
         const futureDate = format(addDays(today, daysAhead), 'yyyy-MM-dd')
         // Include schedules from 7 days before their due date
         const pastDate = format(addDays(today, -7), 'yyyy-MM-dd')
-        
+
         const { data, error } = await client
           .from('schedules')
           .select(`
@@ -317,10 +329,10 @@ export const scheduleService = {
           .gte('next_due_date', pastDate)
           .lte('next_due_date', futureDate)
         .order('next_due_date', { ascending: true })
-        
+
         if (error) {
           console.error('[scheduleService.getUpcomingSchedules] Error:', error)
-          
+
           // Auth error - refresh token and retry
           if ((error.message?.includes('JWT') || error.message?.includes('token') || error.code === 'PGRST301') && retryCount === 0) {
             console.log('[scheduleService] Auth error, refreshing token...')
@@ -331,13 +343,25 @@ export const scheduleService = {
           }
           throw error
         }
-        
+
         let schedules = (data || []).map(item => {
           const schedule = snakeToCamel(item) as any
+          const patients = (item as any).patients
+          const items = (item as any).items
+
           return {
             ...schedule,
-            patient: (item as any).patients ? snakeToCamel((item as any).patients) : null,
-            item: (item as any).items ? snakeToCamel((item as any).items) : null
+            // Add flat fields for UI compatibility (matching scheduleServiceEnhanced pattern)
+            patient_name: patients?.name || '',
+            patient_care_type: patients?.care_type || '',
+            patient_number: patients?.patient_number || '',
+            doctor_id: patients?.doctor_id || null,
+            doctor_name: patients?.doctor_name || '',
+            item_name: items?.name || '',
+            item_category: items?.category || '',
+            // Keep nested objects for backward compatibility
+            patient: patients ? snakeToCamel(patients) : null,
+            item: items ? snakeToCamel(items) : null
           } as ScheduleWithDetails
         })
 
@@ -620,13 +644,25 @@ export const scheduleService = {
           }
           throw error
         }
-        
+
         let schedules = (data || []).map(item => {
           const schedule = snakeToCamel(item) as any
+          const patients = (item as any).patients
+          const items = (item as any).items
+
           return {
             ...schedule,
-            patient: (item as any).patients ? snakeToCamel((item as any).patients) : null,
-            item: (item as any).items ? snakeToCamel((item as any).items) : null
+            // Add flat fields for UI compatibility (matching scheduleServiceEnhanced pattern)
+            patient_name: patients?.name || '',
+            patient_care_type: patients?.care_type || '',
+            patient_number: patients?.patient_number || '',
+            doctor_id: patients?.doctor_id || null,
+            doctor_name: patients?.doctor_name || '',
+            item_name: items?.name || '',
+            item_category: items?.category || '',
+            // Keep nested objects for backward compatibility
+            patient: patients ? snakeToCamel(patients) : null,
+            item: items ? snakeToCamel(items) : null
           } as ScheduleWithDetails
         })
 

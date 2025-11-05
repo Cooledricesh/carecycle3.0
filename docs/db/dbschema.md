@@ -2,7 +2,7 @@
 
 **Last Updated**: November 5, 2025
 **Schema Version**: 3.0.0 (Current Production State - Verified)
-**Migration Count**: 62 migrations applied
+**Migration Count**: 60 migrations applied
 **Direct DB Verification**: 2025-11-05
 
 ## Overview
