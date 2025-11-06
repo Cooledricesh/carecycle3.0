@@ -56,7 +56,8 @@
     "server-only": "0.0.1",
     "ts-pattern": "^5",
     "zod": "^3",
-    "zustand": "^4"
+    "zustand": "^4",
+    "@next/third-parties": "15.2.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
