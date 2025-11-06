@@ -25,12 +25,104 @@ export type NotificationChannel = 'dashboard' | 'push' | 'email'
 
 export type NotificationState = 'pending' | 'ready' | 'sent' | 'failed'
 
+export type JoinRequestStatus = 'pending' | 'approved' | 'rejected'
+
+export type InvitationStatus = 'pending' | 'accepted' | 'expired'
+
 export interface Database {
   public: {
     Tables: {
+      organizations: {
+        Row: {
+          id: string
+          name: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      join_requests: {
+        Row: {
+          id: string
+          organization_id: string
+          email: string
+          name: string
+          role: string
+          status: JoinRequestStatus
+          reviewed_by: string | null
+          reviewed_at: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          email: string
+          name: string
+          role?: string
+          status?: JoinRequestStatus
+          reviewed_by?: string | null
+          reviewed_at?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          organization_id?: string
+          email?: string
+          name?: string
+          role?: string
+          status?: JoinRequestStatus
+          reviewed_by?: string | null
+          reviewed_at?: string | null
+          created_at?: string
+        }
+      }
+      invitations: {
+        Row: {
+          id: string
+          organization_id: string
+          email: string
+          role: string
+          token: string
+          status: InvitationStatus
+          created_at: string
+          expires_at: string
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          email: string
+          role?: string
+          token?: string
+          status?: InvitationStatus
+          created_at?: string
+          expires_at?: string
+        }
+        Update: {
+          id?: string
+          organization_id?: string
+          email?: string
+          role?: string
+          token?: string
+          status?: InvitationStatus
+          created_at?: string
+          expires_at?: string
+        }
+      }
       profiles: {
         Row: {
           id: string
+          organization_id: string
           email: string
           name: string
           role: UserRole
@@ -45,6 +137,7 @@ export interface Database {
         }
         Insert: {
           id: string
+          organization_id?: string
           email: string
           name: string
           role?: UserRole
@@ -59,6 +152,7 @@ export interface Database {
         }
         Update: {
           id?: string
+          organization_id?: string
           email?: string
           name?: string
           role?: UserRole
@@ -131,6 +225,7 @@ export interface Database {
       audit_logs: {
         Row: {
           id: string
+          organization_id: string
           table_name: string
           operation: string
           record_id: string | null
@@ -146,6 +241,7 @@ export interface Database {
         }
         Insert: {
           id?: string
+          organization_id: string
           table_name: string
           operation: string
           record_id?: string | null
@@ -161,6 +257,7 @@ export interface Database {
         }
         Update: {
           id?: string
+          organization_id?: string
           table_name?: string
           operation?: string
           record_id?: string | null
@@ -178,6 +275,7 @@ export interface Database {
       items: {
         Row: {
           id: string
+          organization_id: string
           code: string
           name: string
           category: string
@@ -195,6 +293,7 @@ export interface Database {
         }
         Insert: {
           id?: string
+          organization_id: string
           code?: string
           name: string
           category: string
@@ -212,6 +311,7 @@ export interface Database {
         }
         Update: {
           id?: string
+          organization_id?: string
           code?: string
           name?: string
           category?: string
@@ -231,6 +331,7 @@ export interface Database {
       patients: {
         Row: {
           id: string
+          organization_id: string
           hospital_id: string | null
           patient_number: string
           name: string
@@ -248,6 +349,7 @@ export interface Database {
         }
         Insert: {
           id?: string
+          organization_id: string
           hospital_id?: string | null
           patient_number: string
           name: string
@@ -265,6 +367,7 @@ export interface Database {
         }
         Update: {
           id?: string
+          organization_id?: string
           hospital_id?: string | null
           patient_number?: string
           name?: string
@@ -284,6 +387,7 @@ export interface Database {
       schedules: {
         Row: {
           id: string
+          organization_id: string
           patient_id: string
           item_id: string
           interval_weeks: number
@@ -303,6 +407,7 @@ export interface Database {
         }
         Insert: {
           id?: string
+          organization_id: string
           patient_id: string
           item_id: string
           interval_weeks: number
@@ -322,6 +427,7 @@ export interface Database {
         }
         Update: {
           id?: string
+          organization_id?: string
           patient_id?: string
           item_id?: string
           interval_weeks?: number
@@ -343,6 +449,7 @@ export interface Database {
       schedule_executions: {
         Row: {
           id: string
+          organization_id: string
           schedule_id: string
           planned_date: string
           executed_date: string | null
@@ -358,6 +465,7 @@ export interface Database {
         }
         Insert: {
           id?: string
+          organization_id: string
           schedule_id: string
           planned_date: string
           executed_date?: string | null
@@ -373,6 +481,7 @@ export interface Database {
         }
         Update: {
           id?: string
+          organization_id?: string
           schedule_id?: string
           planned_date?: string
           executed_date?: string | null
@@ -390,6 +499,7 @@ export interface Database {
       notifications: {
         Row: {
           id: string
+          organization_id: string
           schedule_id: string | null
           execution_id: string | null
           recipient_id: string
@@ -407,6 +517,7 @@ export interface Database {
         }
         Insert: {
           id?: string
+          organization_id: string
           schedule_id?: string | null
           execution_id?: string | null
           recipient_id: string
@@ -424,6 +535,7 @@ export interface Database {
         }
         Update: {
           id?: string
+          organization_id?: string
           schedule_id?: string | null
           execution_id?: string | null
           recipient_id?: string
@@ -595,3 +707,15 @@ export type ScheduleExecutionUpdate = Database['public']['Tables']['schedule_exe
 export type Notification = Database['public']['Tables']['notifications']['Row']
 export type NotificationInsert = Database['public']['Tables']['notifications']['Insert']
 export type NotificationUpdate = Database['public']['Tables']['notifications']['Update']
+
+export type Organization = Database['public']['Tables']['organizations']['Row']
+export type OrganizationInsert = Database['public']['Tables']['organizations']['Insert']
+export type OrganizationUpdate = Database['public']['Tables']['organizations']['Update']
+
+export type JoinRequest = Database['public']['Tables']['join_requests']['Row']
+export type JoinRequestInsert = Database['public']['Tables']['join_requests']['Insert']
+export type JoinRequestUpdate = Database['public']['Tables']['join_requests']['Update']
+
+export type Invitation = Database['public']['Tables']['invitations']['Row']
+export type InvitationInsert = Database['public']['Tables']['invitations']['Insert']
+export type InvitationUpdate = Database['public']['Tables']['invitations']['Update']
