@@ -48,7 +48,7 @@
 - `src/app/(protected)/admin/page.tsx`
 
 #### 문서
-- `MULTI_TENANCY_PLAN.md` (활동 로그와 무관 - Multi-tenancy 계획)
+- `multitenancy.md` (활동 로그와 무관 - Multi-tenancy 계획)
 
 #### 임시 파일
 - `check_completed.mjs`
@@ -533,7 +533,7 @@ const isCompletion = newValues.next_due_date > oldValues.next_due_date
 
 ## 📚 참고 자료
 
-- Multi-tenancy 계획: `MULTI_TENANCY_PLAN.md`
+- Multi-tenancy 계획: `multitenancy.md`
 - API Reference: `docs/API-REFERENCE.md`
 - Supabase Migration 가이드: `CLAUDE.md`
 
