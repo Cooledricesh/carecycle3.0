@@ -35,43 +35,18 @@ npm run dev
 
 The API will be available at `http://localhost:3000/api`
 
-### 4. Access Interactive Documentation
 
-Open your browser and navigate to:
-```
-http://localhost:3000/api-docs
-```
+## 🔑 Quick Authentication
 
-This provides an interactive Swagger UI where you can test all endpoints.
-
-## 🔑 Authentication Flow
-
-### Step 1: Login
+For detailed authentication flow and API key system documentation, see [API Reference - Authentication](./API-REFERENCE.md#authentication).
 
 ```bash
+# Login
 curl -X POST http://localhost:3000/api/auth/login \
   -H "Content-Type: application/json" \
-  -d '{
-    "email": "test@example.com",
-    "password": "TestPassword123!"
-  }'
-```
+  -d '{"email": "test@example.com", "password": "TestPassword123!"}'
 
-**Response:**
-```json
-{
-  "session": {
-    "accessToken": "eyJ...",
-    "refreshToken": "eyJ..."
-  }
-}
-```
-
-### Step 2: Use the Token
-
-Include the token in all subsequent requests:
-
-```bash
+# Use the returned token
 curl -X GET http://localhost:3000/api/patients \
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
 ```
@@ -99,13 +74,7 @@ const response = await fetch('http://localhost:3000/api/patients/patient-uuid/up
 const result = await response.json();
 ```
 
-**Role-Based Update Restrictions:**
-
-| Role | Allowed Fields | Restrictions |
-|------|----------------|--------------|
-| Doctor | `metadata` | Can only update own patients |
-| Nurse | `careType`, `metadata` | Limited to assigned care type |
-| Admin | All fields | No restrictions |
+For role-based update restrictions, see [API Reference - Update Patient](./API-REFERENCE.md#update-patient-enhanced).
 
 ### Handling RLS (Row Level Security) Errors
 
@@ -132,28 +101,17 @@ try {
 }
 ```
 
-### Other Common Use Cases
 
-[Previous quick start guide use cases remain the same]
+## 🧪 Error Handling
 
-## 🧪 RLS Error Handling Strategy
-
-### Common RLS Error Codes
-
-| Code | Description | Action |
-|------|-------------|--------|
-| `42501` | Row Level Security Violation | Check user permissions |
-| `ROLE_RESTRICTED` | Role-based Update Constraint | Limit update fields |
-
-### Fallback Mechanism
-
-1. Attempt direct Supabase update
-2. If RLS blocks, use service-layer validation
-3. Provide clear, actionable error messages
+For comprehensive error codes and RLS handling strategies, see [API Reference - Error Handling](./API-REFERENCE.md#error-handling).
 
 ## 🛠️ Development Tools
 
-[Previous development tools section remains the same]
+### Testing API Endpoints
+- Use `curl` for command-line testing
+- Postman or Insomnia for GUI-based testing
+- VS Code REST Client extension for in-editor testing
 
 ## 🐛 Debugging RLS and Role-Based Issues
 

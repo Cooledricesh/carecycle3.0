@@ -112,12 +112,15 @@ supabase/migrations/*.md
 vooster.json
 
 # Test files with hardcoded credentials
+# Test files (except __tests__ directories for proper test suites)
 test-*.js
-*.test.js
 test-*.ts
-*.test.ts
 **/test/**
 **/tests/**
+
+# Allow test files in __tests__ directories (Vitest/Jest convention)
+!**/__tests__/**/*.test.js
+!**/__tests__/**/*.test.ts
 
 # Admin scripts with sensitive data (NEVER COMMIT)
 create-admin*.js

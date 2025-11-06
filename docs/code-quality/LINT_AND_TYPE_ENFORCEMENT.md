@@ -171,36 +171,7 @@ import { SpecificExport } from 'some-module';
 - Achieve zero TypeScript errors
 - Enable strict mode
 
-## 8. Enforcement Prompts for AI Assistants
-
-### Starting Any Task
-```text
-Before I begin, I will:
-1. Run `npm run lint` and document current errors
-2. Run `npx tsc --noEmit` and document type errors
-3. Save baseline to compare against later
-4. Not proceed until baseline is established
-```
-
-### During Development
-```text
-After each file modification, I will:
-1. Run lint on the specific file
-2. Fix ALL errors in that file, not just "related" ones
-3. Verify no new errors in other files
-4. Document any errors I cannot fix with reason and TODO
-```
-
-### Before Completion
-```text
-I cannot consider this task complete until:
-1. npm run lint shows no new errors
-2. npx tsc --noEmit shows no new errors
-3. All errors are either fixed or documented with issue numbers
-4. The error checklist is completed and included in my response
-```
-
-## 9. REJECTION Criteria
+## 8. REJECTION Criteria
 
 Your work will be REJECTED if:
 - 🚫 You add new lint errors without fixing them
@@ -210,7 +181,7 @@ Your work will be REJECTED if:
 - 🚫 You skip the validation checklist
 - 🚫 You increase the total error count
 
-## 10. The Golden Rules
+## 9. The Golden Rules
 
 1. **Every error matters** - No error is too small to fix
 2. **Leave it better** - Fix more than you break
@@ -218,7 +189,7 @@ Your work will be REJECTED if:
 4. **No surprises** - All errors must be accounted for
 5. **Continuous improvement** - Each PR should reduce total errors
 
-## 11. Emergency Procedures
+## 10. Emergency Procedures
 
 ### If You Accidentally Introduced Errors
 
@@ -248,7 +219,7 @@ git add -p  # Partial adds
 git commit -m "fix: resolve lint errors in components"
 ```
 
-## 12. Reporting Template
+## 11. Reporting Template
 
 ### Use This Format in Every Response
 

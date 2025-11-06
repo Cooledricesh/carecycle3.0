@@ -1,3 +1,6 @@
+import { ChannelIO } from '@/third-parties/Channelio';
+import { GoogleAnalytics } from '@next/third-parties/google'
+import { GA_MEASUREMENT_ID } from './gtag';
 import type { Metadata } from 'next';
 import { Noto_Sans_KR } from 'next/font/google';
 import './globals.css';
@@ -30,9 +33,12 @@ export default function RootLayout({
 }>) {
   return (
     <html suppressHydrationWarning lang="ko">
+      <ChannelIO />
       <body
         className={`${notoSansKR.variable} font-sans antialiased`}
       >
+  {/* Google Analytics */}
+  <GoogleAnalytics gaId={GA_MEASUREMENT_ID} />
         <Providers>{children}</Providers>
       </body>
     </html>
