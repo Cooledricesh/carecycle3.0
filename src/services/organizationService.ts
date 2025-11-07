@@ -104,6 +104,7 @@ export async function createOrganization(
     // Insert organization
     const { data, error } = await supabase
       .from('organizations')
+      // @ts-expect-error - Supabase type inference issue with organizations table
       .insert({ name: trimmedName })
       .select('id, name')
       .single();
@@ -166,7 +167,7 @@ export async function createOrganizationAndRegisterUser(
     const trimmedName = organizationName.trim();
 
     // Call RPC function for atomic operation
-    const { data, error } = await supabase.rpc(
+    const { data, error } = await (supabase.rpc as any)(
       'create_organization_and_register_user',
       {
         p_user_id: userId,
@@ -188,8 +189,8 @@ export async function createOrganizationAndRegisterUser(
 
     // RPC function returns organization_id directly as a string
     // Wrap it in an object for consistent API
-    const organizationId = typeof data === 'string' ? data : data?.organization_id || data;
-    return { data: { organization_id: organizationId }, error: null };
+    const organizationId = typeof data === 'string' ? data : (data as any)?.organization_id || data;
+    return { data: { organization_id: organizationId as string }, error: null };
   } catch (err) {
     return {
       data: null,

@@ -124,6 +124,7 @@ export class DoctorFilterStrategy implements FilterStrategy {
         )
       `)
       .eq('status', 'active')
+      .eq('organization_id', userContext.organizationId)
 
     // Apply doctor filtering (only show assigned patients unless showAll is true)
     if (!filters.showAll) {

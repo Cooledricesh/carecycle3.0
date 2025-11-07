@@ -104,7 +104,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     // If no error or error is not "no rows", it means there's an existing request
-    if (existingRequest && existingError?.code !== "PGRST116") {
+    if (existingRequest && (!existingError || (existingError && typeof existingError === 'object' && existingError !== null && 'code' in existingError && (existingError as any).code !== "PGRST116"))) {
       return NextResponse.json(
         {
           error: "Bad Request",

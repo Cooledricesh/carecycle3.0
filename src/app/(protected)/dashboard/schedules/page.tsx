@@ -126,7 +126,12 @@ function SchedulesContent() {
   const error = schedulesError || overdueError;
 
   const deleteMutation = useMutation({
-    mutationFn: scheduleService.delete,
+    mutationFn: (id: string) => {
+      if (!profile?.organization_id) {
+        throw new Error('Organization ID not available');
+      }
+      return scheduleService.delete(id, profile.organization_id);
+    },
     onSuccess: async () => {
       scheduleServiceEnhanced.clearCache();
       eventManager.emitScheduleChange();
@@ -156,8 +161,12 @@ function SchedulesContent() {
   };
 
   const statusMutation = useMutation({
-    mutationFn: ({ id, status }: { id: string; status: 'active' | 'paused' }) =>
-      scheduleService.updateStatus(id, status),
+    mutationFn: ({ id, status }: { id: string; status: 'active' | 'paused' }) => {
+      if (!profile?.organization_id) {
+        throw new Error('Organization ID not available');
+      }
+      return scheduleService.updateStatus(id, status, profile.organization_id);
+    },
     onSuccess: async (_, variables) => {
       scheduleServiceEnhanced.clearCache();
       eventManager.emitScheduleChange();
@@ -194,10 +203,10 @@ function SchedulesContent() {
   };
 
   const handleConfirmResume = async (options: { strategy: 'custom' | 'immediate' | 'next_cycle'; customDate?: Date; handleMissed?: 'skip' | 'catch_up' | 'mark_overdue' }) => {
-    if (!selectedScheduleForResume) return;
+    if (!selectedScheduleForResume || !profile?.organization_id) return;
 
     try {
-      await scheduleService.resumeSchedule(selectedScheduleForResume.id, options);
+      await scheduleService.resumeSchedule(selectedScheduleForResume.id, profile.organization_id, options);
 
       scheduleServiceEnhanced.clearCache();
       eventManager.emitScheduleChange();

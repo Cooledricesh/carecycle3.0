@@ -228,8 +228,12 @@ export function CalendarView({ className }: CalendarViewProps) {
   
   // 스케줄 액션 핸들러들
   const statusMutation = useMutation({
-    mutationFn: ({ id, status }: { id: string; status: 'active' | 'paused' }) =>
-      scheduleService.updateStatus(id, status),
+    mutationFn: ({ id, status }: { id: string; status: 'active' | 'paused' }) => {
+      if (!profile?.organization_id) {
+        throw new Error('Organization ID not available');
+      }
+      return scheduleService.updateStatus(id, status, profile.organization_id);
+    },
     onSuccess: async (_, variables) => {
       toast({
         title: "성공",
@@ -252,7 +256,12 @@ export function CalendarView({ className }: CalendarViewProps) {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: scheduleService.delete,
+    mutationFn: (id: string) => {
+      if (!profile?.organization_id) {
+        throw new Error('Organization ID not available');
+      }
+      return scheduleService.delete(id, profile.organization_id);
+    },
     onSuccess: async () => {
       toast({
         title: "성공",
@@ -288,9 +297,10 @@ export function CalendarView({ className }: CalendarViewProps) {
     if (!selectedScheduleForResume) return;
 
     try {
+      if (!profile?.organization_id) return;
       // Use id fallback to handle objects with either id or schedule_id
       const scheduleId = (selectedScheduleForResume as any).id || (selectedScheduleForResume as any).schedule_id;
-      await scheduleService.resumeSchedule(scheduleId, options);
+      await scheduleService.resumeSchedule(scheduleId, profile.organization_id, options);
 
       toast({
         title: "성공",

@@ -116,6 +116,7 @@ export class NurseFilterStrategy implements FilterStrategy {
         )
       `)
       .eq('status', 'active')
+      .eq('organization_id', userContext.organizationId)
 
     // Apply care type filtering
     if (!filters.showAll && userContext.careType) {

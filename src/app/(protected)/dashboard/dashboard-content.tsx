@@ -85,8 +85,9 @@ export default function DashboardContent() {
 
   // Pause schedule handler
   const handlePause = async (schedule: ScheduleWithDetails) => {
+    if (!profile?.organization_id) return;
     try {
-      await scheduleService.pauseSchedule(schedule.schedule_id, { reason: '수동 보류' });
+      await scheduleService.pauseSchedule(schedule.schedule_id, profile.organization_id, { reason: '수동 보류' });
       toast({
         title: "보류 완료",
         description: `${schedule.patient_name}님의 ${schedule.item_name} 스케줄이 보류되었습니다.`,
@@ -104,8 +105,9 @@ export default function DashboardContent() {
 
   // Resume schedule handler
   const handleResume = async (schedule: ScheduleWithDetails) => {
+    if (!profile?.organization_id) return;
     try {
-      await scheduleService.resumeSchedule(schedule.schedule_id, {
+      await scheduleService.resumeSchedule(schedule.schedule_id, profile.organization_id, {
         strategy: 'next_cycle',
         handleMissed: 'skip'
       });
@@ -132,11 +134,11 @@ export default function DashboardContent() {
 
   // Actual deletion after confirmation
   const confirmDelete = async () => {
-    if (!scheduleToDelete) return;
+    if (!scheduleToDelete || !profile?.organization_id) return;
 
     setIsDeleting(true);
     try {
-      await scheduleService.delete(scheduleToDelete.schedule_id);
+      await scheduleService.delete(scheduleToDelete.schedule_id, profile.organization_id);
       toast({
         title: "삭제 완료",
         description: `${scheduleToDelete.patient_name}님의 ${scheduleToDelete.item_name} 스케줄이 삭제되었습니다.`,

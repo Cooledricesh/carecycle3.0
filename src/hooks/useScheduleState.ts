@@ -71,10 +71,15 @@ export function useScheduleState(schedule: Schedule | null): UseScheduleStateRet
       await stateManager.pauseSchedule(id, options)
     },
     onSuccess: (_, variables) => {
+      const organizationId = (schedule as any)?.organization_id
       scheduleServiceEnhanced.clearCache()
       eventManager.emitScheduleChange()
       queryClient.invalidateQueries({ queryKey: ['schedules'] })
-      queryClient.invalidateQueries({ queryKey: ['schedule', variables.id] })
+      if (organizationId) {
+        queryClient.invalidateQueries({ queryKey: ['schedule', variables.id, organizationId] })
+      } else {
+        queryClient.invalidateQueries({ queryKey: ['schedule', variables.id] })
+      }
       queryClient.invalidateQueries({ queryKey: ['schedule-executions'] })
       queryClient.invalidateQueries({ queryKey: ['notifications'] })
 
@@ -102,10 +107,15 @@ export function useScheduleState(schedule: Schedule | null): UseScheduleStateRet
       await stateManager.resumeSchedule(id, options)
     },
     onSuccess: (_, variables) => {
+      const organizationId = (schedule as any)?.organization_id
       scheduleServiceEnhanced.clearCache()
       eventManager.emitScheduleChange()
       queryClient.invalidateQueries({ queryKey: ['schedules'] })
-      queryClient.invalidateQueries({ queryKey: ['schedule', variables.id] })
+      if (organizationId) {
+        queryClient.invalidateQueries({ queryKey: ['schedule', variables.id, organizationId] })
+      } else {
+        queryClient.invalidateQueries({ queryKey: ['schedule', variables.id] })
+      }
       queryClient.invalidateQueries({ queryKey: ['schedule-executions'] })
       queryClient.invalidateQueries({ queryKey: ['notifications'] })
 

@@ -234,7 +234,7 @@ export const scheduleService = {
       try {
         console.log('[scheduleService.getTodayChecklist] Fetching with filters:', filters, '(attempt:', retryCount + 1, ')')
         const today = format(new Date(), 'yyyy-MM-dd')
-        
+
         const { data, error } = await client
           .from('schedules')
           .select(`
@@ -247,7 +247,7 @@ export const scheduleService = {
           .lte('next_due_date', today)
           .order('priority', { ascending: false })
           .order('next_due_date', { ascending: true })
-        
+
         if (error) {
           console.error('[scheduleService.getTodayChecklist] Error:', error)
 
@@ -269,6 +269,8 @@ export const scheduleService = {
 
           return {
             ...schedule,
+            // Explicit schedule_id mapping (ScheduleWithDetails expects snake_case)
+            schedule_id: item.id,
             // Add flat fields for UI compatibility (matching scheduleServiceEnhanced pattern)
             patient_name: patients?.name || '',
             patient_care_type: patients?.care_type || '',
@@ -359,6 +361,8 @@ export const scheduleService = {
 
           return {
             ...schedule,
+            // Explicit schedule_id mapping (ScheduleWithDetails expects snake_case)
+            schedule_id: item.id,
             // Add flat fields for UI compatibility (matching scheduleServiceEnhanced pattern)
             patient_name: patients?.name || '',
             patient_care_type: patients?.care_type || '',
@@ -679,6 +683,8 @@ export const scheduleService = {
 
           return {
             ...schedule,
+            // Explicit schedule_id mapping (ScheduleWithDetails expects snake_case)
+            schedule_id: item.id,
             // Add flat fields for UI compatibility (matching scheduleServiceEnhanced pattern)
             patient_name: patients?.name || '',
             patient_care_type: patients?.care_type || '',

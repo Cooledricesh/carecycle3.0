@@ -38,11 +38,11 @@ export function LoginForm({
         email,
         password,
       });
-      
+
       if (error) throw error;
-      
-      // 템플릿처럼 단순하게 리다이렉트
-      router.push("/dashboard");
+
+      // 하드 리디렉트로 세션 쿠키 반영
+      window.location.href = "/dashboard";
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : "로그인 중 오류가 발생했습니다.";
 

@@ -158,7 +158,11 @@ export function PatientRegistrationModal({
         careType: data.careType,
         isActive: true,
       })
-      
+
+      if (!profile?.organization_id) {
+        throw new Error('Organization ID not found');
+      }
+
       const supabase = createClient()
       const result = await patientService.create({
         name: data.name,
@@ -166,7 +170,7 @@ export function PatientRegistrationModal({
         careType: data.careType,
         doctorId: (profile?.role === 'admin' || profile?.role === 'doctor' || profile?.role === 'nurse') ? data.doctorId : null,
         isActive: true,
-      }, supabase)
+      }, profile.organization_id, supabase)
       
       console.log('Patient created successfully:', result)
 

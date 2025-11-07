@@ -74,12 +74,24 @@ describe('Organization Service', () => {
       mockSupabase = {
         from: vi.fn((table: string) => ({
           select: vi.fn(() => ({
+            eq: vi.fn(async () => ({
+              data: null,
+              error: null
+            })),
             ilike: vi.fn(async () => ({
               data: [
                 { id: 'org-1', name: '테스트병원' },
                 { id: 'org-2', name: '테스트새병원' }
               ],
               error: null
+            }))
+          })),
+          insert: vi.fn(() => ({
+            select: vi.fn(() => ({
+              single: vi.fn(async () => ({
+                data: null,
+                error: null
+              }))
             }))
           }))
         })),
@@ -111,9 +123,21 @@ describe('Organization Service', () => {
     it('should return empty array when no organizations match', async () => {
       mockSupabase.from = vi.fn(() => ({
         select: vi.fn(() => ({
+          eq: vi.fn(async () => ({
+            data: null,
+            error: null
+          })),
           ilike: vi.fn(async () => ({
             data: [],
             error: null
+          }))
+        })),
+        insert: vi.fn(() => ({
+          select: vi.fn(() => ({
+            single: vi.fn(async () => ({
+              data: null,
+              error: null
+            }))
           }))
         }))
       }));
@@ -130,9 +154,21 @@ describe('Organization Service', () => {
     it('should handle database errors gracefully', async () => {
       mockSupabase.from = vi.fn(() => ({
         select: vi.fn(() => ({
+          eq: vi.fn(async () => ({
+            data: null,
+            error: null
+          })),
           ilike: vi.fn(async () => ({
             data: null,
             error: { message: 'Database error' }
+          }))
+        })),
+        insert: vi.fn(() => ({
+          select: vi.fn(() => ({
+            single: vi.fn(async () => ({
+              data: null,
+              error: null
+            }))
           }))
         }))
       }));

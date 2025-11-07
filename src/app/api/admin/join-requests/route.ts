@@ -87,11 +87,14 @@ export async function GET(request: NextRequest) {
     }
 
     // 4. Transform data to include organization_name
-    const transformedRequests = joinRequests?.map((request) => ({
-      ...request,
-      organization_name: request.organizations?.name || null,
-      organizations: undefined, // Remove nested object
-    }));
+    const transformedRequests = joinRequests?.map((request) => {
+      const org = Array.isArray(request.organizations) ? request.organizations[0] : request.organizations;
+      return {
+        ...request,
+        organization_name: org?.name || null,
+        organizations: undefined, // Remove nested object
+      };
+    });
 
     return NextResponse.json({
       data: transformedRequests || [],

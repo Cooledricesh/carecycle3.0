@@ -98,21 +98,27 @@ describe('PatientValidationService', () => {
   describe('validatePatientNumber - Duplicate Check', () => {
     it('should detect active patient conflict', async () => {
       // Arrange: Mock active patient exists
+      const mockEqChain = {
+        single: vi.fn().mockResolvedValue({
+          data: {
+            id: '1',
+            name: '테스트',
+            patient_number: 'TEST001',
+            care_type: '외래'
+          },
+          error: null
+        }),
+        limit: vi.fn().mockResolvedValue({
+          data: [],
+          error: null
+        })
+      }
+
       const mockFrom = vi.fn(() => ({
         select: vi.fn(() => ({
           eq: vi.fn(() => ({
             eq: vi.fn(() => ({
-              eq: vi.fn(() => ({
-                single: vi.fn().mockResolvedValue({
-                  data: {
-                    id: '1',
-                    name: '테스트',
-                    patient_number: 'TEST001',
-                    care_type: '외래'
-                  },
-                  error: null
-                })
-              }))
+              eq: vi.fn(() => mockEqChain)
             }))
           }))
         }))
@@ -120,7 +126,9 @@ describe('PatientValidationService', () => {
       mockSupabase.from = mockFrom as any
 
       // Act
-      const result = await service.validatePatientNumber('TEST001')
+      const result = await service.validatePatientNumber('TEST001', {
+        suggestAlternatives: false
+      })
 
       // Assert
       expect(result.isValid).toBe(false)
@@ -131,16 +139,22 @@ describe('PatientValidationService', () => {
 
     it('should pass when no duplicate exists', async () => {
       // Arrange: Mock no patient exists (PGRST116 = no rows found)
+      const mockEqChain = {
+        single: vi.fn().mockResolvedValue({
+          data: null,
+          error: { code: 'PGRST116' }
+        }),
+        limit: vi.fn().mockResolvedValue({
+          data: [],
+          error: null
+        })
+      }
+
       const mockFrom = vi.fn(() => ({
         select: vi.fn(() => ({
           eq: vi.fn(() => ({
             eq: vi.fn(() => ({
-              eq: vi.fn(() => ({
-                single: vi.fn().mockResolvedValue({
-                  data: null,
-                  error: { code: 'PGRST116' }
-                })
-              }))
+              eq: vi.fn(() => mockEqChain)
             }))
           }))
         }))
