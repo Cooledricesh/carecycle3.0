@@ -7,6 +7,23 @@ import type {
   ActivityOperation,
 } from '@/types/activity'
 
+// Valid operation types for runtime validation
+const VALID_OPERATIONS: ActivityOperation[] = ['INSERT', 'UPDATE', 'DELETE', 'LOGIN', 'LOGOUT']
+
+/**
+ * Validates and safely casts operation string to ActivityOperation type
+ * @param operation - Raw operation string from database
+ * @returns Valid ActivityOperation or 'UNKNOWN' if invalid
+ */
+function validateOperation(operation: string): ActivityOperation {
+  if (VALID_OPERATIONS.includes(operation as ActivityOperation)) {
+    return operation as ActivityOperation
+  }
+
+  console.error('[activityService] Invalid operation value detected:', operation)
+  return 'UNKNOWN'
+}
+
 export const activityService = {
   async getStats(supabase?: SupabaseClient): Promise<ActivityStats> {
     const client = supabase || createClient()
@@ -120,7 +137,7 @@ export const activityService = {
         return {
           id: row.id,
           tableName: row.table_name,
-          operation: row.operation as ActivityOperation,
+          operation: validateOperation(row.operation),
           recordId: row.record_id,
           oldValues: row.old_values as Record<string, any> | null,
           newValues: row.new_values as Record<string, any> | null,
