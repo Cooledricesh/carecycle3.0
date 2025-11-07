@@ -29,34 +29,38 @@ export function useProfile() {
     queryKey: ['profile', user?.id],
     queryFn: async () => {
       if (!user?.id) {
-        console.log('[useProfile] No user ID available');
         return null;
       }
 
-      console.log('[useProfile] Fetching profile for user:', user.id);
+      // Add timeout protection (10 seconds)
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error('Profile fetch timeout after 10s')), 10000);
+      });
 
-      const { data, error } = await supabase
+      const queryPromise = supabase
         .from('profiles')
         .select('*')
         .eq('id', user.id)
         .single();
 
-      if (error) {
-        console.error('[useProfile] Error fetching profile:', {
-          message: error.message || 'Unknown error',
-          code: error.code || 'NO_CODE',
-          details: error.details || 'No details',
-          hint: error.hint || 'No hint',
-          name: error.name || 'Error'
-        });
+      try {
+        const { data, error } = await Promise.race([queryPromise, timeoutPromise]);
+
+        if (error) {
+          console.error('[useProfile] Error fetching profile:', error.message);
+          return null;
+        }
+
+        return data;
+      } catch (timeoutError: any) {
+        console.error('[useProfile] Query timeout:', timeoutError.message);
         return null;
       }
-
-      console.log('[useProfile] Profile fetched successfully:', data);
-      return data;
     },
     enabled: !!user?.id,
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 10 * 60 * 1000, // 10 minutes
+    retry: 1, // Only retry once to avoid extended hangs
+    retryDelay: 1000, // Short retry delay
   });
 }

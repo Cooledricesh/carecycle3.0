@@ -16,16 +16,16 @@ function makeQueryClient() {
   return new QueryClient({
     defaultOptions: {
       queries: {
-        // Always consider data stale to ensure fresh data
-        staleTime: 0,
+        // Consider data stale after 30 seconds to balance freshness and performance
+        staleTime: 30 * 1000,
         // Cache data for 5 minutes
         gcTime: 5 * 60 * 1000,
-        // Always refetch when window regains focus
-        refetchOnWindowFocus: true,
-        // Always refetch when component mounts
-        refetchOnMount: 'always',
-        // Retry failed requests
-        retry: 2,
+        // Don't refetch on window focus to prevent unnecessary requests
+        refetchOnWindowFocus: false,
+        // Only refetch on mount if data is stale (not 'always')
+        refetchOnMount: true,
+        // Retry failed requests once (reduced from 2)
+        retry: 1,
         retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
       },
       mutations: {

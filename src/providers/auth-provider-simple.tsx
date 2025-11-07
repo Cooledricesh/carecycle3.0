@@ -5,73 +5,32 @@ import { User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 
-interface UserProfile {
-  id: string
-  email: string
-  name: string
-  role: string
-  organization_id: string
-  care_type: string | null
-  is_active: boolean
-  approval_status: 'pending' | 'approved' | 'rejected' | null
-  created_at?: string | null
-  updated_at?: string | null
-  phone?: string | null
-  approved_at?: string | null
-  approved_by?: string | null
-  rejection_reason?: string | null
-}
-
 interface AuthContextType {
   user: User | null
-  profile: UserProfile | null
   loading: boolean
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
-  profile: null,
   loading: true,
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
-
-  // Fetch user profile including organization_id
-  const fetchUserProfile = async (userId: string) => {
-    try {
-      const supabase = createClient();
-
-      // Simple fetch without timeout - let Supabase handle its own timeout
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, email, name, role, organization_id, care_type, is_active, approval_status')
-        .eq('id', userId)
-        .single();
-
-      if (error) {
-        console.error('[Auth] Error fetching profile:', error);
-        // User will continue without profile data
-        setProfile(null);
-      } else {
-        setProfile(data);
-      }
-    } catch (error) {
-      console.error('[Auth] Error in fetchUserProfile:', error);
-      // Continuing without profile - may be RLS issue
-      setProfile(null);
-    }
-  };
 
   useEffect(() => {
     const supabase = createClient();
     let mounted = true;
 
-    // Set loading to false immediately - we'll handle auth state from onAuthStateChange
-    setLoading(false);
+    // Check initial session immediately
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (mounted) {
+        setUser(session?.user ?? null);
+        setLoading(false);
+      }
+    });
 
     // Listen for changes on auth state
     const {
@@ -79,23 +38,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (!mounted) return;
 
-      console.log('[Auth] Auth state changed:', event, !!session);
-
-      // Handle all auth state changes including INITIAL_SESSION
-      if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+      // Handle all auth state changes
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
         setUser(session?.user ?? null);
-
-        // Fetch profile for signed in user
-        if (session?.user) {
-          await fetchUserProfile(session.user.id);
-        } else {
-          setProfile(null);
-        }
       }
 
       if (event === 'SIGNED_OUT') {
         setUser(null);
-        setProfile(null);
       }
 
       // Refresh the page on sign in/out to update server components
@@ -111,7 +60,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [router]);
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading }}>
+    <AuthContext.Provider value={{ user, loading }}>
       {children}
     </AuthContext.Provider>
   );
