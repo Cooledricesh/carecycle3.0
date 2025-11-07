@@ -2,8 +2,7 @@
 // @ts-nocheck - Legacy service with complex type issues, needs refactoring
 'use client'
 
-import { createClient } from '@/lib/supabase/client'
-import type { SupabaseClient } from '@/lib/supabase/database'
+import { createClient, type SupabaseClient } from '@/lib/supabase/client'
 import {
   ScheduleCreateSchema,
   ScheduleUpdateSchema,

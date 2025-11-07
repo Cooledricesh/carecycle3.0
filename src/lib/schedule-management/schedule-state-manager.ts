@@ -2,8 +2,7 @@
 // @ts-nocheck - Complex type mismatches with database schema, needs refactoring
 'use client'
 
-import { createClient } from '@/lib/supabase/client'
-import type { SupabaseClient } from '@/lib/supabase/database'
+import { createClient, type SupabaseClient } from '@/lib/supabase/client'
 import { ScheduleStateValidator } from './schedule-state-validator'
 import { ScheduleDateCalculator, type RecalculationOptions } from './schedule-date-calculator'
 import { ScheduleDataSynchronizer } from './schedule-data-synchronizer'

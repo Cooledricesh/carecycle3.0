@@ -1,7 +1,6 @@
 'use client'
 
-import { createClient } from '@/lib/supabase/client'
-import type { SupabaseClient } from '@/lib/supabase/database'
+import { createClient, type SupabaseClient } from '@/lib/supabase/client'
 import { patientRestoreManager, type InactivePatient } from './patient-restore-manager'
 
 export interface ValidationResult {

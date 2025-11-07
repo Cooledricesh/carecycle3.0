@@ -1,11 +1,9 @@
-/* eslint-disable @typescript-eslint/ban-ts-comment */
 /**
  * Organization Service
  *
  * Handles organization creation, search, and user registration.
  * Implements validation and business logic for organization management.
  */
-// @ts-nocheck - Legacy service with complex type issues, needs refactoring
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '@/lib/database.types';
@@ -106,7 +104,6 @@ export async function createOrganization(
     // Insert organization
     const { data, error } = await supabase
       .from('organizations')
-      // @ts-expect-error - Supabase type inference issue with organizations table
       .insert({ name: trimmedName })
       .select('id, name')
       .single();
@@ -137,6 +134,7 @@ export async function createOrganization(
  *
  * @param supabase - Supabase client
  * @param userId - User ID to register as admin
+ * @param userName - User name for profile
  * @param organizationName - Name of organization to create
  * @param userRole - Role to assign to user ('admin', 'doctor', 'nurse')
  * @returns Organization ID if successful
@@ -144,8 +142,9 @@ export async function createOrganization(
 export async function createOrganizationAndRegisterUser(
   supabase: SupabaseClient<Database>,
   userId: string,
+  userName: string,
   organizationName: string,
-  userRole: string
+  userRole: string = 'admin'
 ): Promise<{
   data: { organization_id: string } | null;
   error: Error | null;
@@ -169,11 +168,12 @@ export async function createOrganizationAndRegisterUser(
     const trimmedName = organizationName.trim();
 
     // Call RPC function for atomic operation
-    const { data, error } = await (supabase.rpc as any)(
+    const { data, error } = await supabase.rpc(
       'create_organization_and_register_user',
       {
-        p_user_id: userId,
         p_organization_name: trimmedName,
+        p_user_id: userId,
+        p_user_name: userName,
         p_user_role: userRole,
       }
     );
@@ -191,8 +191,8 @@ export async function createOrganizationAndRegisterUser(
 
     // RPC function returns organization_id directly as a string
     // Wrap it in an object for consistent API
-    const organizationId = typeof data === 'string' ? data : (data as any)?.organization_id || data;
-    return { data: { organization_id: organizationId as string }, error: null };
+    const organizationId = typeof data === 'string' ? data : String(data);
+    return { data: { organization_id: organizationId }, error: null };
   } catch (err) {
     return {
       data: null,

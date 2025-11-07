@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/ban-ts-comment */
-// @ts-nocheck - Type issues with realtime subscriptions, needs proper typing
 'use client'
 
 import { useEffect, useState } from 'react'
@@ -197,7 +195,7 @@ function ApprovalPendingPageContent() {
                 <p><span className="font-medium">Name:</span> {profile.name}</p>
                 <p><span className="font-medium">Email:</span> {profile.email}</p>
                 <p><span className="font-medium">Role:</span> {profile.role}</p>
-                <p><span className="font-medium">Registered:</span> {new Date(profile.created_at).toLocaleDateString()}</p>
+                <p><span className="font-medium">Registered:</span> {profile.created_at ? new Date(profile.created_at).toLocaleDateString() : 'N/A'}</p>
                 <p>
                   <span className="font-medium">Status:</span>{' '}
                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${

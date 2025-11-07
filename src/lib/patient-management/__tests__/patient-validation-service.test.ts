@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { PatientValidationService } from '../patient-validation-service'
-import type { SupabaseClient } from '@/lib/supabase/database'
+import type { SupabaseClient } from '@/lib/supabase/client'
 import { patientRestoreManager } from '../patient-restore-manager'
 
 // Mock patient restore manager

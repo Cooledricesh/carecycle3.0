@@ -1,12 +1,10 @@
-/* eslint-disable @typescript-eslint/ban-ts-comment */
-// @ts-nocheck - Legacy service with complex type issues, needs refactoring
-import { createClient } from '@/lib/supabase/client'
-import type { SupabaseClient } from '@/lib/supabase/database'
+import { createClient, type SupabaseClient } from '@/lib/supabase/client'
 import type {
   ActivityStats,
   ActivityFilters,
   PaginatedAuditLogs,
   AuditLog,
+  ActivityOperation,
 } from '@/types/activity'
 
 export const activityService = {
@@ -116,17 +114,17 @@ export const activityService = {
       data?.map((row) => ({
         id: row.id,
         tableName: row.table_name,
-        operation: row.operation,
+        operation: row.operation as ActivityOperation,
         recordId: row.record_id,
-        oldValues: row.old_values,
-        newValues: row.new_values,
+        oldValues: row.old_values as Record<string, any> | null,
+        newValues: row.new_values as Record<string, any> | null,
         userId: row.user_id,
         userEmail: row.user_email,
         // Use the user_name field from audit_logs (populated by our migration)
         userName: row.user_name || null,
         userRole: row.user_role,
-        timestamp: row.timestamp,
-        ipAddress: row.ip_address,
+        timestamp: row.timestamp || new Date().toISOString(),
+        ipAddress: typeof row.ip_address === 'string' ? row.ip_address : null,
         userAgent: row.user_agent,
       })) || []
 
