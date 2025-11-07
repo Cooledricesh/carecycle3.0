@@ -39,26 +39,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const supabase = createClient();
 
-      // Add timeout to prevent infinite waiting
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Profile fetch timeout')), 5000)
-      );
-
-      const fetchPromise = supabase
+      // Simple fetch without timeout - let Supabase handle its own timeout
+      const { data, error } = await supabase
         .from('profiles')
         .select('id, email, name, role, organization_id, care_type, is_active, approval_status')
         .eq('id', userId)
         .single();
 
-      // Race between fetch and timeout
-      const result = await Promise.race([fetchPromise, timeoutPromise]) as any;
-
-      if (result.error) {
-        console.error('[Auth] Error fetching profile:', result.error);
+      if (error) {
+        console.error('[Auth] Error fetching profile:', error);
         // User will continue without profile data
         setProfile(null);
       } else {
-        setProfile(result.data);
+        setProfile(data);
       }
     } catch (error) {
       console.error('[Auth] Error in fetchUserProfile:', error);
@@ -71,39 +64,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const supabase = createClient();
     let mounted = true;
 
-    // CRITICAL: Use getSession() not getUser() - see AUTH_FAILURE_ANALYSIS.md
-    const initializeAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+    // Set loading to false immediately - we'll handle auth state from onAuthStateChange
+    setLoading(false);
 
-      if (!mounted) return;
-
-      setUser(session?.user ?? null);
-
-      // Fetch profile if user exists
-      if (session?.user) {
-        await fetchUserProfile(session.user.id);
-      } else {
-        setProfile(null);
-      }
-
-      setLoading(false);
-    };
-
-    initializeAuth();
-
-    // Listen for changes on auth state (AFTER initial session)
+    // Listen for changes on auth state
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (!mounted) return;
 
-      // Skip INITIAL_SESSION - already handled by getSession()
-      if (event === 'INITIAL_SESSION') {
-        return;
-      }
+      console.log('[Auth] Auth state changed:', event, !!session);
 
-      // Handle auth changes
-      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+      // Handle all auth state changes including INITIAL_SESSION
+      if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
         setUser(session?.user ?? null);
 
         // Fetch profile for signed in user
@@ -112,14 +85,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         } else {
           setProfile(null);
         }
-
-        setLoading(false);
       }
 
       if (event === 'SIGNED_OUT') {
         setUser(null);
         setProfile(null);
-        setLoading(false);
       }
 
       // Refresh the page on sign in/out to update server components
