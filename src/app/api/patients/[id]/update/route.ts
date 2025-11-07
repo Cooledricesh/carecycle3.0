@@ -150,16 +150,24 @@ export async function PUT(
       )
     }
 
-    // Check user role and care_type for nurses
+    // Check user role, care_type for nurses, and organization_id
     const { data: profile, error: profileError } = await userClient
       .from('profiles')
-      .select('role, care_type')
+      .select('role, care_type, organization_id')
       .eq('id', user.id)
       .single()
 
     if (profileError || !profile) {
       return NextResponse.json(
         { error: '사용자 정보를 확인할 수 없습니다' },
+        { status: 403 }
+      )
+    }
+
+    // Verify user has organization_id
+    if (!profile.organization_id) {
+      return NextResponse.json(
+        { error: '조직 정보가 없습니다' },
         { status: 403 }
       )
     }
@@ -204,12 +212,12 @@ export async function PUT(
       )
     }
 
-    // Role-specific validation
+    // Role-specific validation with organization check
     if (profile.role === 'doctor') {
-      // Doctors can only update their assigned patients
+      // Doctors can only update their assigned patients in same organization
       const { data: patient, error: patientError } = await userClient
         .from('patients')
-        .select('doctor_id')
+        .select('doctor_id, organization_id')
         .eq('id', id)
         .single()
 
@@ -217,6 +225,14 @@ export async function PUT(
         return NextResponse.json(
           { error: '환자를 찾을 수 없습니다' },
           { status: 404 }
+        )
+      }
+
+      // Check if patient belongs to same organization
+      if (patient.organization_id !== profile.organization_id) {
+        return NextResponse.json(
+          { error: '다른 조직의 환자는 수정할 수 없습니다' },
+          { status: 403 }
         )
       }
 
@@ -228,12 +244,12 @@ export async function PUT(
         )
       }
     } else if (profile.role === 'nurse') {
-      // Nurses can only update patients in their care_type
+      // Nurses can only update patients in their care_type and organization
       // Using service client here to ensure we can read the patient even if RLS would block it
       const serviceClient = await createServiceClient()
       const { data: patient, error: patientError } = await serviceClient
         .from('patients')
-        .select('care_type')
+        .select('care_type, organization_id')
         .eq('id', id)
         .single()
 
@@ -244,10 +260,41 @@ export async function PUT(
         )
       }
 
+      // Check if patient belongs to same organization
+      if (patient.organization_id !== profile.organization_id) {
+        return NextResponse.json(
+          { error: '다른 조직의 환자는 수정할 수 없습니다' },
+          { status: 403 }
+        )
+      }
+
       // Check if nurse's care_type matches patient's care_type
       if (patient.care_type !== profile.care_type) {
         return NextResponse.json(
           { error: '담당 진료 구분의 환자만 수정할 수 있습니다' },
+          { status: 403 }
+        )
+      }
+    } else if (profile.role === 'admin') {
+      // Admins can update any patient in their organization
+      const serviceClient = await createServiceClient()
+      const { data: patient, error: patientError } = await serviceClient
+        .from('patients')
+        .select('organization_id')
+        .eq('id', id)
+        .single()
+
+      if (patientError || !patient) {
+        return NextResponse.json(
+          { error: '환자를 찾을 수 없습니다' },
+          { status: 404 }
+        )
+      }
+
+      // Check if patient belongs to same organization
+      if (patient.organization_id !== profile.organization_id) {
+        return NextResponse.json(
+          { error: '다른 조직의 환자는 수정할 수 없습니다' },
           { status: 403 }
         )
       }

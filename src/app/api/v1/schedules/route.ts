@@ -28,17 +28,34 @@ export async function GET(request: NextRequest) {
     // Apply rate limiting
     const rateLimitResult = await rateLimitMiddleware(request, rateLimitPresets.standard)
     if (rateLimitResult) return rateLimitResult
-    
+
     const searchParams = request.nextUrl.searchParams
     const filters = validateQueryParams(searchParams, scheduleFilterSchema)
-    
+
     const supabase = await createClient()
-    
-    // Build query
+
+    // Get user's organization_id
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) {
+      return ApiResponseBuilder.error(401, 'UNAUTHORIZED', 'Authentication required')
+    }
+
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('organization_id')
+      .eq('id', user.id)
+      .single()
+
+    if (!profile?.organization_id) {
+      return ApiResponseBuilder.error(403, 'FORBIDDEN', 'Organization information not found')
+    }
+
+    // Build query with organization filter
     let query = supabase
       .from('schedules')
       .select('*, patients(name, patient_number), items(name, category)', { count: 'exact' })
-    
+      .eq('organization_id', profile.organization_id)
+
     // Apply filters
     if (filters.patientId) {
       query = query.eq('patient_id', filters.patientId)
@@ -85,35 +102,53 @@ export async function POST(request: NextRequest) {
     // Apply rate limiting
     const rateLimitResult = await rateLimitMiddleware(request, rateLimitPresets.strict)
     if (rateLimitResult) return rateLimitResult
-    
+
     const body = await request.json()
     const validated = createScheduleSchema.parse(body)
-    
+
     const supabase = await createClient()
-    
-    // Check if patient exists
+
+    // Get user's organization_id
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) {
+      return ApiResponseBuilder.error(401, 'UNAUTHORIZED', 'Authentication required')
+    }
+
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('organization_id')
+      .eq('id', user.id)
+      .single()
+
+    if (!profile?.organization_id) {
+      return ApiResponseBuilder.error(403, 'FORBIDDEN', 'Organization information not found')
+    }
+
+    // Check if patient exists and belongs to same organization
     const { data: patient, error: patientError } = await supabase
       .from('patients')
       .select('id')
       .eq('id', validated.patientId)
+      .eq('organization_id', profile.organization_id)
       .single()
-    
+
     if (patientError || !patient) {
       return ApiResponseBuilder.error(404, 'NOT_FOUND', 'Patient not found')
     }
-    
-    // Check if item exists
+
+    // Check if item exists and belongs to same organization
     const { data: item, error: itemError } = await supabase
       .from('items')
       .select('id')
       .eq('id', validated.itemId)
+      .eq('organization_id', profile.organization_id)
       .single()
-    
+
     if (itemError || !item) {
       return ApiResponseBuilder.error(404, 'NOT_FOUND', 'Item not found')
     }
-    
-    // Create schedule
+
+    // Create schedule with organization_id
     const { data, error } = await supabase
       .from('schedules')
       .insert({
@@ -125,6 +160,7 @@ export async function POST(request: NextRequest) {
         end_date: validated.endDate,
         notes: validated.notes,
         status: 'active',
+        organization_id: profile.organization_id
       })
       .select('*, patients(name, patient_number), items(name, category)')
       .single()

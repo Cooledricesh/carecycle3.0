@@ -17,13 +17,13 @@ export async function POST(request: NextRequest) {
       )
     }
     
-    // Check user's approval status
+    // Check user's approval status and organization_id
     const { data: profile, error: profileError } = await supabaseClient
       .from('profiles')
-      .select('approval_status, role, is_active')
+      .select('approval_status, role, is_active, organization_id')
       .eq('id', user.id)
       .single()
-    
+
     if (profileError || !profile) {
       console.error('[API /patients] Profile fetch error:', profileError)
       return NextResponse.json(
@@ -31,7 +31,15 @@ export async function POST(request: NextRequest) {
         { status: 403 }
       )
     }
-    
+
+    // Verify user has organization_id
+    if (!profile.organization_id) {
+      return NextResponse.json(
+        { error: '조직 정보가 없습니다.' },
+        { status: 403 }
+      )
+    }
+
     // Verify user is approved and active
     if (profile.approval_status !== 'approved' || !profile.is_active) {
       return NextResponse.json(
@@ -53,7 +61,9 @@ export async function POST(request: NextRequest) {
       metadata: validated.metadata || {},
       // Add audit fields
       created_by: user.id,
-      created_at: new Date().toISOString()
+      created_at: new Date().toISOString(),
+      // Add organization_id for multitenancy
+      organization_id: profile.organization_id
     }
     
     console.log('[API /patients] Creating patient with service role:', {
@@ -65,11 +75,12 @@ export async function POST(request: NextRequest) {
     // Use service role client to bypass RLS
     const supabaseServiceRole = await createServiceClient()
     
-    // Check for duplicate patient number
+    // Check for duplicate patient number within organization
     const { data: existing } = await supabaseServiceRole
       .from('patients')
       .select('id')
       .eq('patient_number', insertData.patient_number)
+      .eq('organization_id', profile.organization_id)
       .eq('is_active', true)
       .single()
     
