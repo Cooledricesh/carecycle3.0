@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/ban-ts-comment */
-// @ts-nocheck - Legacy service with complex type issues, needs refactoring
 'use client'
 
 import { createClient, type SupabaseClient } from '@/lib/supabase/client'
@@ -13,11 +11,19 @@ import {
   type ScheduleEditInput,
   type ScheduleCreateWithCustomItemInput
 } from '@/schemas/schedule'
-import type { Schedule, ScheduleWithDetails } from '@/types/schedule'
+import type { Schedule, ScheduleWithDetails, ScheduleRow } from '@/types/schedule'
 import { toCamelCase as snakeToCamel, toSnakeCase as camelToSnake } from '@/lib/database-utils'
 import { format, addDays } from 'date-fns'
 import { addWeeks } from '@/lib/utils/date'
 import type { ScheduleFilter } from '@/lib/filters/filter-types'
+import {
+  convertRowToSchedule,
+  extractPatientName,
+  extractItemName,
+  extractCareType,
+  extractDoctorId,
+  hasRelations
+} from '@/lib/schedule-management/schedule-type-mapper'
 
 export const scheduleService = {
   async create(input: ScheduleCreateInput, organizationId: string, supabase?: SupabaseClient): Promise<Schedule> {
@@ -56,7 +62,7 @@ export const scheduleService = {
       // Calculate next_due_date from start_date
       const nextDueDate = validated.startDate
 
-      const { data, error } = await (client as any)
+      const { data, error } = await client
         .from('schedules')
         .insert({
           ...snakeData,
@@ -75,7 +81,12 @@ export const scheduleService = {
         }
         throw error
       }
-      return snakeToCamel(data) as Schedule
+
+      if (!data) {
+        throw new Error('스케줄 생성 실패: 데이터가 반환되지 않았습니다.')
+      }
+
+      return convertRowToSchedule(data)
     } catch (error: any) {
       console.error('Error creating schedule:', error)
       // Re-throw if it's already our custom error message
@@ -945,7 +956,7 @@ export const scheduleService = {
             p_planned_date: schedule.next_due_date,
             p_executed_date: input.executedDate,
             p_executed_by: input.executedBy,
-            p_notes: input.notes || null
+            p_notes: input.notes ?? undefined
           })
 
         if (rpcError) {
@@ -958,12 +969,13 @@ export const scheduleService = {
               .from('schedule_executions')
               .insert({
                 schedule_id: scheduleId,
+                organization_id: organizationId,
                 planned_date: schedule.next_due_date,
                 executed_date: input.executedDate,
                 executed_time: format(new Date(), 'HH:mm:ss'),
                 status: 'completed',
                 executed_by: input.executedBy,
-                notes: input.notes || null
+                notes: input.notes ?? undefined
               })
 
             if (executionError) {
@@ -1050,7 +1062,7 @@ export const scheduleService = {
         p_start_date: startDate,
         p_end_date: endDate,
         p_organization_id: organizationId,
-        p_user_id: null // Can be enhanced to pass user ID for role-based filtering
+        p_user_id: undefined // Can be enhanced to pass user ID for role-based filtering
       })
 
       if (error) {

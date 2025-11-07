@@ -1,13 +1,36 @@
-/* eslint-disable @typescript-eslint/ban-ts-comment */
-// @ts-nocheck - Complex type mismatches with database schema, needs refactoring
 'use client'
 
 import { createClient, type SupabaseClient } from '@/lib/supabase/client'
 import { ScheduleStateValidator } from './schedule-state-validator'
 import { ScheduleDateCalculator, type RecalculationOptions } from './schedule-date-calculator'
 import { ScheduleDataSynchronizer } from './schedule-data-synchronizer'
-import type { Schedule } from '@/types/schedule'
+import type { Schedule, ScheduleRow } from '@/types/schedule'
 import { format, differenceInWeeks } from 'date-fns'
+
+/**
+ * Converts database row (snake_case) to Schedule type (camelCase)
+ */
+function convertRowToSchedule(row: ScheduleRow): Schedule {
+  return {
+    id: row.id,
+    patientId: row.patient_id,
+    itemId: row.item_id,
+    intervalWeeks: row.interval_weeks,
+    startDate: row.start_date,
+    endDate: row.end_date,
+    lastExecutedDate: row.last_executed_date,
+    nextDueDate: row.next_due_date,
+    status: row.status ?? 'active',
+    assignedNurseId: row.assigned_nurse_id,
+    notes: row.notes,
+    priority: row.priority ?? 0,
+    requiresNotification: row.requires_notification ?? false,
+    notificationDaysBefore: row.notification_days_before ?? 1,
+    createdBy: row.created_by,
+    createdAt: row.created_at ?? new Date().toISOString(),
+    updatedAt: row.updated_at ?? new Date().toISOString(),
+  }
+}
 
 export interface PauseOptions {
   reason?: string
@@ -61,26 +84,29 @@ export class ScheduleStateManager {
   async pauseSchedule(scheduleId: string, options?: PauseOptions): Promise<void> {
     try {
       // 1. Get current schedule
-      const { data: schedule, error: fetchError } = await this.supabase
+      const { data: scheduleRow, error: fetchError } = await this.supabase
         .from('schedules')
         .select('*')
         .eq('id', scheduleId)
         .single()
 
-      if (fetchError || !schedule) {
+      if (fetchError || !scheduleRow) {
         throw new Error('스케줄을 찾을 수 없습니다.')
       }
 
+      // Convert to Schedule type
+      const schedule = convertRowToSchedule(scheduleRow)
+
       // 2. Validate state transition
-      const currentStatus = schedule.status || 'active'
+      const currentStatus = schedule.status
       const validation = this.validator.validateTransition(currentStatus, 'paused')
       if (!validation.isValid) {
         throw new Error(validation.errors.join(', '))
       }
 
       // 3. Check if can pause
-      if (!this.validator.canPause(schedule as any)) {
-        const reasons = this.validator.getBlockingReasons(schedule as any, 'paused')
+      if (!this.validator.canPause(schedule)) {
+        const reasons = this.validator.getBlockingReasons(schedule, 'paused')
         throw new Error(`일시정지할 수 없습니다: ${reasons.join(', ')}`)
       }
 
@@ -110,7 +136,7 @@ export class ScheduleStateManager {
       // 7. Log state transition
       await this.logStateTransition({
         scheduleId,
-        fromStatus: schedule.status || 'active',
+        fromStatus: schedule.status,
         toStatus: 'paused',
         transitionDate: new Date(),
         reason: options?.reason,
@@ -121,9 +147,9 @@ export class ScheduleStateManager {
       })
 
       // 8. Notify if requested
-      if (options?.notifyAssignedNurse && schedule.assigned_nurse_id) {
+      if (options?.notifyAssignedNurse && schedule.assignedNurseId) {
         await this.createSystemNotification(
-          schedule.assigned_nurse_id,
+          schedule.assignedNurseId,
           '스케줄 일시정지',
           `스케줄이 일시정지되었습니다. 사유: ${options.reason || '사유 없음'}`
         )
@@ -143,7 +169,7 @@ export class ScheduleStateManager {
   async resumeSchedule(scheduleId: string, options: ResumeOptions): Promise<void> {
     try {
       // 1. Get current schedule with additional details
-      const { data: schedule, error: fetchError } = await this.supabase
+      const { data: scheduleRow, error: fetchError } = await this.supabase
         .from('schedules')
         .select(`
           *,
@@ -153,20 +179,23 @@ export class ScheduleStateManager {
         .eq('id', scheduleId)
         .single()
 
-      if (fetchError || !schedule) {
+      if (fetchError || !scheduleRow) {
         throw new Error('스케줄을 찾을 수 없습니다.')
       }
 
+      // Convert to Schedule type
+      const schedule = convertRowToSchedule(scheduleRow)
+
       // 2. Validate state transition
-      const currentStatus = schedule.status || 'paused'
+      const currentStatus = schedule.status
       const validation = this.validator.validateTransition(currentStatus, 'active')
       if (!validation.isValid) {
         throw new Error(validation.errors.join(', '))
       }
 
       // 3. Check if can resume
-      if (!this.validator.canResume(schedule as any)) {
-        const reasons = this.validator.getBlockingReasons(schedule as any, 'active')
+      if (!this.validator.canResume(schedule)) {
+        const reasons = this.validator.getBlockingReasons(schedule, 'active')
         throw new Error(`재개할 수 없습니다: ${reasons.join(', ')}`)
       }
 
@@ -178,7 +207,7 @@ export class ScheduleStateManager {
       }
 
       const newNextDueDate = this.calculator.calculateNextDueDate(
-        schedule as any,
+        schedule,
         recalculationOptions
       )
 
@@ -190,10 +219,10 @@ export class ScheduleStateManager {
 
       // 6. Calculate missed executions if needed
       let missedExecutions = 0
-      if (options.handleMissed !== 'skip' && schedule.updated_at) {
-        const pausedDate = new Date(schedule.updated_at)
+      if (options.handleMissed !== 'skip' && schedule.updatedAt) {
+        const pausedDate = new Date(schedule.updatedAt)
         const missed = this.calculator.getMissedExecutions(
-          schedule as any,
+          schedule,
           pausedDate,
           new Date()
         )
@@ -201,8 +230,27 @@ export class ScheduleStateManager {
 
         // Handle missed executions based on strategy
         if (options.handleMissed === 'catch_up' && missedExecutions > 0) {
+          // Get organization_id from user profile
+          const { data: { user } } = await this.supabase.auth.getUser()
+
+          if (!user?.id) {
+            console.error('Cannot create catch-up executions: user not authenticated')
+            return
+          }
+
+          const { data: profile } = await this.supabase
+            .from('profiles')
+            .select('organization_id')
+            .eq('id', user.id)
+            .single()
+
+          if (!profile?.organization_id) {
+            console.error('Cannot create catch-up executions: organization_id not found')
+            return
+          }
+
           const catchUpDates = this.calculator.calculateCatchUpDates(
-            schedule as any,
+            schedule,
             missedExecutions
           )
           // Create catch-up executions
@@ -211,6 +259,7 @@ export class ScheduleStateManager {
               .from('schedule_executions')
               .insert({
                 schedule_id: scheduleId,
+                organization_id: profile.organization_id,
                 planned_date: format(date, 'yyyy-MM-dd'),
                 status: 'planned',
                 notes: '재개 후 따라잡기 실행'
@@ -285,16 +334,23 @@ export class ScheduleStateManager {
       return []
     }
 
-    return data.map(log => ({
-      id: log.id,
-      scheduleId: log.schedule_id,
-      fromStatus: log.old_values?.status || '',
-      toStatus: log.new_values?.status || '',
-      transitionDate: new Date(log.changed_at),
-      performedBy: log.changed_by,
-      reason: log.reason,
-      metadata: log.new_values
-    }))
+    return data
+      .filter(log => log.changed_at !== null)
+      .map(log => {
+        const oldValues = log.old_values as Record<string, any> | null
+        const newValues = log.new_values as Record<string, any> | null
+
+        return {
+          id: log.id,
+          scheduleId: log.schedule_id,
+          fromStatus: (oldValues?.status as string) || '',
+          toStatus: (newValues?.status as string) || '',
+          transitionDate: new Date(log.changed_at!),
+          performedBy: log.changed_by ?? undefined,
+          reason: log.reason ?? undefined,
+          metadata: newValues || undefined
+        }
+      })
   }
 
   /**
@@ -339,10 +395,23 @@ export class ScheduleStateManager {
     message: string
   ): Promise<void> {
     try {
+      // Get organization_id from recipient profile
+      const { data: profile } = await this.supabase
+        .from('profiles')
+        .select('organization_id')
+        .eq('id', recipientId)
+        .single()
+
+      if (!profile?.organization_id) {
+        console.error('Cannot create notification: organization_id not found')
+        return
+      }
+
       await this.supabase
         .from('notifications')
         .insert({
           recipient_id: recipientId,
+          organization_id: profile.organization_id,
           channel: 'dashboard',
           notify_date: format(new Date(), 'yyyy-MM-dd'),
           state: 'ready',
