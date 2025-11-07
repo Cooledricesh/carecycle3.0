@@ -32,9 +32,11 @@ export function useProfile() {
         return null;
       }
 
+      let timeoutId: ReturnType<typeof setTimeout> | undefined;
+
       // Add timeout protection (10 seconds)
       const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error('Profile fetch timeout after 10s')), 10000);
+        timeoutId = setTimeout(() => reject(new Error('Profile fetch timeout after 10s')), 10000);
       });
 
       const queryPromise = supabase
@@ -55,6 +57,11 @@ export function useProfile() {
       } catch (timeoutError: any) {
         console.error('[useProfile] Query timeout:', timeoutError.message);
         return null;
+      } finally {
+        // Clean up timeout to prevent memory leak
+        if (timeoutId !== undefined) {
+          clearTimeout(timeoutId);
+        }
       }
     },
     enabled: !!user?.id,

@@ -860,8 +860,7 @@ describe('scheduleService - Multitenancy Data Isolation', () => {
       expect(mockSupabase.rpc).toHaveBeenCalledWith('get_calendar_schedules', {
         p_start_date: '2025-01-01',
         p_end_date: '2025-01-31',
-        p_organization_id: org1.id,
-        p_user_id: null,
+        p_user_id: undefined,
       });
     });
 

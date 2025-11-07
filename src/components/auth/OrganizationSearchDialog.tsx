@@ -42,14 +42,23 @@ export function OrganizationSearchDialog({
       setError(null)
 
       try {
-        const response = await fetch(`/api/organizations/search?q=${encodeURIComponent(searchQuery)}`)
+        const response = await fetch('/api/organizations/search', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            search_term: searchQuery,
+            limit: 10,
+          }),
+        })
 
         if (!response.ok) {
           throw new Error('조직 검색에 실패했습니다')
         }
 
-        const data = await response.json()
-        setOrganizations(data.organizations || [])
+        const result = await response.json()
+        setOrganizations(result.data || [])
       } catch (err) {
         setError(err instanceof Error ? err.message : '조직 검색에 실패했습니다')
         setOrganizations([])

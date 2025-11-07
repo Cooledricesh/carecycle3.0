@@ -36,9 +36,9 @@ Adding `organizationId` parameter to all schedule-related services, hooks, and c
 
 **Pattern for All Hooks**:
 ```typescript
-import { useAuth } from '@/providers/auth-provider-simple'
+import { useProfile } from '@/hooks/useProfile'
 
-const { profile } = useAuth()
+const { data: profile } = useProfile()
 
 useQuery({
   queryKey: ['resource', profile?.organization_id, ...],
@@ -86,10 +86,10 @@ async methodName(param1, organizationId: string, supabase?: SupabaseClient)
 ### Hook Implementation
 
 ```typescript
-import { useAuth } from '@/providers/auth-provider-simple'
+import { useProfile } from '@/hooks/useProfile'
 
 export function useMyHook() {
-  const { profile } = useAuth()
+  const { data: profile } = useProfile()
 
   return useQuery({
     queryKey: ['myResource', profile?.organization_id],
@@ -109,7 +109,7 @@ export function useMyHook() {
 const { data } = useSchedules()
 
 // If direct call is needed:
-const { profile } = useAuth()
+const { data: profile } = useProfile()
 await scheduleService.create(input, profile!.organization_id)
 ```
 

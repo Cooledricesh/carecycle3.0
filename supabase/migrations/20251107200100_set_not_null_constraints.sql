@@ -1,7 +1,8 @@
 -- Migration: Set organization_id to NOT NULL on all tables
 -- Created: 2025-11-07
 -- Purpose: Enforce organization_id requirement after data migration
--- IMPORTANT: This must run AFTER data migration (20251107000005)
+-- IMPORTANT: This must run AFTER data migration (20251106153933_migrate_existing_data.sql)
+-- and all security fixes (20251107200000-20251107200002)
 
 BEGIN;
 

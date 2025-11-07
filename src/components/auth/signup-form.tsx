@@ -124,6 +124,8 @@ export function SignUpForm({
       setAwaitingApproval(true);
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : "가입 요청에 실패했습니다.");
+      // Reopen dialog on error to allow user to retry
+      setShowOrgSearch(true);
     } finally {
       setIsLoading(false);
     }

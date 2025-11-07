@@ -95,16 +95,16 @@ export async function POST(request: NextRequest) {
     }
 
     // 7. Check for existing pending request
-    const { data: existingRequest, error: existingError } = await supabase
+    const { data: existingRequest } = await supabase
       .from("join_requests")
       .select("id, status")
       .eq("user_id", user.id)
       .eq("organization_id", organization_id)
       .eq("status", "pending")
-      .single();
+      .maybeSingle();
 
-    // If no error or error is not "no rows", it means there's an existing request
-    if (existingRequest && (!existingError || (existingError && typeof existingError === 'object' && existingError !== null && 'code' in existingError && (existingError as any).code !== "PGRST116"))) {
+    // If existing request found, return error
+    if (existingRequest) {
       return NextResponse.json(
         {
           error: "Bad Request",
@@ -122,7 +122,7 @@ export async function POST(request: NextRequest) {
         email: profile.email,
         name: profile.name,
         organization_id,
-        requested_role,
+        role: requested_role, // Map requested_role parameter to role column
         status: "pending",
       })
       .select(

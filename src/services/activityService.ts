@@ -111,22 +111,29 @@ export const activityService = {
     }
 
     const logs: AuditLog[] =
-      data?.map((row) => ({
-        id: row.id,
-        tableName: row.table_name,
-        operation: row.operation as ActivityOperation,
-        recordId: row.record_id,
-        oldValues: row.old_values as Record<string, any> | null,
-        newValues: row.new_values as Record<string, any> | null,
-        userId: row.user_id,
-        userEmail: row.user_email,
-        // Use the user_name field from audit_logs (populated by our migration)
-        userName: row.user_name || null,
-        userRole: row.user_role,
-        timestamp: row.timestamp || new Date().toISOString(),
-        ipAddress: typeof row.ip_address === 'string' ? row.ip_address : null,
-        userAgent: row.user_agent,
-      })) || []
+      data?.map((row) => {
+        // Validate required audit fields for integrity
+        if (!row.timestamp) {
+          throw new Error(`Audit log ${row.id} missing required timestamp - data integrity violation`)
+        }
+
+        return {
+          id: row.id,
+          tableName: row.table_name,
+          operation: row.operation as ActivityOperation,
+          recordId: row.record_id,
+          oldValues: row.old_values as Record<string, any> | null,
+          newValues: row.new_values as Record<string, any> | null,
+          userId: row.user_id,
+          userEmail: row.user_email,
+          // Use the user_name field from audit_logs (populated by our migration)
+          userName: row.user_name || null,
+          userRole: row.user_role,
+          timestamp: row.timestamp,
+          ipAddress: typeof row.ip_address === 'string' ? row.ip_address : null,
+          userAgent: row.user_agent,
+        }
+      }) || []
 
     const total = count || 0
     const totalPages = Math.ceil(total / limit)

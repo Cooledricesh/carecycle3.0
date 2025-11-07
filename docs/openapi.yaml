@@ -210,7 +210,10 @@ paths:
       tags:
         - Organizations
       summary: Create new organization
-      description: Create a new organization and assign user as first admin
+      description: |
+        Create a new organization and assign authenticated user as first admin.
+        User ID and name are derived from the authenticated session, not from request body.
+        This prevents privilege escalation attacks.
       requestBody:
         required: true
         content:
@@ -218,25 +221,19 @@ paths:
             schema:
               type: object
               required:
-                - organizationName
-                - userId
-                - userName
+                - organization_name
               properties:
-                organizationName:
+                organization_name:
                   type: string
                   minLength: 2
                   maxLength: 100
                   example: 새병원
-                userId:
-                  type: string
-                  format: uuid
-                userName:
-                  type: string
-                  example: 홍길동
-                userRole:
+                  description: Name of the new organization
+                user_role:
                   type: string
                   enum: [admin, doctor, nurse]
                   default: admin
+                  description: Role for the authenticated user (optional, defaults to admin)
       responses:
         '200':
           description: Organization created successfully

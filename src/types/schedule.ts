@@ -12,6 +12,7 @@ export type ScheduleUpdate = Database['public']['Tables']['schedules']['Update']
 // Application-level types
 export interface Schedule {
   id: string
+  organization_id?: string | null
   patientId: string
   itemId: string
   intervalWeeks: number

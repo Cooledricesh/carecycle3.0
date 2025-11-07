@@ -75,13 +75,15 @@ export function Sidebar({ onNavigate }: SidebarProps = {}) {
 
   const handleSignOut = async () => {
     console.log('[Sidebar Debug] Logout initiated');
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+
     try {
       const supabase = createClient();
 
       // Add timeout protection for sign out (5 seconds)
       const signOutPromise = supabase.auth.signOut();
       const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error('Sign out timeout')), 5000);
+        timeoutId = setTimeout(() => reject(new Error('Sign out timeout')), 5000);
       });
 
       await Promise.race([signOutPromise, timeoutPromise]);
@@ -100,6 +102,10 @@ export function Sidebar({ onNavigate }: SidebarProps = {}) {
         }
       });
     } finally {
+      // Clean up timeout to prevent memory leak
+      if (timeoutId !== undefined) {
+        clearTimeout(timeoutId);
+      }
       // Always redirect to sign in, regardless of success/failure
       console.log('[Sidebar Debug] Redirecting to signin');
       router.push('/auth/signin');

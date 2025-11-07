@@ -378,7 +378,7 @@ export default function AdminUsersPage() {
     );
   }
 
-  const pendingUsers = users.filter(u => u.approval_status === 'pending');
+  const pendingUsers = users.filter(u => u.approval_status === 'pending' || u.approval_status === null);
   const approvedUsers = users.filter(u => u.approval_status === 'approved');
   const rejectedUsers = users.filter(u => u.approval_status === 'rejected');
 
