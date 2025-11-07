@@ -334,57 +334,30 @@ export async function PUT(
       const shouldUseFallback = error.code === '42501' || error.code === '42P17' || error.code === '42703'
 
       if (shouldUseFallback) {
-        console.log(`[API] Database error (${error.code}), using function-based update fallback`)
+        console.log(`[API] Database error (${error.code}), using service client fallback`)
 
         try {
-          // Try using the secure function approach first
-          // Convert snake_case updateData to camelCase for JSON
-          const jsonUpdates: Record<string, any> = {}
-          if ('name' in updateData) jsonUpdates.name = updateData.name
-          if ('patient_number' in updateData) jsonUpdates.patient_number = updateData.patient_number
-          if ('care_type' in updateData) jsonUpdates.care_type = updateData.care_type
-          if ('department' in updateData) jsonUpdates.department = updateData.department
-          if ('doctor_id' in updateData) jsonUpdates.doctor_id = updateData.doctor_id
-          if ('is_active' in updateData) jsonUpdates.is_active = updateData.is_active
-          if ('metadata' in updateData) jsonUpdates.metadata = updateData.metadata
+          // Use service client (bypasses RLS)
+          const serviceClient = await createServiceClient()
+          const { data: serviceData, error: serviceError } = await serviceClient
+            .from('patients')
+            .update(updateData)
+            .eq('id', id)
+            .select()
+            .single()
 
-          const { data: functionData, error: functionError } = await userClient
-            .rpc('update_patient_with_role_check', {
-              p_patient_id: id,
-              p_updates: jsonUpdates
-            })
-
-          if (functionError) {
-            console.log('[API] Function-based update failed, falling back to service client', functionError)
-
-            // Last resort: use service client (bypasses RLS)
-            const serviceClient = await createServiceClient()
-            const { data: serviceData, error: serviceError } = await serviceClient
-              .from('patients')
-              .update(updateData)
-              .eq('id', id)
-              .select()
-              .single()
-
-            if (serviceError) {
-              console.error('[API] Error updating patient with service client:', serviceError)
-              return NextResponse.json(
-                { error: `환자 정보 수정 실패: ${serviceError.message}` },
-                { status: 400 }
-              )
-            }
-
-            if (!serviceData) {
-              return NextResponse.json({ error: '환자 정보를 찾을 수 없습니다' }, { status: 404 })
-            }
-            return NextResponse.json(serviceData)
+          if (serviceError) {
+            console.error('[API] Error updating patient with service client:', serviceError)
+            return NextResponse.json(
+              { error: `환자 정보 수정 실패: ${serviceError.message}` },
+              { status: 400 }
+            )
           }
 
-          // Function call succeeded
-          if (!functionData) {
+          if (!serviceData) {
             return NextResponse.json({ error: '환자 정보를 찾을 수 없습니다' }, { status: 404 })
           }
-          return NextResponse.json(functionData)
+          return NextResponse.json(serviceData)
 
         } catch (fallbackError) {
           console.error('[API] Fallback failed:', fallbackError)

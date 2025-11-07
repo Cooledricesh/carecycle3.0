@@ -54,7 +54,7 @@ import { eventManager } from '@/lib/events/schedule-event-manager'
 import { patientService } from '@/services/patientService'
 import { PatientSearchField } from '@/components/patients/patient-search-field'
 import type { Patient } from '@/types/patient'
-import { useAuth } from '@/providers/auth-provider-simple'
+import { useProfile, Profile } from '@/hooks/useProfile'
 
 interface ScheduleCreateModalProps {
   presetPatientId?: string
@@ -85,7 +85,8 @@ export function ScheduleCreateModal({
   const [datePopoverOpen, setDatePopoverOpen] = useState(false)
   const { toast } = useToast()
   const supabase = createClient()
-  const { profile } = useAuth()
+  const { data: profile } = useProfile()
+  const typedProfile = profile as Profile | null | undefined
 
   const form = useForm<ScheduleCreateWithIntervalInput>({
     resolver: zodResolver(ScheduleCreateWithIntervalSchema),
@@ -159,12 +160,12 @@ export function ScheduleCreateModal({
     try {
       setIsSubmitting(true)
 
-      if (!profile?.organization_id) {
+      if (!typedProfile?.organization_id) {
         throw new Error('Organization ID not found');
       }
 
       // Verify patient exists
-      const patientExists = await patientService.getById(data.patientId, profile.organization_id)
+      const patientExists = await patientService.getById(data.patientId, typedProfile.organization_id)
       if (!patientExists) {
         throw new Error('선택한 환자를 찾을 수 없습니다.')
       }
@@ -192,7 +193,7 @@ export function ScheduleCreateModal({
         notes: data.notes || null,
         category: category || 'other', // Use item's category or default to 'other'
         notificationDaysBefore: 7 // Default notification days
-      }, profile.organization_id)
+      }, typedProfile.organization_id)
 
       // Clear cache and emit event for real-time updates
       scheduleServiceEnhanced.clearCache()

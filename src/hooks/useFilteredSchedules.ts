@@ -5,7 +5,7 @@ import { scheduleService } from '@/services/scheduleService'
 import { scheduleServiceEnhanced } from '@/services/scheduleServiceEnhanced'
 import { useFilterContext, useIsFilterContextAvailable } from '@/lib/filters/filter-context'
 import { useAuth } from '@/providers/auth-provider-simple'
-import { useProfile } from '@/hooks/useProfile'
+import { useProfile, Profile } from '@/hooks/useProfile'
 import { useToast } from '@/hooks/use-toast'
 import { mapErrorToUserMessage } from '@/lib/error-mapper'
 import { createClient } from '@/lib/supabase/client'
@@ -18,6 +18,7 @@ export function useFilteredSchedules() {
   const queryClient = useQueryClient()
   const { user, loading: authLoading } = useAuth()
   const { data: profile, isLoading: profileLoading } = useProfile()
+  const typedProfile = profile as Profile | null | undefined
   const isFilterAvailable = useIsFilterContextAvailable()
   // Always call the hook unconditionally
   const filterContext = useFilterContext()
@@ -27,11 +28,11 @@ export function useFilteredSchedules() {
 
 
   const query = useQuery({
-    queryKey: ['schedules', profile?.organization_id, user?.id, profile?.role, filters.showAll], // Include filter state in key
+    queryKey: ['schedules', typedProfile?.organization_id, user?.id, typedProfile?.role, filters.showAll], // Include filter state in key
     queryFn: async () => {
       try {
         // Always try to get schedules, even without full profile
-        if (user && profile?.organization_id) {
+        if (user && typedProfile?.organization_id) {
           // Wait for profile if it's still loading
           if (profileLoading) {
             return []
@@ -40,9 +41,9 @@ export function useFilteredSchedules() {
           // Use enhanced service with whatever info we have
           const userContext: UserContext & { organizationId: string } = {
             userId: user.id,
-            role: profile?.role || 'doctor',
-            careType: profile?.care_type || null,
-            organizationId: profile.organization_id
+            role: typedProfile?.role || 'doctor',
+            careType: typedProfile?.care_type || null,
+            organizationId: typedProfile.organization_id
           }
 
           const result = await scheduleServiceEnhanced.getFilteredSchedules(
@@ -69,7 +70,7 @@ export function useFilteredSchedules() {
         throw error
       }
     },
-    enabled: !!user && !authLoading && !!profile?.organization_id,
+    enabled: !!user && !authLoading && !!typedProfile?.organization_id,
     staleTime: 0 // Immediate refetch on invalidation
   })
 
@@ -99,6 +100,7 @@ export function useFilteredTodayChecklist() {
   const { toast } = useToast()
   const { user, loading: authLoading } = useAuth()
   const { data: profile, isLoading: profileLoading } = useProfile()
+  const typedProfile = profile as Profile | null | undefined
   const isFilterAvailable = useIsFilterContextAvailable()
   // Always call the hook unconditionally
   const filterContext = useFilterContext()
@@ -107,16 +109,16 @@ export function useFilteredTodayChecklist() {
   const supabase = createClient()
 
   return useQuery({
-    queryKey: ['schedules', 'today', profile?.organization_id, filters.showAll], // Include filter state in key
+    queryKey: ['schedules', 'today', typedProfile?.organization_id, filters.showAll], // Include filter state in key
     queryFn: async () => {
       try {
         // Use enhanced service for today's checklist
-        if (user && profile && profile.organization_id) {
+        if (user && typedProfile && typedProfile.organization_id) {
           const userContext: UserContext & { organizationId: string } = {
             userId: user.id,
-            role: profile.role || 'nurse',
-            careType: profile.care_type || null,
-            organizationId: profile.organization_id
+            role: typedProfile.role || 'nurse',
+            careType: typedProfile.care_type || null,
+            organizationId: typedProfile.organization_id
           }
 
           const result = await scheduleServiceEnhanced.getTodayChecklist(
@@ -140,7 +142,7 @@ export function useFilteredTodayChecklist() {
         throw error
       }
     },
-    enabled: !!user && !authLoading && !!profile && !profileLoading && !!profile?.organization_id,
+    enabled: !!user && !authLoading && !!typedProfile && !profileLoading && !!typedProfile?.organization_id,
     staleTime: 0 // Immediate refetch on invalidation
   })
 }
@@ -149,6 +151,7 @@ export function useFilteredUpcomingSchedules(daysAhead: number = 7) {
   const { toast } = useToast()
   const { user, loading: authLoading } = useAuth()
   const { data: profile, isLoading: profileLoading } = useProfile()
+  const typedProfile = profile as Profile | null | undefined
   const isFilterAvailable = useIsFilterContextAvailable()
   // Always call the hook unconditionally
   const filterContext = useFilterContext()
@@ -157,28 +160,28 @@ export function useFilteredUpcomingSchedules(daysAhead: number = 7) {
   const supabase = createClient()
 
   return useQuery({
-    queryKey: ['schedules', 'upcoming', profile?.organization_id, daysAhead, filters.showAll], // Include filter state in key
+    queryKey: ['schedules', 'upcoming', typedProfile?.organization_id, daysAhead, filters.showAll], // Include filter state in key
     queryFn: async () => {
       try {
-        if (!profile || !user || !profile.organization_id) {
+        if (!typedProfile || !user || !typedProfile.organization_id) {
           return []
         }
 
         // Get all schedules first
-        const allSchedules = await scheduleService.getUpcomingSchedules(daysAhead, profile.organization_id, filters, supabase)
+        const allSchedules = await scheduleService.getUpcomingSchedules(daysAhead, typedProfile.organization_id, filters, supabase)
 
         // Apply role-based filtering if showAll is false
         if (!filters.showAll) {
-          if (profile.role === 'nurse' && profile.care_type) {
+          if (typedProfile.role === 'nurse' && typedProfile.care_type) {
             // Filter by care_type for nurses
             // Handle both possible property names (patients or patient)
             const filtered = allSchedules.filter((schedule: any) =>
-              (schedule.patients?.care_type === profile.care_type) ||
-              (schedule.patient?.careType === profile.care_type) ||
-              (schedule.patient?.care_type === profile.care_type)
+              (schedule.patients?.care_type === typedProfile.care_type) ||
+              (schedule.patient?.careType === typedProfile.care_type) ||
+              (schedule.patient?.care_type === typedProfile.care_type)
             )
             return filtered
-          } else if (profile.role === 'doctor') {
+          } else if (typedProfile.role === 'doctor') {
             // Filter by doctor_id for doctors
             // Handle both possible property names (patients or patient)
             const filtered = allSchedules.filter((schedule: any) =>
@@ -202,7 +205,7 @@ export function useFilteredUpcomingSchedules(daysAhead: number = 7) {
         throw error
       }
     },
-    enabled: !!user && !authLoading && !!profile && !profileLoading && !!profile?.organization_id,
+    enabled: !!user && !authLoading && !!typedProfile && !profileLoading && !!typedProfile?.organization_id,
     staleTime: 0 // Immediate refetch on invalidation
   })
 }

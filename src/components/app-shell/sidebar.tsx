@@ -24,7 +24,7 @@ import { useAuth } from '@/providers/auth-provider-simple';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { useProfile } from '@/hooks/useProfile';
+import { useProfile, Profile } from '@/hooks/useProfile';
 import { useSidebar } from '@/providers/sidebar-provider';
 import {
   Tooltip,
@@ -74,17 +74,45 @@ export function Sidebar({ onNavigate }: SidebarProps = {}) {
   const loading = authLoading || profileLoading;
 
   const handleSignOut = async () => {
-    const supabase = createClient();
-    await supabase.auth.signOut();
-    router.push('/auth/signin');
+    console.log('[Sidebar Debug] Logout initiated');
+    try {
+      const supabase = createClient();
+
+      // Add timeout protection for sign out (5 seconds)
+      const signOutPromise = supabase.auth.signOut();
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error('Sign out timeout')), 5000);
+      });
+
+      await Promise.race([signOutPromise, timeoutPromise]);
+      console.log('[Sidebar Debug] Logout successful via Supabase');
+    } catch (error: any) {
+      console.error('[Sidebar Debug] Logout failed or timed out:', error.message);
+      // Fallback: clear storage manually
+      console.log('[Sidebar Debug] Clearing storage manually as fallback');
+      localStorage.clear();
+      sessionStorage.clear();
+      // Clear supabase cookies
+      document.cookie.split(";").forEach((c) => {
+        const cookieName = c.split("=")[0].trim();
+        if (cookieName.startsWith('sb-')) {
+          document.cookie = cookieName + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/";
+        }
+      });
+    } finally {
+      // Always redirect to sign in, regardless of success/failure
+      console.log('[Sidebar Debug] Redirecting to signin');
+      router.push('/auth/signin');
+    }
   };
 
+  const typedProfile = profile as Profile | null | undefined;
 
   // Show all basic navigation if no profile, add admin navigation if admin
-  const userRole = profile?.role || 'nurse';
-  
-  const allNavigation = userRole === 'admin' 
-    ? [...navigation, ...adminNavigation] 
+  const userRole = typedProfile?.role || 'nurse';
+
+  const allNavigation = userRole === 'admin'
+    ? [...navigation, ...adminNavigation]
     : navigation;
 
   // Filter navigation based on roles if specified
@@ -92,7 +120,7 @@ export function Sidebar({ onNavigate }: SidebarProps = {}) {
     // If no roles specified, show to everyone
     if (!item.roles) return true;
     // If profile exists, check role
-    if (profile) return item.roles.includes(profile.role);
+    if (typedProfile) return item.roles.includes(typedProfile.role);
     // If no profile, only show items without role restriction
     return !item.roles || item.roles.includes('nurse');
   });
@@ -128,21 +156,21 @@ export function Sidebar({ onNavigate }: SidebarProps = {}) {
         <div className="flex items-center space-x-3">
           <Avatar>
             <AvatarFallback>
-              {profile?.name?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase() || 'U'}
+              {typedProfile?.name?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase() || 'U'}
             </AvatarFallback>
           </Avatar>
           {!isCollapsed && (
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-gray-900 truncate">
-                {profile?.name || user?.email?.split('@')[0] || '사용자'}
+                {typedProfile?.name || user?.email?.split('@')[0] || '사용자'}
               </p>
               <p className="text-xs text-gray-500 truncate">
-                {profile ? (
+                {typedProfile ? (
                   <>
-                    {profile.role === 'nurse' ? '스텝' :
-                     profile.role === 'doctor' ? '의사' :
-                     profile.role === 'admin' ? '관리자' : '사용자'}
-                    {profile.care_type && ` • ${profile.care_type}`}
+                    {typedProfile.role === 'nurse' ? '스텝' :
+                     typedProfile.role === 'doctor' ? '의사' :
+                     typedProfile.role === 'admin' ? '관리자' : '사용자'}
+                    {typedProfile.care_type && ` • ${typedProfile.care_type}`}
                   </>
                 ) : user ? (
                   <span className="text-amber-600">프로필 설정 필요</span>

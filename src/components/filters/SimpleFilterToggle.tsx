@@ -2,7 +2,7 @@
 
 import { cn } from '@/lib/utils'
 import { useFilterContext } from '@/lib/filters/filter-context'
-import { useProfile } from '@/hooks/useProfile'
+import { useProfile, Profile } from '@/hooks/useProfile'
 import { Users, User, AlertCircle } from 'lucide-react'
 import { useFilteredPatientCount } from '@/hooks/useFilteredPatientCount'
 import { useFilterStatistics } from '@/hooks/useFilterStatistics'
@@ -16,19 +16,20 @@ interface SimpleFilterToggleProps {
 export function SimpleFilterToggle({ className, onToggle }: SimpleFilterToggleProps) {
   const { filters, updateFilters } = useFilterContext()
   const { data: profile, isLoading } = useProfile()
+  const typedProfile = profile as Profile | null | undefined
 
   // Get filtered patient counts
   const { myPatientCount, totalCount } = useFilteredPatientCount()
 
   // Use the new hook for statistics
-  const { statistics, urgentCount } = useFilterStatistics(profile)
+  const { statistics, urgentCount } = useFilterStatistics(typedProfile)
 
-  if (isLoading || !profile) {
+  if (isLoading || !typedProfile) {
     return null
   }
 
   // Admin doesn't need simple toggle - they use full filters
-  if (profile.role === 'admin') {
+  if (typedProfile.role === 'admin') {
     return null
   }
 
@@ -42,15 +43,15 @@ export function SimpleFilterToggle({ className, onToggle }: SimpleFilterTogglePr
 
   // Get display text based on role
   const getToggleText = () => {
-    if (profile.role === 'doctor') {
+    if (typedProfile.role === 'doctor') {
       return {
         my: '내 환자',
         all: '전체 환자',
         myCount: myPatientCount,
         allCount: totalCount
       }
-    } else if (profile.role === 'nurse') {
-      const careTypeDisplay = profile.care_type || '소속'
+    } else if (typedProfile.role === 'nurse') {
+      const careTypeDisplay = typedProfile.care_type || '소속'
       // For nurses, show care_type patient count
       return {
         my: `${careTypeDisplay} 환자`,
@@ -154,14 +155,15 @@ export function SimpleFilterToggle({ className, onToggle }: SimpleFilterTogglePr
 export function SimpleFilterToggleMobile({ className, onToggle }: SimpleFilterToggleProps) {
   const { filters, updateFilters } = useFilterContext()
   const { data: profile, isLoading } = useProfile()
+  const typedProfile = profile as Profile | null | undefined
 
   // Get filtered patient counts
   const { myPatientCount, totalCount } = useFilteredPatientCount()
 
   // Use the new hook for statistics
-  const { statistics, urgentCount } = useFilterStatistics(profile)
+  const { statistics, urgentCount } = useFilterStatistics(typedProfile)
 
-  if (isLoading || !profile || profile.role === 'admin') {
+  if (isLoading || !typedProfile || typedProfile.role === 'admin') {
     return null
   }
 
@@ -174,15 +176,15 @@ export function SimpleFilterToggleMobile({ className, onToggle }: SimpleFilterTo
   }
 
   const getToggleText = () => {
-    if (profile.role === 'doctor') {
+    if (typedProfile.role === 'doctor') {
       return {
         my: '내 환자만 보기',
         all: '모든 환자 보기',
         myCount: myPatientCount,
         allCount: totalCount
       }
-    } else if (profile.role === 'nurse') {
-      const careTypeDisplay = profile.care_type || '소속'
+    } else if (typedProfile.role === 'nurse') {
+      const careTypeDisplay = typedProfile.care_type || '소속'
       return {
         my: `${careTypeDisplay} 환자만 보기`,
         all: '모든 환자 보기',

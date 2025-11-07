@@ -53,7 +53,7 @@ import { eventManager } from '@/lib/events/schedule-event-manager'
 import type { ScheduleWithDetails } from '@/types/schedule'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { mapErrorToUserMessage } from '@/lib/error-mapper'
-import { useAuth } from '@/providers/auth-provider-simple'
+import { useProfile, Profile } from '@/hooks/useProfile'
 
 interface ScheduleEditModalProps {
   schedule: ScheduleWithDetails
@@ -91,7 +91,8 @@ export function ScheduleEditModal({
   const { toast } = useToast()
   const queryClient = useQueryClient()
   const supabase = createClient()
-  const { profile } = useAuth()
+  const { data: profile } = useProfile()
+  const typedProfile = profile as Profile | null | undefined
 
   const form = useForm<ScheduleEditInput>({
     resolver: zodResolver(ScheduleEditSchema),
@@ -155,11 +156,11 @@ export function ScheduleEditModal({
         })
       }
 
-      if (!profile?.organization_id) {
+      if (!typedProfile?.organization_id) {
         throw new Error('Organization ID not found');
       }
 
-      return scheduleService.editSchedule(schedule.schedule_id, data, profile.organization_id)
+      return scheduleService.editSchedule(schedule.schedule_id, data, typedProfile.organization_id)
     },
     onSuccess: () => {
       // scheduleServiceEnhanced의 캐시도 클리어하고 이벤트 발행

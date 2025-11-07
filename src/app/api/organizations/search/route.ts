@@ -29,10 +29,10 @@ export async function POST(request: NextRequest) {
     // Use service client (no auth required for org search during signup)
     const supabase = await createServiceClient();
 
-    // Call RPC function: search_organizations(search_term, limit)
+    // Call RPC function: search_organizations(p_search_term, p_limit)
     const { data, error } = await supabase.rpc("search_organizations", {
-      search_term,
-      search_limit: limit,
+      p_search_term: search_term,
+      p_limit: limit,
     });
 
     if (error) {

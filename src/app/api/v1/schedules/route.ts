@@ -149,15 +149,18 @@ export async function POST(request: NextRequest) {
     }
 
     // Create schedule with organization_id
+    // Convert interval to weeks (assuming intervalValue is in weeks if intervalType is 'weeks')
+    const intervalWeeks = validated.intervalType === 'weeks' ? validated.intervalValue : Math.ceil(validated.intervalValue / 7)
+
     const { data, error } = await supabase
       .from('schedules')
       .insert({
         patient_id: validated.patientId,
         item_id: validated.itemId,
-        interval_type: validated.intervalType,
-        interval_value: validated.intervalValue,
+        interval_weeks: intervalWeeks,
         start_date: validated.startDate,
         end_date: validated.endDate,
+        next_due_date: validated.startDate,
         notes: validated.notes,
         status: 'active',
         organization_id: profile.organization_id

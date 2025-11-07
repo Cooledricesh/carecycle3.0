@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils'
 import { usePatientSearch } from '@/hooks/usePatientSearch'
 import { patientService } from '@/services/patientService'
 import type { Patient } from '@/types/patient'
-import { useAuth } from '@/providers/auth-provider-simple'
+import { useProfile, Profile } from '@/hooks/useProfile'
 
 interface PatientSearchFieldProps {
   value?: string
@@ -32,7 +32,8 @@ export function PatientSearchField({
   const [isLoadingPatient, setIsLoadingPatient] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
-  const { profile } = useAuth()
+  const { data: profile } = useProfile()
+  const typedProfile = profile as Profile | null | undefined
 
   const {
     searchQuery,
@@ -53,10 +54,10 @@ export function PatientSearchField({
 
   // Sync with external value prop
   useEffect(() => {
-    if (value && value !== selectedPatient?.id && profile?.organization_id) {
+    if (value && value !== selectedPatient?.id && typedProfile?.organization_id) {
       // Load patient data when value changes
       setIsLoadingPatient(true)
-      patientService.getById(value, profile.organization_id)
+      patientService.getById(value, typedProfile.organization_id)
         .then((patient) => {
           if (patient) {
             handleSelectPatient(patient)
@@ -72,7 +73,7 @@ export function PatientSearchField({
       // Clear selection when value is empty
       clearSelection()
     }
-  }, [value, selectedPatient, handleSelectPatient, clearSelection, profile?.organization_id])
+  }, [value, selectedPatient, handleSelectPatient, clearSelection, typedProfile?.organization_id])
 
   // Handle clear button
   const handleClear = (e: React.MouseEvent) => {

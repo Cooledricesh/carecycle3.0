@@ -60,15 +60,14 @@ export async function GET(request: NextRequest) {
       .from("join_requests")
       .select(`
         id,
-        user_id,
         email,
         name,
         organization_id,
-        requested_role,
+        role,
         status,
         created_at,
         reviewed_at,
-        reviewer_id,
+        reviewed_by,
         organizations (
           id,
           name

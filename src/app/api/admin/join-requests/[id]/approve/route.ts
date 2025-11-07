@@ -109,12 +109,12 @@ export async function POST(
     // 7. Use RPC function to approve (handles transaction)
     const serviceSupabase = await createServiceClient();
 
-    const finalRole = assignedRole || joinRequest.requested_role;
+    const finalRole = assignedRole || joinRequest.role;
 
     const { error: rpcError } = await serviceSupabase.rpc(
       "approve_join_request",
       {
-        p_request_id: requestId,
+        p_join_request_id: requestId,
         p_admin_id: user.id,
         p_assigned_role: finalRole,
       }

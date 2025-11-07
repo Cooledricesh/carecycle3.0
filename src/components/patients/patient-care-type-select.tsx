@@ -13,7 +13,7 @@ import { patientService } from '@/services/patientService'
 import type { Patient } from '@/types/patient'
 import { Loader2 } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
-import { useAuth } from '@/providers/auth-provider-simple'
+import { useProfile, Profile } from '@/hooks/useProfile'
 
 // Type-safe care types
 const CARE_TYPES = ['외래', '입원', '낮병원'] as const
@@ -38,7 +38,8 @@ export function PatientCareTypeSelect({
   const [currentValue, setCurrentValue] = useState<CareType | null>(patient.careType || null)
   const { toast } = useToast()
   const queryClient = useQueryClient()
-  const { profile } = useAuth()
+  const { data: profile } = useProfile()
+  const typedProfile = profile as Profile | null | undefined
   
   // Request ID to handle race conditions
   const requestIdRef = useRef(0)
@@ -95,7 +96,7 @@ export function PatientCareTypeSelect({
     setIsLoading(true)
 
     try {
-      if (!profile?.organization_id) {
+      if (!typedProfile?.organization_id) {
         throw new Error('Organization ID not found');
       }
 
@@ -104,7 +105,7 @@ export function PatientCareTypeSelect({
         {
           careType: newCareType,
         },
-        profile.organization_id,
+        typedProfile.organization_id,
         {
           signal: abortControllerRef.current.signal
         }
