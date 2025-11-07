@@ -8,6 +8,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '@/lib/database.types';
+import * as organizationService from '@/services/organizationService';
 
 // Mock Supabase client type
 type MockSupabaseClient = {
@@ -15,80 +16,52 @@ type MockSupabaseClient = {
     select: (columns?: string) => {
       eq: (column: string, value: string) => Promise<{ data: unknown; error: unknown }>;
       ilike: (column: string, value: string) => Promise<{ data: unknown; error: unknown }>;
+      single?: () => Promise<{ data: unknown; error: unknown }>;
     };
-    insert: (values: unknown) => Promise<{ data: unknown; error: unknown }>;
+    insert: (values: unknown) => {
+      select: (columns?: string) => {
+        single: () => Promise<{ data: unknown; error: unknown }>;
+      };
+    };
   };
   rpc: (fnName: string, params: unknown) => Promise<{ data: unknown; error: unknown }>;
-};
-
-// Service functions to be implemented
-interface OrganizationService {
-  searchOrganizations(supabase: SupabaseClient<Database>, query: string): Promise<{
-    data: Array<{ id: string; name: string }> | null;
-    error: Error | null
-  }>;
-
-  createOrganization(supabase: SupabaseClient<Database>, name: string): Promise<{
-    data: { id: string; name: string } | null;
-    error: Error | null
-  }>;
-
-  createOrganizationAndRegisterUser(
-    supabase: SupabaseClient<Database>,
-    userId: string,
-    organizationName: string,
-    userRole: string
-  ): Promise<{
-    data: { organization_id: string } | null;
-    error: Error | null
-  }>;
-
-  validateOrganizationName(name: string): { valid: boolean; error?: string };
-}
-
-// Mock implementation (will fail until real implementation exists)
-const mockOrganizationService: OrganizationService = {
-  searchOrganizations: async () => ({ data: null, error: new Error('Not implemented') }),
-  createOrganization: async () => ({ data: null, error: new Error('Not implemented') }),
-  createOrganizationAndRegisterUser: async () => ({ data: null, error: new Error('Not implemented') }),
-  validateOrganizationName: () => ({ valid: false, error: 'Not implemented' })
 };
 
 describe('Organization Service', () => {
   describe('validateOrganizationName', () => {
     it('should reject empty organization name', () => {
-      const result = mockOrganizationService.validateOrganizationName('');
+      const result = organizationService.validateOrganizationName('');
       expect(result.valid).toBe(false);
       expect(result.error).toBe('조직 이름을 입력해주세요.');
     });
 
     it('should reject whitespace-only organization name', () => {
-      const result = mockOrganizationService.validateOrganizationName('   ');
+      const result = organizationService.validateOrganizationName('   ');
       expect(result.valid).toBe(false);
       expect(result.error).toBe('조직 이름을 입력해주세요.');
     });
 
     it('should reject organization name shorter than 2 characters', () => {
-      const result = mockOrganizationService.validateOrganizationName('A');
+      const result = organizationService.validateOrganizationName('A');
       expect(result.valid).toBe(false);
       expect(result.error).toBe('조직 이름은 2자 이상 100자 이하여야 합니다.');
     });
 
     it('should reject organization name longer than 100 characters', () => {
       const longName = 'A'.repeat(101);
-      const result = mockOrganizationService.validateOrganizationName(longName);
+      const result = organizationService.validateOrganizationName(longName);
       expect(result.valid).toBe(false);
       expect(result.error).toBe('조직 이름은 2자 이상 100자 이하여야 합니다.');
     });
 
     it('should accept valid organization name', () => {
-      const result = mockOrganizationService.validateOrganizationName('테스트병원');
+      const result = organizationService.validateOrganizationName('테스트병원');
       expect(result.valid).toBe(true);
       expect(result.error).toBeUndefined();
     });
 
     it('should trim whitespace from organization name', () => {
-      const result = mockOrganizationService.validateOrganizationName('  테스트병원  ');
+      const result = organizationService.validateOrganizationName('  테스트병원  ');
       expect(result.valid).toBe(true);
       expect(result.error).toBeUndefined();
     });
@@ -115,7 +88,7 @@ describe('Organization Service', () => {
     });
 
     it('should search organizations by name (case-insensitive)', async () => {
-      const result = await mockOrganizationService.searchOrganizations(
+      const result = await organizationService.searchOrganizations(
         mockSupabase as unknown as SupabaseClient<Database>,
         '테스트'
       );
@@ -126,7 +99,7 @@ describe('Organization Service', () => {
     });
 
     it('should support partial name matching', async () => {
-      const result = await mockOrganizationService.searchOrganizations(
+      const result = await organizationService.searchOrganizations(
         mockSupabase as unknown as SupabaseClient<Database>,
         '병원'
       );
@@ -145,7 +118,7 @@ describe('Organization Service', () => {
         }))
       }));
 
-      const result = await mockOrganizationService.searchOrganizations(
+      const result = await organizationService.searchOrganizations(
         mockSupabase as unknown as SupabaseClient<Database>,
         'NonexistentOrg'
       );
@@ -164,7 +137,7 @@ describe('Organization Service', () => {
         }))
       }));
 
-      const result = await mockOrganizationService.searchOrganizations(
+      const result = await organizationService.searchOrganizations(
         mockSupabase as unknown as SupabaseClient<Database>,
         '테스트'
       );
@@ -181,9 +154,13 @@ describe('Organization Service', () => {
       mockSupabase = {
         from: vi.fn((table: string) => ({
           select: vi.fn(),
-          insert: vi.fn(async () => ({
-            data: { id: 'new-org-id', name: '테스트병원' },
-            error: null
+          insert: vi.fn(() => ({
+            select: vi.fn(() => ({
+              single: vi.fn(async () => ({
+                data: { id: 'new-org-id', name: '테스트병원' },
+                error: null
+              }))
+            }))
           }))
         })),
         rpc: vi.fn()
@@ -191,7 +168,7 @@ describe('Organization Service', () => {
     });
 
     it('should create new organization with unique name', async () => {
-      const result = await mockOrganizationService.createOrganization(
+      const result = await organizationService.createOrganization(
         mockSupabase as unknown as SupabaseClient<Database>,
         '테스트병원'
       );
@@ -205,13 +182,17 @@ describe('Organization Service', () => {
     it('should reject duplicate organization name', async () => {
       mockSupabase.from = vi.fn(() => ({
         select: vi.fn(),
-        insert: vi.fn(async () => ({
-          data: null,
-          error: { code: '23505', message: 'duplicate key value' }
+        insert: vi.fn(() => ({
+          select: vi.fn(() => ({
+            single: vi.fn(async () => ({
+              data: null,
+              error: { code: '23505', message: 'duplicate key value' }
+            }))
+          }))
         }))
       }));
 
-      const result = await mockOrganizationService.createOrganization(
+      const result = await organizationService.createOrganization(
         mockSupabase as unknown as SupabaseClient<Database>,
         '테스트병원'
       );
@@ -224,13 +205,17 @@ describe('Organization Service', () => {
     it('should handle database errors during creation', async () => {
       mockSupabase.from = vi.fn(() => ({
         select: vi.fn(),
-        insert: vi.fn(async () => ({
-          data: null,
-          error: { message: 'Database connection failed' }
+        insert: vi.fn(() => ({
+          select: vi.fn(() => ({
+            single: vi.fn(async () => ({
+              data: null,
+              error: { message: 'Database connection failed' }
+            }))
+          }))
         }))
       }));
 
-      const result = await mockOrganizationService.createOrganization(
+      const result = await organizationService.createOrganization(
         mockSupabase as unknown as SupabaseClient<Database>,
         '테스트병원'
       );
@@ -254,7 +239,7 @@ describe('Organization Service', () => {
     });
 
     it('should create organization and register user as first admin', async () => {
-      const result = await mockOrganizationService.createOrganizationAndRegisterUser(
+      const result = await organizationService.createOrganizationAndRegisterUser(
         mockSupabase as unknown as SupabaseClient<Database>,
         'user-123',
         '테스트병원',
@@ -274,7 +259,7 @@ describe('Organization Service', () => {
 
       mockSupabase.rpc = rpcSpy;
 
-      await mockOrganizationService.createOrganizationAndRegisterUser(
+      await organizationService.createOrganizationAndRegisterUser(
         mockSupabase as unknown as SupabaseClient<Database>,
         'user-123',
         '테스트병원',
@@ -294,7 +279,7 @@ describe('Organization Service', () => {
         error: { code: '23505', message: 'duplicate key value' }
       }));
 
-      const result = await mockOrganizationService.createOrganizationAndRegisterUser(
+      const result = await organizationService.createOrganizationAndRegisterUser(
         mockSupabase as unknown as SupabaseClient<Database>,
         'user-123',
         '테스트병원',
@@ -313,7 +298,7 @@ describe('Organization Service', () => {
         error: { message: 'Transaction failed' }
       }));
 
-      const result = await mockOrganizationService.createOrganizationAndRegisterUser(
+      const result = await organizationService.createOrganizationAndRegisterUser(
         mockSupabase as unknown as SupabaseClient<Database>,
         'user-123',
         '테스트병원',
@@ -330,7 +315,7 @@ describe('Organization Service', () => {
         error: { message: 'Invalid role' }
       }));
 
-      const result = await mockOrganizationService.createOrganizationAndRegisterUser(
+      const result = await organizationService.createOrganizationAndRegisterUser(
         mockSupabase as unknown as SupabaseClient<Database>,
         'user-123',
         '테스트병원',
@@ -342,7 +327,7 @@ describe('Organization Service', () => {
     });
 
     it('should set user as first admin of new organization', async () => {
-      const result = await mockOrganizationService.createOrganizationAndRegisterUser(
+      const result = await organizationService.createOrganizationAndRegisterUser(
         mockSupabase as unknown as SupabaseClient<Database>,
         'user-123',
         '테스트병원',
@@ -364,7 +349,7 @@ describe('Organization Service', () => {
         })
       };
 
-      const result = await mockOrganizationService.createOrganizationAndRegisterUser(
+      const result = await organizationService.createOrganizationAndRegisterUser(
         mockSupabase as unknown as SupabaseClient<Database>,
         'user-123',
         '테스트병원',
@@ -376,13 +361,13 @@ describe('Organization Service', () => {
     });
 
     it('should sanitize organization name input', () => {
-      const result = mockOrganizationService.validateOrganizationName('  <script>alert("xss")</script>  ');
+      const result = organizationService.validateOrganizationName('  <script>alert("xss")</script>  ');
       expect(result.valid).toBe(false);
       // Should reject names containing HTML/script tags
     });
 
     it('should handle special characters in organization name', () => {
-      const result = mockOrganizationService.validateOrganizationName('테스트병원 (본원)');
+      const result = organizationService.validateOrganizationName('테스트병원 (본원)');
       expect(result.valid).toBe(true);
     });
   });

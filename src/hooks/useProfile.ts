@@ -10,6 +10,7 @@ export interface Profile {
   name: string;
   role: 'admin' | 'nurse' | 'doctor';
   care_type: string | null;
+  organization_id: string;
   phone?: string | null;
   is_active?: boolean;
   created_at: string;

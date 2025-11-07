@@ -35,18 +35,19 @@ export function useCalendarSchedules(currentDate: Date) {
   }, [monthStart, monthEnd])
 
   return useQuery({
-    queryKey: ['calendar-schedules', monthStart, monthEnd, user?.id, profile?.role, profile?.care_type, filters],
+    queryKey: ['calendar-schedules', profile?.organization_id, monthStart, monthEnd, user?.id, profile?.role, profile?.care_type, filters],
     queryFn: async () => {
       try {
-        if (!user || !profile) {
+        if (!user || !profile || !profile.organization_id) {
           return []
         }
 
         // Create user context for role-based filtering
-        const userContext: UserContext = {
+        const userContext: UserContext & { organizationId: string } = {
           userId: user.id,
           role: profile.role,
-          careType: profile.care_type
+          careType: profile.care_type,
+          organizationId: profile.organization_id
         }
 
         // Use enhanced service with proper role-based filtering
@@ -83,7 +84,7 @@ export function useCalendarSchedules(currentDate: Date) {
         throw error
       }
     },
-    enabled: !!user && !authLoading && !!profile && !profileLoading,
+    enabled: !!user && !authLoading && !!profile && !profileLoading && !!profile?.organization_id,
     staleTime: 0,
     refetchOnMount: 'always'
   })
@@ -92,12 +93,13 @@ export function useCalendarSchedules(currentDate: Date) {
 // Hook for fetching execution history for a specific date
 export function useScheduleExecutions(date: Date | null) {
   const { user } = useAuth()
+  const { data: profile } = useProfile()
   const supabase = createClient()
 
   return useQuery({
-    queryKey: ['schedule-executions', date ? format(date, 'yyyy-MM-dd') : null, user?.id],
+    queryKey: ['schedule-executions', profile?.organization_id, date ? format(date, 'yyyy-MM-dd') : null, user?.id],
     queryFn: async () => {
-      if (!date || !user) {
+      if (!date || !user || !profile?.organization_id) {
         return []
       }
 
@@ -125,6 +127,7 @@ export function useScheduleExecutions(date: Date | null) {
             )
           )
         `)
+        .eq('organization_id', profile.organization_id)
         .eq('executed_date', dateString)
         .eq('status', 'completed')
         .order('executed_time', { ascending: true })
@@ -153,7 +156,7 @@ export function useScheduleExecutions(date: Date | null) {
         item: execution.schedules.items
       }))
     },
-    enabled: !!date && !!user,
+    enabled: !!date && !!user && !!profile?.organization_id,
     staleTime: 30000
   })
 }

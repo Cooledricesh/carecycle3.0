@@ -6,6 +6,7 @@ export interface UserContext {
   userId: string
   role: 'doctor' | 'nurse' | 'admin'
   careType?: string | null
+  organizationId: string
 }
 
 export interface FilterOptions {

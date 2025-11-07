@@ -277,6 +277,7 @@ export class ScheduleServiceEnhanced {
         `)
         .lte('next_due_date', today)  // Less than or equal to today (includes overdue)
         .eq('status', 'active')
+        .eq('organization_id', userContext.organizationId)
 
       // Apply role-based filtering
       if (!showAll && userContext.role !== 'admin') {
@@ -399,7 +400,8 @@ export class ScheduleServiceEnhanced {
     }
 
     const { data, error } = await client.rpc('get_filter_statistics', {
-      p_user_id: userContext.userId
+      p_user_id: userContext.userId,
+      p_organization_id: userContext.organizationId
     })
 
     if (error) {

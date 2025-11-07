@@ -23,9 +23,13 @@ export function usePatients() {
   const supabase = createClient()
 
   const query = useQuery({
-    queryKey: ['patients', user?.id, profile?.role, profile?.care_type, filters.showAll],
+    queryKey: ['patients', profile?.organization_id, user?.id, profile?.role, profile?.care_type, filters.showAll],
     queryFn: async () => {
       try {
+        if (!profile?.organization_id) {
+          throw new Error('Organization ID not available')
+        }
+
         const userContext = profile ? {
           role: profile.role,
           careType: profile.care_type,
@@ -33,7 +37,7 @@ export function usePatients() {
           userId: profile.id
         } : undefined
 
-        return await patientService.getAll(supabase, userContext)
+        return await patientService.getAll(profile.organization_id, supabase, userContext)
       } catch (error) {
         if (!loading) {
           const message = mapErrorToUserMessage(error)
@@ -46,12 +50,15 @@ export function usePatients() {
         throw error
       }
     },
-    enabled: true
+    enabled: !!profile?.organization_id
   })
 
   const createMutation = useMutation({
     mutationFn: async (input: PatientCreateInput) => {
-      return await patientService.create(input, supabase)
+      if (!profile?.organization_id) {
+        throw new Error('Organization ID not available')
+      }
+      return await patientService.create(input, profile.organization_id, supabase)
     },
     onError: (error) => {
       const message = mapErrorToUserMessage(error)
@@ -74,7 +81,10 @@ export function usePatients() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      return await patientService.delete(id, supabase)
+      if (!profile?.organization_id) {
+        throw new Error('Organization ID not available')
+      }
+      return await patientService.delete(id, profile.organization_id, supabase)
     },
     onError: (error) => {
       const message = mapErrorToUserMessage(error)
@@ -115,13 +125,17 @@ export function usePatients() {
 export function usePatient(id: string) {
   const { toast } = useToast()
   const { user, loading } = useAuth()
+  const { data: profile } = useProfile()
   const supabase = createClient()
-  
+
   return useQuery({
-    queryKey: ['patients', id],
+    queryKey: ['patients', profile?.organization_id, id],
     queryFn: async () => {
       try {
-        const patient = await patientService.getById(id, supabase)
+        if (!profile?.organization_id) {
+          throw new Error('Organization ID not available')
+        }
+        const patient = await patientService.getById(id, profile.organization_id, supabase)
         if (!patient) {
           throw new Error('환자를 찾을 수 없습니다')
         }
@@ -136,7 +150,7 @@ export function usePatient(id: string) {
         throw error
       }
     },
-    enabled: !!id, // Only check if ID exists, not auth state
+    enabled: !!id && !!profile?.organization_id,
     retry: 3, // Increased retries for production stability
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000)
   })
@@ -144,12 +158,18 @@ export function usePatient(id: string) {
 
 export function useSearchPatients(query: string) {
   const { user, loading } = useAuth()
+  const { data: profile } = useProfile()
   const supabase = createClient()
-  
+
   return useQuery({
-    queryKey: ['patients', 'search', query],
-    queryFn: () => patientService.search(query, supabase),
-    enabled: query.length >= 2, // Only check query length, not auth
+    queryKey: ['patients', 'search', profile?.organization_id, query],
+    queryFn: () => {
+      if (!profile?.organization_id) {
+        throw new Error('Organization ID not available')
+      }
+      return patientService.search(query, profile.organization_id, supabase)
+    },
+    enabled: query.length >= 2 && !!profile?.organization_id,
     staleTime: 10 * 1000 // 10 seconds
   })
 }

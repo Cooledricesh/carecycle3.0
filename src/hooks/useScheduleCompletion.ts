@@ -25,10 +25,10 @@ interface UseScheduleCompletionReturn {
 }
 
 export function useScheduleCompletion(): UseScheduleCompletionReturn {
-  const { user } = useAuth()
+  const { user, profile } = useAuth()
   const { toast } = useToast()
   const queryClient = useQueryClient()
-  
+
   const [selectedSchedule, setSelectedSchedule] = useState<ScheduleWithDetails | null>(null)
   const [executionDate, setExecutionDate] = useState(format(new Date(), 'yyyy-MM-dd'))
   const [executionNotes, setExecutionNotes] = useState('')
@@ -43,7 +43,7 @@ export function useScheduleCompletion(): UseScheduleCompletionReturn {
   }
 
   const handleSubmit = async () => {
-    if (!selectedSchedule || !user) return
+    if (!selectedSchedule || !user || !profile?.organization_id) return
 
     setIsSubmitting(true)
 
@@ -63,7 +63,7 @@ export function useScheduleCompletion(): UseScheduleCompletionReturn {
         executedDate: executionDate,
         notes: executionNotes,
         executedBy: user.id
-      })
+      }, profile.organization_id)
 
       toast({
         title: "완료 처리 성공",

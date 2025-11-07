@@ -12,14 +12,17 @@ import { createClient } from '@/lib/supabase/client'
 export function useSchedules() {
   const { toast } = useToast()
   const queryClient = useQueryClient()
-  const { user, loading } = useAuth()
+  const { user, profile, loading } = useAuth()
   const supabase = createClient()
 
   const query = useQuery({
-    queryKey: ['schedules', user?.id],
+    queryKey: ['schedules', profile?.organization_id],
     queryFn: async () => {
+      if (!profile?.organization_id) {
+        throw new Error('Organization ID not available')
+      }
       try {
-        return await scheduleService.getAllSchedules(undefined, supabase)
+        return await scheduleService.getAllSchedules(profile.organization_id, undefined, supabase)
       } catch (error) {
         console.error('useSchedules error:', error)
         const message = mapErrorToUserMessage(error)
@@ -31,17 +34,20 @@ export function useSchedules() {
         throw error
       }
     },
-    enabled: !!user && !loading,
+    enabled: !!user && !!profile?.organization_id && !loading,
     staleTime: 0 // Immediate refetch on invalidation
   })
 
   const createMutation = useMutation({
     mutationFn: async (input: Parameters<typeof scheduleService.createWithCustomItem>[0]) => {
-      return await scheduleService.createWithCustomItem(input, supabase)
+      if (!profile?.organization_id) {
+        throw new Error('Organization ID not available')
+      }
+      return await scheduleService.createWithCustomItem(input, profile.organization_id, supabase)
     },
     onSuccess: () => {
       // Invalidate only schedules-related queries
-      queryClient.invalidateQueries({ queryKey: ['schedules'] })
+      queryClient.invalidateQueries({ queryKey: ['schedules', profile?.organization_id] })
       toast({
         title: '성공',
         description: '일정이 성공적으로 등록되었습니다.'
@@ -59,7 +65,10 @@ export function useSchedules() {
 
   const markCompletedMutation = useMutation({
     mutationFn: async ({ scheduleId, ...input }: { scheduleId: string } & Parameters<typeof scheduleService.markAsCompleted>[1]) => {
-      return await scheduleService.markAsCompleted(scheduleId, input, supabase)
+      if (!profile?.organization_id) {
+        throw new Error('Organization ID not available')
+      }
+      return await scheduleService.markAsCompleted(scheduleId, input, profile.organization_id, supabase)
     },
     onError: (error) => {
       const message = mapErrorToUserMessage(error)
@@ -71,7 +80,7 @@ export function useSchedules() {
     },
     onSuccess: () => {
       // Invalidate only schedules-related queries
-      queryClient.invalidateQueries({ queryKey: ['schedules'] })
+      queryClient.invalidateQueries({ queryKey: ['schedules', profile?.organization_id] })
       toast({
         title: '성공',
         description: '일정이 완료 처리되었습니다.'
@@ -81,7 +90,7 @@ export function useSchedules() {
 
   const refetch = () => {
     // Refresh only schedules-related queries
-    queryClient.invalidateQueries({ queryKey: ['schedules'] })
+    queryClient.invalidateQueries({ queryKey: ['schedules', profile?.organization_id] })
   }
 
   return {
@@ -98,14 +107,17 @@ export function useSchedules() {
 
 export function useTodayChecklist() {
   const { toast } = useToast()
-  const { user, loading } = useAuth()
+  const { user, profile, loading } = useAuth()
   const supabase = createClient()
-  
+
   return useQuery({
-    queryKey: ['schedules', 'today', user?.id],
+    queryKey: ['schedules', 'today', profile?.organization_id],
     queryFn: async () => {
+      if (!profile?.organization_id) {
+        throw new Error('Organization ID not available')
+      }
       try {
-        return await scheduleService.getTodayChecklist(undefined, supabase)
+        return await scheduleService.getTodayChecklist(profile.organization_id, undefined, supabase)
       } catch (error) {
         const message = mapErrorToUserMessage(error)
         toast({
@@ -116,21 +128,24 @@ export function useTodayChecklist() {
         throw error
       }
     },
-    enabled: !!user && !loading,
+    enabled: !!user && !!profile?.organization_id && !loading,
     staleTime: 0 // Immediate refetch on invalidation
   })
 }
 
 export function useUpcomingSchedules(daysAhead: number = 7) {
   const { toast } = useToast()
-  const { user, loading } = useAuth()
+  const { user, profile, loading } = useAuth()
   const supabase = createClient()
-  
+
   return useQuery({
-    queryKey: ['schedules', 'upcoming', daysAhead, user?.id],
+    queryKey: ['schedules', 'upcoming', daysAhead, profile?.organization_id],
     queryFn: async () => {
+      if (!profile?.organization_id) {
+        throw new Error('Organization ID not available')
+      }
       try {
-        return await scheduleService.getUpcomingSchedules(daysAhead, undefined, supabase)
+        return await scheduleService.getUpcomingSchedules(daysAhead, profile.organization_id, undefined, supabase)
       } catch (error) {
         const message = mapErrorToUserMessage(error)
         toast({
@@ -141,21 +156,24 @@ export function useUpcomingSchedules(daysAhead: number = 7) {
         throw error
       }
     },
-    enabled: !!user && !loading,
+    enabled: !!user && !!profile?.organization_id && !loading,
     staleTime: 0 // Immediate refetch on invalidation
   })
 }
 
 export function usePatientSchedules(patientId: string) {
   const { toast } = useToast()
-  const { user, loading } = useAuth()
+  const { user, profile, loading } = useAuth()
   const supabase = createClient()
-  
+
   return useQuery({
-    queryKey: ['schedules', 'patient', patientId, user?.id],
+    queryKey: ['schedules', 'patient', patientId, profile?.organization_id],
     queryFn: async () => {
+      if (!profile?.organization_id) {
+        throw new Error('Organization ID not available')
+      }
       try {
-        return await scheduleService.getByPatientId(patientId, supabase)
+        return await scheduleService.getByPatientId(patientId, profile.organization_id, supabase)
       } catch (error) {
         const message = mapErrorToUserMessage(error)
         toast({
@@ -166,20 +184,23 @@ export function usePatientSchedules(patientId: string) {
         throw error
       }
     },
-    enabled: !!patientId && !!user && !loading
+    enabled: !!patientId && !!user && !!profile?.organization_id && !loading
   })
 }
 
 export function useOverdueSchedules() {
   const { toast } = useToast()
-  const { user, loading } = useAuth()
+  const { user, profile, loading } = useAuth()
   const supabase = createClient()
 
   return useQuery({
-    queryKey: ['schedules', 'overdue', user?.id],
+    queryKey: ['schedules', 'overdue', profile?.organization_id],
     queryFn: async () => {
+      if (!profile?.organization_id) {
+        throw new Error('Organization ID not available')
+      }
       try {
-        return await scheduleService.getOverdueSchedules(supabase)
+        return await scheduleService.getOverdueSchedules(profile.organization_id, supabase)
       } catch (error) {
         const message = mapErrorToUserMessage(error)
         toast({
@@ -190,7 +211,7 @@ export function useOverdueSchedules() {
         throw error
       }
     },
-    enabled: !!user && !loading,
+    enabled: !!user && !!profile?.organization_id && !loading,
     staleTime: 0 // Immediate refetch on invalidation
   })
 }
