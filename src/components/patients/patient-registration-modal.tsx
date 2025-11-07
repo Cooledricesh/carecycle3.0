@@ -36,7 +36,7 @@ import { createClient } from '@/lib/supabase/client'
 import { usePatientRestoration } from '@/hooks/usePatientRestoration'
 import { PatientRestorationDialog } from './patient-restoration-dialog'
 import { useDoctors } from '@/hooks/useDoctors'
-import { useProfile } from '@/hooks/useProfile'
+import { useProfile, Profile } from '@/hooks/useProfile'
 
 const PatientRegistrationSchema = z.object({
   name: z
@@ -82,6 +82,7 @@ export function PatientRegistrationModal({
   const restoration = usePatientRestoration()
   const { data: doctors, isLoading: isLoadingDoctors } = useDoctors()
   const { data: profile } = useProfile()
+  const typedProfile = profile as Profile | null | undefined
 
   const form = useForm<PatientRegistrationFormData>({
     resolver: zodResolver(PatientRegistrationSchema),
@@ -159,7 +160,7 @@ export function PatientRegistrationModal({
         isActive: true,
       })
 
-      if (!profile?.organization_id) {
+      if (!typedProfile?.organization_id) {
         throw new Error('Organization ID not found');
       }
 
@@ -168,9 +169,9 @@ export function PatientRegistrationModal({
         name: data.name,
         patientNumber: data.patientNumber,
         careType: data.careType,
-        doctorId: (profile?.role === 'admin' || profile?.role === 'doctor' || profile?.role === 'nurse') ? data.doctorId : null,
+        doctorId: (typedProfile?.role === 'admin' || typedProfile?.role === 'doctor' || typedProfile?.role === 'nurse') ? data.doctorId : null,
         isActive: true,
-      }, profile.organization_id, supabase)
+      }, typedProfile.organization_id, supabase)
       
       console.log('Patient created successfully:', result)
 
@@ -270,9 +271,15 @@ export function PatientRegistrationModal({
 
       // Only proceed with form.getValues() and creation if validation passes
       const formData = form.getValues()
+
+      if (!typedProfile?.organization_id) {
+        throw new Error('Organization ID가 없습니다')
+      }
+
       await restoration.createWithArchive(formData.patientNumber, {
         name: formData.name,
         careType: formData.careType,
+        organizationId: typedProfile.organization_id,
         metadata: {}
       })
 
@@ -392,7 +399,7 @@ export function PatientRegistrationModal({
                 </FormItem>
               )}
             />
-            {(profile?.role === 'admin' || profile?.role === 'doctor' || profile?.role === 'nurse') && (
+            {(typedProfile?.role === 'admin' || typedProfile?.role === 'doctor' || typedProfile?.role === 'nurse') && (
               <FormField
                 control={form.control}
                 name="doctorId"

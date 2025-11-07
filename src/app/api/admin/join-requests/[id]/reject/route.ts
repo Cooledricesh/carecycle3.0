@@ -111,9 +111,9 @@ export async function POST(
     const { error: rpcError } = await serviceSupabase.rpc(
       "reject_join_request",
       {
-        p_request_id: requestId,
+        p_join_request_id: requestId,
         p_admin_id: user.id,
-        p_reason: reason || null,
+        p_rejection_reason: reason || undefined,
       }
     );
 

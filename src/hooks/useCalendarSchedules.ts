@@ -5,7 +5,7 @@ import { useEffect } from 'react'
 import { scheduleServiceEnhanced } from '@/services/scheduleServiceEnhanced'
 import { useFilterContext } from '@/lib/filters/filter-context'
 import { useAuth } from '@/providers/auth-provider-simple'
-import { useProfile } from '@/hooks/useProfile'
+import { useProfile, Profile } from '@/hooks/useProfile'
 import { useToast } from '@/hooks/use-toast'
 import { mapErrorToUserMessage } from '@/lib/error-mapper'
 import { createClient } from '@/lib/supabase/client'
@@ -22,6 +22,7 @@ export function useCalendarSchedules(currentDate: Date) {
   const { toast } = useToast()
   const { user, loading: authLoading } = useAuth()
   const { data: profile, isLoading: profileLoading } = useProfile()
+  const typedProfile = profile as Profile | null | undefined
   const { filters } = useFilterContext()
   const supabase = createClient()
 
@@ -35,19 +36,19 @@ export function useCalendarSchedules(currentDate: Date) {
   }, [monthStart, monthEnd])
 
   return useQuery({
-    queryKey: ['calendar-schedules', profile?.organization_id, monthStart, monthEnd, user?.id, profile?.role, profile?.care_type, filters],
+    queryKey: ['calendar-schedules', typedProfile?.organization_id, monthStart, monthEnd, user?.id, typedProfile?.role, typedProfile?.care_type, filters],
     queryFn: async () => {
       try {
-        if (!user || !profile || !profile.organization_id) {
+        if (!user || !profile || !typedProfile || !typedProfile.organization_id) {
           return []
         }
 
         // Create user context for role-based filtering
         const userContext: UserContext & { organizationId: string } = {
           userId: user.id,
-          role: profile.role,
-          careType: profile.care_type,
-          organizationId: profile.organization_id
+          role: typedProfile.role,
+          careType: typedProfile.care_type,
+          organizationId: typedProfile.organization_id
         }
 
         // Use enhanced service with proper role-based filtering
@@ -84,7 +85,7 @@ export function useCalendarSchedules(currentDate: Date) {
         throw error
       }
     },
-    enabled: !!user && !authLoading && !!profile && !profileLoading && !!profile?.organization_id,
+    enabled: !!user && !authLoading && !!profile && !profileLoading && !!typedProfile?.organization_id,
     staleTime: 0,
     refetchOnMount: 'always'
   })
@@ -94,12 +95,13 @@ export function useCalendarSchedules(currentDate: Date) {
 export function useScheduleExecutions(date: Date | null) {
   const { user } = useAuth()
   const { data: profile } = useProfile()
+  const typedProfile = profile as Profile | null | undefined
   const supabase = createClient()
 
   return useQuery({
-    queryKey: ['schedule-executions', profile?.organization_id, date ? format(date, 'yyyy-MM-dd') : null, user?.id],
+    queryKey: ['schedule-executions', typedProfile?.organization_id, date ? format(date, 'yyyy-MM-dd') : null, user?.id],
     queryFn: async () => {
-      if (!date || !user || !profile?.organization_id) {
+      if (!date || !user || !typedProfile?.organization_id) {
         return []
       }
 
@@ -127,7 +129,7 @@ export function useScheduleExecutions(date: Date | null) {
             )
           )
         `)
-        .eq('organization_id', profile.organization_id)
+        .eq('organization_id', typedProfile.organization_id)
         .eq('executed_date', dateString)
         .eq('status', 'completed')
         .order('executed_time', { ascending: true })
@@ -156,7 +158,7 @@ export function useScheduleExecutions(date: Date | null) {
         item: execution.schedules.items
       }))
     },
-    enabled: !!date && !!user && !!profile?.organization_id,
+    enabled: !!date && !!user && !!typedProfile?.organization_id,
     staleTime: 30000
   })
 }

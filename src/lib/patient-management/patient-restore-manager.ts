@@ -26,6 +26,7 @@ export interface RestorePatientOptions {
 export interface CreateWithArchiveOptions {
   name: string
   careType?: string
+  organizationId: string
   metadata?: Record<string, any>
 }
 
@@ -117,8 +118,8 @@ export class PatientRestoreManager {
       const { data: restoredPatient, error: restoreError } = await this.supabase
         .rpc('restore_patient_atomic', {
           patient_id: patientId,
-          update_name: updateName,
-          update_care_type: updateCareType
+          update_name: updateName || undefined,
+          update_care_type: updateCareType || undefined
         })
 
       if (restoreError) {
@@ -177,6 +178,7 @@ export class PatientRestoreManager {
         patient_number: patientNumber,
         name: options.name,
         care_type: options.careType || null,
+        organization_id: options.organizationId,
         is_active: true,
         archived: false,
         metadata: options.metadata || {}

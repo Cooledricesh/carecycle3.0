@@ -13,7 +13,13 @@ interface UserProfile {
   organization_id: string
   care_type: string | null
   is_active: boolean
-  approval_status: string
+  approval_status: 'pending' | 'approved' | 'rejected' | null
+  created_at?: string | null
+  updated_at?: string | null
+  phone?: string | null
+  approved_at?: string | null
+  approved_by?: string | null
+  rejection_reason?: string | null
 }
 
 interface AuthContextType {

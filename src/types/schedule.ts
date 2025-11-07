@@ -131,6 +131,7 @@ export const getScheduleStatusLabel = (status: ScheduleStatus): string => {
     paused: '일시중지',
     completed: '완료',
     cancelled: '취소',
+    deleted: '삭제',
   }
   return labels[status] || status
 }
@@ -141,6 +142,7 @@ export const getScheduleStatusColor = (status: ScheduleStatus): string => {
     paused: 'warning',
     completed: 'default',
     cancelled: 'destructive',
+    deleted: 'destructive',
   }
   return colors[status] || 'default'
 }

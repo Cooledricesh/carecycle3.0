@@ -13,8 +13,12 @@ export interface Profile {
   organization_id: string;
   phone?: string | null;
   is_active?: boolean;
-  created_at: string;
-  updated_at: string;
+  created_at: string | null;
+  updated_at: string | null;
+  approval_status?: 'pending' | 'approved' | 'rejected' | null;
+  approved_at?: string | null;
+  approved_by?: string | null;
+  rejection_reason?: string | null;
 }
 
 export function useProfile() {

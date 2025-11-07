@@ -26,13 +26,17 @@ export async function getSchedulePausedDate(scheduleId: string): Promise<Date | 
 
     if (data && data.length > 0) {
       const log = data[0]
+      const oldValues = typeof log.old_values === 'object' && log.old_values !== null ? log.old_values : {}
+      const newValues = typeof log.new_values === 'object' && log.new_values !== null ? log.new_values : {}
+
       // Check if this was actually an active->paused transition
-      if (log.old_values?.status === 'active' && log.new_values?.status === 'paused') {
-        return new Date(log.changed_at)
+      if ('status' in oldValues && oldValues.status === 'active' &&
+          'status' in newValues && newValues.status === 'paused') {
+        return new Date(log.changed_at || new Date().toISOString())
       }
       // For older logs that use different action format
-      if (log.new_values?.status === 'paused') {
-        return new Date(log.changed_at)
+      if ('status' in newValues && newValues.status === 'paused') {
+        return new Date(log.changed_at || new Date().toISOString())
       }
     }
 
