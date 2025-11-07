@@ -38,29 +38,45 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const fetchUserProfile = async (userId: string) => {
     try {
       const supabase = createClient();
-      const { data, error } = await supabase
+
+      // Add timeout to prevent infinite waiting
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Profile fetch timeout')), 5000)
+      );
+
+      const fetchPromise = supabase
         .from('profiles')
         .select('id, email, name, role, organization_id, care_type, is_active, approval_status')
         .eq('id', userId)
         .single();
 
-      if (error) {
-        console.error('[Auth] Error fetching profile:', error);
+      // Race between fetch and timeout
+      const result = await Promise.race([fetchPromise, timeoutPromise]) as any;
+
+      if (result.error) {
+        console.error('[Auth] Error fetching profile:', result.error);
+        // User will continue without profile data
         setProfile(null);
       } else {
-        setProfile(data);
+        setProfile(result.data);
       }
     } catch (error) {
       console.error('[Auth] Error in fetchUserProfile:', error);
+      // Continuing without profile - may be RLS issue
       setProfile(null);
     }
   };
 
   useEffect(() => {
     const supabase = createClient();
+    let mounted = true;
 
     // CRITICAL: Use getSession() not getUser() - see AUTH_FAILURE_ANALYSIS.md
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
+    const initializeAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+
+      if (!mounted) return;
+
       setUser(session?.user ?? null);
 
       // Fetch profile if user exists
@@ -71,16 +87,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       setLoading(false);
-    });
+    };
 
-    // Listen for changes on auth state
+    initializeAuth();
+
+    // Listen for changes on auth state (AFTER initial session)
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('[Auth] Event:', event, 'User:', session?.user?.email);
+      if (!mounted) return;
 
-      // Handle INITIAL_SESSION properly - see AUTH_FAILURE_ANALYSIS.md
-      if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN') {
+      // Skip INITIAL_SESSION - already handled by getSession()
+      if (event === 'INITIAL_SESSION') {
+        return;
+      }
+
+      // Handle auth changes
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
         setUser(session?.user ?? null);
 
         // Fetch profile for signed in user
@@ -105,7 +128,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, [router]);
 
   return (
