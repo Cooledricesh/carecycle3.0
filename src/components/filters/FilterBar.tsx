@@ -4,7 +4,7 @@ import { CareTypeFilter, CareTypeFilterMobile } from './CareTypeFilter'
 import { SimpleFilterToggle, SimpleFilterToggleMobile } from './SimpleFilterToggle'
 import { FilterReset } from './FilterReset'
 import { useFilterContext } from '@/lib/filters/filter-context'
-import { useProfile } from '@/hooks/useProfile'
+import { useProfile, Profile } from '@/hooks/useProfile'
 import { useIsMobile } from '@/hooks/useIsMobile'
 import { Filter, ChevronDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -30,6 +30,7 @@ export function FilterBar({
   const isMobile = useIsMobile()
   const { hasActiveFilters, filters } = useFilterContext()
   const { data: profile } = useProfile()
+  const typedProfile = profile as Profile | null | undefined
   const [isOpen, setIsOpen] = useState(!collapsible)
 
   const activeFilterCount =
@@ -40,12 +41,12 @@ export function FilterBar({
 
   // Role-based UI differentiation
   const renderFilterContent = () => {
-    if (!profile) {
+    if (!typedProfile) {
       return null
     }
 
     // Doctor: Simple toggle only
-    if (profile.role === 'doctor') {
+    if (typedProfile.role === 'doctor') {
       return (
         <div className={cn(
           'flex items-center gap-3',
@@ -74,7 +75,7 @@ export function FilterBar({
     }
 
     // Nurse: Simple toggle only (same as doctor)
-    if (profile.role === 'nurse') {
+    if (typedProfile.role === 'nurse') {
       return (
         <div className={cn(
           'flex items-center gap-3',

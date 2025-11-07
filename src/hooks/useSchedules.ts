@@ -6,6 +6,7 @@ import type { ScheduleWithDetails } from '@/types/schedule'
 import { useToast } from '@/hooks/use-toast'
 import { mapErrorToUserMessage } from '@/lib/error-mapper'
 import { useAuth } from '@/providers/auth-provider-simple'
+import { useProfile, Profile } from '@/hooks/useProfile'
 import { createClient } from '@/lib/supabase/client'
 // Removed complex query keys - using simple invalidation
 
@@ -13,13 +14,18 @@ export function useSchedules() {
   const { toast } = useToast()
   const queryClient = useQueryClient()
   const { user, loading } = useAuth()
+  const { data: profile } = useProfile()
+  const typedProfile = profile as Profile | null | undefined
   const supabase = createClient()
 
   const query = useQuery({
-    queryKey: ['schedules', user?.id],
+    queryKey: ['schedules', typedProfile?.organization_id],
     queryFn: async () => {
+      if (!typedProfile?.organization_id) {
+        throw new Error('Organization ID not available')
+      }
       try {
-        return await scheduleService.getAllSchedules(undefined, supabase)
+        return await scheduleService.getAllSchedules(typedProfile.organization_id, undefined, supabase)
       } catch (error) {
         console.error('useSchedules error:', error)
         const message = mapErrorToUserMessage(error)
@@ -31,17 +37,20 @@ export function useSchedules() {
         throw error
       }
     },
-    enabled: !!user && !loading,
+    enabled: !!user && !!typedProfile?.organization_id && !loading,
     staleTime: 0 // Immediate refetch on invalidation
   })
 
   const createMutation = useMutation({
     mutationFn: async (input: Parameters<typeof scheduleService.createWithCustomItem>[0]) => {
-      return await scheduleService.createWithCustomItem(input, supabase)
+      if (!typedProfile?.organization_id) {
+        throw new Error('Organization ID not available')
+      }
+      return await scheduleService.createWithCustomItem(input, typedProfile.organization_id, supabase)
     },
     onSuccess: () => {
       // Invalidate only schedules-related queries
-      queryClient.invalidateQueries({ queryKey: ['schedules'] })
+      queryClient.invalidateQueries({ queryKey: ['schedules', typedProfile?.organization_id] })
       toast({
         title: '성공',
         description: '일정이 성공적으로 등록되었습니다.'
@@ -59,7 +68,10 @@ export function useSchedules() {
 
   const markCompletedMutation = useMutation({
     mutationFn: async ({ scheduleId, ...input }: { scheduleId: string } & Parameters<typeof scheduleService.markAsCompleted>[1]) => {
-      return await scheduleService.markAsCompleted(scheduleId, input, supabase)
+      if (!typedProfile?.organization_id) {
+        throw new Error('Organization ID not available')
+      }
+      return await scheduleService.markAsCompleted(scheduleId, input, typedProfile.organization_id, supabase)
     },
     onError: (error) => {
       const message = mapErrorToUserMessage(error)
@@ -71,7 +83,7 @@ export function useSchedules() {
     },
     onSuccess: () => {
       // Invalidate only schedules-related queries
-      queryClient.invalidateQueries({ queryKey: ['schedules'] })
+      queryClient.invalidateQueries({ queryKey: ['schedules', typedProfile?.organization_id] })
       toast({
         title: '성공',
         description: '일정이 완료 처리되었습니다.'
@@ -81,7 +93,7 @@ export function useSchedules() {
 
   const refetch = () => {
     // Refresh only schedules-related queries
-    queryClient.invalidateQueries({ queryKey: ['schedules'] })
+    queryClient.invalidateQueries({ queryKey: ['schedules', typedProfile?.organization_id] })
   }
 
   return {
@@ -99,13 +111,18 @@ export function useSchedules() {
 export function useTodayChecklist() {
   const { toast } = useToast()
   const { user, loading } = useAuth()
+  const { data: profile } = useProfile()
+  const typedProfile = profile as Profile | null | undefined
   const supabase = createClient()
-  
+
   return useQuery({
-    queryKey: ['schedules', 'today', user?.id],
+    queryKey: ['schedules', 'today', typedProfile?.organization_id],
     queryFn: async () => {
+      if (!typedProfile?.organization_id) {
+        throw new Error('Organization ID not available')
+      }
       try {
-        return await scheduleService.getTodayChecklist(undefined, supabase)
+        return await scheduleService.getTodayChecklist(typedProfile.organization_id, undefined, supabase)
       } catch (error) {
         const message = mapErrorToUserMessage(error)
         toast({
@@ -116,7 +133,7 @@ export function useTodayChecklist() {
         throw error
       }
     },
-    enabled: !!user && !loading,
+    enabled: !!user && !!typedProfile?.organization_id && !loading,
     staleTime: 0 // Immediate refetch on invalidation
   })
 }
@@ -124,13 +141,18 @@ export function useTodayChecklist() {
 export function useUpcomingSchedules(daysAhead: number = 7) {
   const { toast } = useToast()
   const { user, loading } = useAuth()
+  const { data: profile } = useProfile()
+  const typedProfile = profile as Profile | null | undefined
   const supabase = createClient()
-  
+
   return useQuery({
-    queryKey: ['schedules', 'upcoming', daysAhead, user?.id],
+    queryKey: ['schedules', 'upcoming', daysAhead, typedProfile?.organization_id],
     queryFn: async () => {
+      if (!typedProfile?.organization_id) {
+        throw new Error('Organization ID not available')
+      }
       try {
-        return await scheduleService.getUpcomingSchedules(daysAhead, undefined, supabase)
+        return await scheduleService.getUpcomingSchedules(daysAhead, typedProfile.organization_id, undefined, supabase)
       } catch (error) {
         const message = mapErrorToUserMessage(error)
         toast({
@@ -141,7 +163,7 @@ export function useUpcomingSchedules(daysAhead: number = 7) {
         throw error
       }
     },
-    enabled: !!user && !loading,
+    enabled: !!user && !!typedProfile?.organization_id && !loading,
     staleTime: 0 // Immediate refetch on invalidation
   })
 }
@@ -149,13 +171,18 @@ export function useUpcomingSchedules(daysAhead: number = 7) {
 export function usePatientSchedules(patientId: string) {
   const { toast } = useToast()
   const { user, loading } = useAuth()
+  const { data: profile } = useProfile()
+  const typedProfile = profile as Profile | null | undefined
   const supabase = createClient()
-  
+
   return useQuery({
-    queryKey: ['schedules', 'patient', patientId, user?.id],
+    queryKey: ['schedules', 'patient', patientId, typedProfile?.organization_id],
     queryFn: async () => {
+      if (!typedProfile?.organization_id) {
+        throw new Error('Organization ID not available')
+      }
       try {
-        return await scheduleService.getByPatientId(patientId, supabase)
+        return await scheduleService.getByPatientId(patientId, typedProfile.organization_id, supabase)
       } catch (error) {
         const message = mapErrorToUserMessage(error)
         toast({
@@ -166,20 +193,25 @@ export function usePatientSchedules(patientId: string) {
         throw error
       }
     },
-    enabled: !!patientId && !!user && !loading
+    enabled: !!patientId && !!user && !!typedProfile?.organization_id && !loading
   })
 }
 
 export function useOverdueSchedules() {
   const { toast } = useToast()
   const { user, loading } = useAuth()
+  const { data: profile } = useProfile()
+  const typedProfile = profile as Profile | null | undefined
   const supabase = createClient()
 
   return useQuery({
-    queryKey: ['schedules', 'overdue', user?.id],
+    queryKey: ['schedules', 'overdue', typedProfile?.organization_id],
     queryFn: async () => {
+      if (!typedProfile?.organization_id) {
+        throw new Error('Organization ID not available')
+      }
       try {
-        return await scheduleService.getOverdueSchedules(supabase)
+        return await scheduleService.getOverdueSchedules(typedProfile.organization_id, supabase)
       } catch (error) {
         const message = mapErrorToUserMessage(error)
         toast({
@@ -190,7 +222,7 @@ export function useOverdueSchedules() {
         throw error
       }
     },
-    enabled: !!user && !loading,
+    enabled: !!user && !!typedProfile?.organization_id && !loading,
     staleTime: 0 // Immediate refetch on invalidation
   })
 }

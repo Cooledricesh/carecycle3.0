@@ -1,7 +1,6 @@
 'use client'
 
-import { createClient } from '@/lib/supabase/client'
-import type { SupabaseClient } from '@/lib/supabase/database'
+import { createClient, type SupabaseClient } from '@/lib/supabase/client'
 import { executeQueryWithSignal } from '@/lib/supabase/query-helpers'
 import { 
   PatientCreateSchema, 
@@ -15,10 +14,10 @@ import { patientValidationService } from '@/lib/patient-management/patient-valid
 import { PatientRestoreManager } from '@/lib/patient-management/patient-restore-manager'
 
 export const patientService = {
-  async create(input: PatientCreateInput, supabase?: SupabaseClient): Promise<Patient> {
+  async create(input: PatientCreateInput, organizationId: string, supabase?: SupabaseClient): Promise<Patient> {
     const client = supabase || createClient()
     try {
-      console.log('[patientService.create] Input:', input)
+      console.log('[patientService.create] Input:', input, 'OrganizationId:', organizationId)
       const validated = PatientCreateSchema.parse(input)
       console.log('[patientService.create] Validated:', validated)
       
@@ -42,7 +41,8 @@ export const patientService = {
         care_type: validated.careType || null,
         doctor_id: validated.doctorId || null,
         is_active: validated.isActive ?? true,
-        metadata: validated.metadata || {}
+        metadata: validated.metadata || {},
+        organization_id: organizationId
       }
       
       console.log('[patientService.create] Insert data:', insertData)
@@ -134,7 +134,7 @@ export const patientService = {
     }
   },
 
-  async getAll(supabase?: SupabaseClient, userContext?: { role?: string; careType?: string | null; showAll?: boolean; userId?: string }): Promise<Patient[]> {
+  async getAll(organizationId: string, supabase?: SupabaseClient, userContext?: { role?: string; careType?: string | null; showAll?: boolean; userId?: string }): Promise<Patient[]> {
     const client = supabase || createClient()
 
     // Helper function to execute query with retry on auth failure
@@ -150,6 +150,7 @@ export const patientService = {
             doctor:profiles!doctor_id(id, name)
           `)
           .eq('is_active', true)
+          .eq('organization_id', organizationId)
 
         // Apply role-based filtering for nurse and doctor
         if (userContext) {
@@ -209,7 +210,7 @@ export const patientService = {
     return executeQuery()
   },
 
-  async getById(id: string, supabase?: SupabaseClient): Promise<Patient | null> {
+  async getById(id: string, organizationId: string, supabase?: SupabaseClient): Promise<Patient | null> {
     const client = supabase || createClient()
     try {
       const { data, error } = await client
@@ -220,6 +221,7 @@ export const patientService = {
           doctor:profiles!doctor_id(id, name)
         `)
         .eq('id', id)
+        .eq('organization_id', organizationId)
         .single()
 
       if (error) {
@@ -240,7 +242,7 @@ export const patientService = {
     }
   },
 
-  async getByPatientNumber(patientNumber: string, supabase?: SupabaseClient): Promise<Patient | null> {
+  async getByPatientNumber(patientNumber: string, organizationId: string, supabase?: SupabaseClient): Promise<Patient | null> {
     const client = supabase || createClient()
     try {
       const { data, error } = await client
@@ -248,6 +250,7 @@ export const patientService = {
         .select('*')
         .eq('patient_number', patientNumber)
         .eq('is_active', true)
+        .eq('organization_id', organizationId)
         .single()
       
       if (error) {
@@ -263,11 +266,12 @@ export const patientService = {
   },
 
   async update(
-    id: string, 
-    input: PatientUpdateInput, 
-    options?: SupabaseClient | { 
+    id: string,
+    input: PatientUpdateInput,
+    organizationId: string,
+    options?: SupabaseClient | {
       supabase?: SupabaseClient
-      signal?: AbortSignal 
+      signal?: AbortSignal
     }
   ): Promise<Patient> {
     // Type guard to check if the third argument is a SupabaseClient
@@ -310,6 +314,7 @@ export const patientService = {
         .from('patients')
         .update(snakeData)
         .eq('id', id)
+        .eq('organization_id', organizationId)
 
       // Execute query with AbortSignal support using type-safe helper
       const { data, error } = await executeQueryWithSignal<Patient>(
@@ -400,16 +405,17 @@ export const patientService = {
     }
   },
 
-  async delete(id: string, supabase?: SupabaseClient): Promise<void> {
+  async delete(id: string, organizationId: string, supabase?: SupabaseClient): Promise<void> {
     const client = supabase || createClient()
     try {
       console.log('[patientService.delete] Attempting to delete patient with id:', id)
-      
+
       // First, check if the patient exists
       const { data: existingPatient, error: fetchError } = await client
         .from('patients')
         .select('*')
         .eq('id', id)
+        .eq('organization_id', organizationId)
         .single()
       
       if (fetchError) {
@@ -426,11 +432,12 @@ export const patientService = {
       // The database trigger will automatically cascade delete all related schedules
       const { error } = await client
         .from('patients')
-        .update({ 
+        .update({
           is_active: false,
           updated_at: new Date().toISOString()
         })
         .eq('id', id)
+        .eq('organization_id', organizationId)
       
       if (error) {
         console.error('[patientService.delete] Direct update failed:', error)
@@ -474,21 +481,22 @@ export const patientService = {
     }
   },
 
-  async search(query: string, supabase?: SupabaseClient): Promise<Patient[]> {
+  async search(query: string, organizationId: string, supabase?: SupabaseClient): Promise<Patient[]> {
     const client = supabase || createClient()
     try {
       // Validate minimum query length to prevent expensive searches
       if (query.trim().length < 2) {
         return []
       }
-      
+
       // Sanitize query input
       const sanitizedQuery = query.replace(/[%_]/g, '\\$&')
-      
+
       const { data, error } = await client
         .from('patients')
         .select('*')
         .eq('is_active', true)
+        .eq('organization_id', organizationId)
         .or(`name.ilike.%${sanitizedQuery}%,patient_number.ilike.%${sanitizedQuery}%`)
         .limit(20)
       

@@ -4,7 +4,7 @@ import { Database } from '@/lib/database.types'
 
 export type AuditLogRow = Database['public']['Tables']['audit_logs']['Row']
 
-export type ActivityOperation = 'INSERT' | 'UPDATE' | 'DELETE' | 'LOGIN' | 'LOGOUT'
+export type ActivityOperation = 'INSERT' | 'UPDATE' | 'DELETE' | 'LOGIN' | 'LOGOUT' | 'UNKNOWN'
 
 export type ActivityTableName =
   | 'patients'

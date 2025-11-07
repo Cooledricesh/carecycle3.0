@@ -91,6 +91,8 @@ temp/
 
 # Supabase temporary files and cache
 supabase/.temp/
+supabase/migrations/supabase/
+supabase/migrations/.backup/
 
 # Database backups (contains sensitive production data)
 backups/

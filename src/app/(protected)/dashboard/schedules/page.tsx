@@ -35,7 +35,7 @@ import { useIsMobile } from "@/hooks/useIsMobile";
 import { touchTarget, responsiveText, responsivePadding, cn } from "@/lib/utils";
 import { FilterProvider } from "@/providers/filter-provider";
 import { SimpleFilterToggle } from "@/components/filters/SimpleFilterToggle";
-import { useProfile } from "@/hooks/useProfile";
+import { useProfile, Profile } from "@/hooks/useProfile";
 import { useFilterContext } from "@/lib/filters/filter-context";
 import { useAuth } from "@/providers/auth-provider-simple";
 import { scheduleServiceEnhanced } from "@/services/scheduleServiceEnhanced";
@@ -115,6 +115,7 @@ function SchedulesContent() {
   const queryClient = useQueryClient();
   const isMobile = useIsMobile();
   const { data: profile } = useProfile();
+  const typedProfile = profile as Profile | null | undefined;
   const { filters } = useFilterContext();
   const { user } = useAuth();
 
@@ -126,7 +127,12 @@ function SchedulesContent() {
   const error = schedulesError || overdueError;
 
   const deleteMutation = useMutation({
-    mutationFn: scheduleService.delete,
+    mutationFn: (id: string) => {
+      if (!typedProfile?.organization_id) {
+        throw new Error('Organization ID not available');
+      }
+      return scheduleService.delete(id, typedProfile.organization_id);
+    },
     onSuccess: async () => {
       scheduleServiceEnhanced.clearCache();
       eventManager.emitScheduleChange();
@@ -156,8 +162,12 @@ function SchedulesContent() {
   };
 
   const statusMutation = useMutation({
-    mutationFn: ({ id, status }: { id: string; status: 'active' | 'paused' }) =>
-      scheduleService.updateStatus(id, status),
+    mutationFn: ({ id, status }: { id: string; status: 'active' | 'paused' }) => {
+      if (!typedProfile?.organization_id) {
+        throw new Error('Organization ID not available');
+      }
+      return scheduleService.updateStatus(id, status, typedProfile.organization_id);
+    },
     onSuccess: async (_, variables) => {
       scheduleServiceEnhanced.clearCache();
       eventManager.emitScheduleChange();
@@ -194,10 +204,10 @@ function SchedulesContent() {
   };
 
   const handleConfirmResume = async (options: { strategy: 'custom' | 'immediate' | 'next_cycle'; customDate?: Date; handleMissed?: 'skip' | 'catch_up' | 'mark_overdue' }) => {
-    if (!selectedScheduleForResume) return;
+    if (!selectedScheduleForResume || !typedProfile?.organization_id) return;
 
     try {
-      await scheduleService.resumeSchedule(selectedScheduleForResume.id, options);
+      await scheduleService.resumeSchedule(selectedScheduleForResume.id, typedProfile.organization_id, options);
 
       scheduleServiceEnhanced.clearCache();
       eventManager.emitScheduleChange();
@@ -619,12 +629,13 @@ function SchedulesContent() {
 
 export default function SchedulesPage() {
   const { data: profile } = useProfile();
+  const typedProfile = profile as Profile | null | undefined;
 
   return (
     <FilterProvider persistToUrl={true}>
       <div className="space-y-4">
         {/* Show filter toggle for nurse and doctor */}
-        {profile && (profile.role === 'nurse' || profile.role === 'doctor') && (
+        {typedProfile && (typedProfile.role === 'nurse' || typedProfile.role === 'doctor') && (
           <div className="p-3 bg-gray-50 border rounded-lg">
             <SimpleFilterToggle />
           </div>

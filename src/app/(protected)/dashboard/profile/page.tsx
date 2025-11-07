@@ -107,10 +107,13 @@ export default function ProfilePage() {
       }
 
       // Refresh profile data
+      if (!user?.id) {
+        throw new Error("사용자 ID가 없습니다.");
+      }
       const { data: updatedProfile } = await supabase
         .from('profiles')
         .select('*')
-        .eq('id', user?.id)
+        .eq('id', user.id)
         .single();
       if (updatedProfile) setProfile(updatedProfile);
 

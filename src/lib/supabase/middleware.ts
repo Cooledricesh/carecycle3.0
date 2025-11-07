@@ -4,7 +4,7 @@ import { Database } from "../database.types";
 
 export async function updateSession(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  
+
   // Skip middleware for static assets and API health checks
   if (
     pathname.startsWith('/_next') ||
@@ -57,7 +57,7 @@ export async function updateSession(request: NextRequest) {
   // Public routes that don't require authentication
   const publicRoutes = ["/", "/auth/signin", "/auth/signup", "/auth/forgot-password", "/auth/callback", "/auth/update-password"];
   const isPublicRoute = publicRoutes.includes(pathname) || pathname.startsWith("/auth/callback");
-  
+
   // Routes that should be accessible regardless of approval status
   const approvalExemptRoutes = ["/approval-pending", ...publicRoutes];
   const isApprovalExempt = approvalExemptRoutes.includes(pathname) || pathname.startsWith("/auth/callback");

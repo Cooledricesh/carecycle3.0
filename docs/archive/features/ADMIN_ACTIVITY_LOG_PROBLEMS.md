@@ -1,3 +1,10 @@
+> **📦 ARCHIVED**
+> **Archived Date**: 2025-11-07
+> **Reason**: Failed implementation documented for learning purposes. This post-mortem analysis is archived for historical reference and future guidance.
+> **Status**: 📚 Learning Document (Failure Analysis)
+
+---
+
 # 관리자 활동 로그 기능 - 실패 기록 및 재작업 가이드
 
 **작성일**: 2025-09-28
@@ -48,7 +55,7 @@
 - `src/app/(protected)/admin/page.tsx`
 
 #### 문서
-- `MULTI_TENANCY_PLAN.md` (활동 로그와 무관 - Multi-tenancy 계획)
+- `multitenancy.md` (활동 로그와 무관 - Multi-tenancy 계획)
 
 #### 임시 파일
 - `check_completed.mjs`
@@ -533,7 +540,7 @@ const isCompletion = newValues.next_due_date > oldValues.next_due_date
 
 ## 📚 참고 자료
 
-- Multi-tenancy 계획: `MULTI_TENANCY_PLAN.md`
+- Multi-tenancy 계획: `multitenancy.md`
 - API Reference: `docs/API-REFERENCE.md`
 - Supabase Migration 가이드: `CLAUDE.md`
 

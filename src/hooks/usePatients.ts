@@ -8,7 +8,7 @@ import { useToast } from '@/hooks/use-toast'
 import { mapErrorToUserMessage } from '@/lib/error-mapper'
 import { useAuth } from '@/providers/auth-provider-simple'
 import { createClient } from '@/lib/supabase/client'
-import { useProfile } from '@/hooks/useProfile'
+import { useProfile, Profile } from '@/hooks/useProfile'
 import { useFilterContext } from '@/lib/filters/filter-context'
 import { scheduleServiceEnhanced } from '@/services/scheduleServiceEnhanced'
 import { eventManager } from '@/lib/events/schedule-event-manager'
@@ -19,21 +19,26 @@ export function usePatients() {
   const queryClient = useQueryClient()
   const { user, loading } = useAuth()
   const { data: profile } = useProfile()
+  const typedProfile = profile as Profile | null | undefined
   const { filters } = useFilterContext()
   const supabase = createClient()
 
   const query = useQuery({
-    queryKey: ['patients', user?.id, profile?.role, profile?.care_type, filters.showAll],
+    queryKey: ['patients', typedProfile?.organization_id, user?.id, typedProfile?.role, typedProfile?.care_type, filters.showAll],
     queryFn: async () => {
       try {
-        const userContext = profile ? {
-          role: profile.role,
-          careType: profile.care_type,
+        if (!typedProfile?.organization_id) {
+          throw new Error('Organization ID not available')
+        }
+
+        const userContext = typedProfile ? {
+          role: typedProfile.role,
+          careType: typedProfile.care_type,
           showAll: filters.showAll || false,
-          userId: profile.id
+          userId: typedProfile.id
         } : undefined
 
-        return await patientService.getAll(supabase, userContext)
+        return await patientService.getAll(typedProfile.organization_id, supabase, userContext)
       } catch (error) {
         if (!loading) {
           const message = mapErrorToUserMessage(error)
@@ -46,12 +51,15 @@ export function usePatients() {
         throw error
       }
     },
-    enabled: true
+    enabled: !!typedProfile?.organization_id
   })
 
   const createMutation = useMutation({
     mutationFn: async (input: PatientCreateInput) => {
-      return await patientService.create(input, supabase)
+      if (!typedProfile?.organization_id) {
+        throw new Error('Organization ID not available')
+      }
+      return await patientService.create(input, typedProfile.organization_id, supabase)
     },
     onError: (error) => {
       const message = mapErrorToUserMessage(error)
@@ -74,7 +82,10 @@ export function usePatients() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      return await patientService.delete(id, supabase)
+      if (!typedProfile?.organization_id) {
+        throw new Error('Organization ID not available')
+      }
+      return await patientService.delete(id, typedProfile.organization_id, supabase)
     },
     onError: (error) => {
       const message = mapErrorToUserMessage(error)
@@ -115,13 +126,18 @@ export function usePatients() {
 export function usePatient(id: string) {
   const { toast } = useToast()
   const { user, loading } = useAuth()
+  const { data: profile } = useProfile()
+  const typedProfile = profile as Profile | null | undefined
   const supabase = createClient()
-  
+
   return useQuery({
-    queryKey: ['patients', id],
+    queryKey: ['patients', typedProfile?.organization_id, id],
     queryFn: async () => {
       try {
-        const patient = await patientService.getById(id, supabase)
+        if (!typedProfile?.organization_id) {
+          throw new Error('Organization ID not available')
+        }
+        const patient = await patientService.getById(id, typedProfile.organization_id, supabase)
         if (!patient) {
           throw new Error('환자를 찾을 수 없습니다')
         }
@@ -136,7 +152,7 @@ export function usePatient(id: string) {
         throw error
       }
     },
-    enabled: !!id, // Only check if ID exists, not auth state
+    enabled: !!id && !!typedProfile?.organization_id,
     retry: 3, // Increased retries for production stability
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000)
   })
@@ -144,12 +160,19 @@ export function usePatient(id: string) {
 
 export function useSearchPatients(query: string) {
   const { user, loading } = useAuth()
+  const { data: profile } = useProfile()
+  const typedProfile = profile as Profile | null | undefined
   const supabase = createClient()
-  
+
   return useQuery({
-    queryKey: ['patients', 'search', query],
-    queryFn: () => patientService.search(query, supabase),
-    enabled: query.length >= 2, // Only check query length, not auth
+    queryKey: ['patients', 'search', typedProfile?.organization_id, query],
+    queryFn: () => {
+      if (!typedProfile?.organization_id) {
+        throw new Error('Organization ID not available')
+      }
+      return patientService.search(query, typedProfile.organization_id, supabase)
+    },
+    enabled: query.length >= 2 && !!typedProfile?.organization_id,
     staleTime: 10 * 1000 // 10 seconds
   })
 }

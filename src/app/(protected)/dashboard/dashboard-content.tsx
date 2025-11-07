@@ -6,6 +6,7 @@ import { Calendar, Clock, AlertTriangle, TrendingUp, RefreshCw } from "lucide-re
 import { getScheduleCategoryIcon, getScheduleCategoryColor, getScheduleCategoryBgColor, getScheduleCategoryLabel, getScheduleCardBgColor } from '@/lib/utils/schedule-category';
 import { PatientRegistrationModal } from "@/components/patients/patient-registration-modal";
 import { useAuth } from "@/providers/auth-provider-simple";
+import { useProfile } from "@/hooks/useProfile";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import { useFilteredTodayChecklist, useFilteredUpcomingSchedules, useFilteredSchedules } from "@/hooks/useFilteredSchedules";
@@ -39,7 +40,7 @@ import { scheduleService } from "@/services/scheduleService";
 
 export default function DashboardContent() {
   const { user } = useAuth();
-  const [profile, setProfile] = useState<any>(null);
+  const { data: profile, isLoading: profileLoading } = useProfile();
   const isMobile = useIsMobile();
   const [lastUpdated, setLastUpdated] = useState(new Date());
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -85,8 +86,9 @@ export default function DashboardContent() {
 
   // Pause schedule handler
   const handlePause = async (schedule: ScheduleWithDetails) => {
+    if (!profile?.organization_id) return;
     try {
-      await scheduleService.pauseSchedule(schedule.schedule_id, { reason: '수동 보류' });
+      await scheduleService.pauseSchedule(schedule.schedule_id, profile.organization_id, { reason: '수동 보류' });
       toast({
         title: "보류 완료",
         description: `${schedule.patient_name}님의 ${schedule.item_name} 스케줄이 보류되었습니다.`,
@@ -104,8 +106,9 @@ export default function DashboardContent() {
 
   // Resume schedule handler
   const handleResume = async (schedule: ScheduleWithDetails) => {
+    if (!profile?.organization_id) return;
     try {
-      await scheduleService.resumeSchedule(schedule.schedule_id, {
+      await scheduleService.resumeSchedule(schedule.schedule_id, profile.organization_id, {
         strategy: 'next_cycle',
         handleMissed: 'skip'
       });
@@ -132,11 +135,11 @@ export default function DashboardContent() {
 
   // Actual deletion after confirmation
   const confirmDelete = async () => {
-    if (!scheduleToDelete) return;
+    if (!scheduleToDelete || !profile?.organization_id) return;
 
     setIsDeleting(true);
     try {
-      await scheduleService.delete(scheduleToDelete.schedule_id);
+      await scheduleService.delete(scheduleToDelete.schedule_id, profile.organization_id);
       toast({
         title: "삭제 완료",
         description: `${scheduleToDelete.patient_name}님의 ${scheduleToDelete.item_name} 스케줄이 삭제되었습니다.`,
@@ -175,8 +178,9 @@ export default function DashboardContent() {
   const handleRefresh = async () => {
     setIsRefreshing(true);
     try {
-      // Invalidate all queries to get fresh data
-      await queryClient.invalidateQueries();
+      // Invalidate specific queries instead of all queries to prevent infinite loops
+      await queryClient.invalidateQueries({ queryKey: ['schedules'] });
+      await queryClient.invalidateQueries({ queryKey: ['patients'] });
       setLastUpdated(new Date());
       toast({
         title: "새로고침 완료",
@@ -193,27 +197,7 @@ export default function DashboardContent() {
     }
   };
 
-  useEffect(() => {
-    const fetchProfile = async () => {
-      if (user) {
-        const supabase = createClient();
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('name, email, role, care_type')
-          .eq('id', user.id)
-          .single();
-
-        if (data) {
-          setProfile(data);
-        } else {
-          // Fallback to email if profile not found
-          setProfile({ name: user.email?.split('@')[0] || 'User', email: user.email });
-        }
-      }
-    };
-
-    fetchProfile();
-  }, [user]);
+  // Profile is already fetched by useProfile hook - no need for duplicate fetch
 
   const handleRegistrationSuccess = () => {
     toast({
@@ -226,6 +210,17 @@ export default function DashboardContent() {
     }, 1500);
   };
 
+
+  if (profileLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center space-y-2">
+          <RefreshCw className="h-8 w-8 animate-spin mx-auto text-muted-foreground" />
+          <p className="text-sm text-muted-foreground">프로필 로딩 중...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!profile) {
     return null;

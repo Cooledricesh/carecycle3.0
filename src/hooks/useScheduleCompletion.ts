@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useToast } from '@/hooks/use-toast'
 import { useAuth } from '@/providers/auth-provider-simple'
+import { useProfile, Profile } from '@/hooks/useProfile'
 import { scheduleService } from '@/services/scheduleService'
 import type { ScheduleWithDetails } from '@/types/schedule'
 import { format } from 'date-fns'
@@ -26,9 +27,11 @@ interface UseScheduleCompletionReturn {
 
 export function useScheduleCompletion(): UseScheduleCompletionReturn {
   const { user } = useAuth()
+  const { data: profile } = useProfile()
+  const typedProfile = profile as Profile | null | undefined
   const { toast } = useToast()
   const queryClient = useQueryClient()
-  
+
   const [selectedSchedule, setSelectedSchedule] = useState<ScheduleWithDetails | null>(null)
   const [executionDate, setExecutionDate] = useState(format(new Date(), 'yyyy-MM-dd'))
   const [executionNotes, setExecutionNotes] = useState('')
@@ -43,7 +46,7 @@ export function useScheduleCompletion(): UseScheduleCompletionReturn {
   }
 
   const handleSubmit = async () => {
-    if (!selectedSchedule || !user) return
+    if (!selectedSchedule || !user || !typedProfile?.organization_id) return
 
     setIsSubmitting(true)
 
@@ -63,7 +66,7 @@ export function useScheduleCompletion(): UseScheduleCompletionReturn {
         executedDate: executionDate,
         notes: executionNotes,
         executedBy: user.id
-      })
+      }, typedProfile.organization_id)
 
       toast({
         title: "완료 처리 성공",

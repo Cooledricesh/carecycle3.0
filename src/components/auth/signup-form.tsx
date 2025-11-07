@@ -23,6 +23,8 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { OrganizationSearchDialog } from "./OrganizationSearchDialog";
+import { CreateOrganizationDialog } from "./CreateOrganizationDialog";
 
 export function SignUpForm({
   className,
@@ -35,6 +37,11 @@ export function SignUpForm({
   const [role, setRole] = useState<"nurse" | "doctor">("nurse");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [signupStep, setSignupStep] = useState<"basic" | "organization">("basic");
+  const [userId, setUserId] = useState<string | null>(null);
+  const [showOrgSearch, setShowOrgSearch] = useState(false);
+  const [showOrgCreate, setShowOrgCreate] = useState(false);
+  const [awaitingApproval, setAwaitingApproval] = useState(false);
   const router = useRouter();
 
   const handleSignUp = async (e: React.FormEvent) => {
@@ -78,13 +85,99 @@ export function SignUpForm({
         throw new Error(data.error || "회원가입 중 오류가 발생했습니다.");
       }
 
-      router.push("/auth/signup-success");
+      // Basic signup successful, now show organization selection
+      setUserId(data.user.id);
+      setSignupStep("organization");
+      setShowOrgSearch(true);
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : "회원가입 중 오류가 발생했습니다.");
     } finally {
       setIsLoading(false);
     }
   };
+
+  const handleSelectOrganization = async (organizationId: string) => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      // Create join request
+      const response = await fetch("/api/join-requests", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          organization_id: organizationId,
+          email,
+          name,
+          role,
+        }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "가입 요청에 실패했습니다.");
+      }
+
+      // Show awaiting approval message
+      setAwaitingApproval(true);
+    } catch (error: unknown) {
+      setError(error instanceof Error ? error.message : "가입 요청에 실패했습니다.");
+      // Reopen dialog on error to allow user to retry
+      setShowOrgSearch(true);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleCreateOrganization = async (organizationId: string, organizationName: string) => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      // User is automatically assigned as admin when creating organization
+      // Just redirect to dashboard
+      router.push("/dashboard");
+    } catch (error: unknown) {
+      setError(error instanceof Error ? error.message : "조직 생성에 실패했습니다.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Render awaiting approval message
+  if (awaitingApproval) {
+    return (
+      <div className={cn("flex flex-col gap-6", className)} {...props}>
+        <Card>
+          <CardHeader className="space-y-4">
+            <div className="flex justify-center">
+              <AppIcon size="xl" />
+            </div>
+            <div className="text-center">
+              <CardTitle className="text-2xl">승인 대기 중</CardTitle>
+              <CardDescription>관리자 승인을 기다리고 있습니다</CardDescription>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="text-center text-sm text-muted-foreground">
+              <p>가입 요청이 성공적으로 제출되었습니다.</p>
+              <p className="mt-2">관리자가 승인하면 이메일로 알림을 받게 됩니다.</p>
+            </div>
+            <div className="pt-4">
+              <Button
+                onClick={() => router.push("/auth/signin")}
+                className="w-full"
+              >
+                로그인 페이지로 이동
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
@@ -95,7 +188,9 @@ export function SignUpForm({
           </div>
           <div className="text-center">
             <CardTitle className="text-2xl">회원가입</CardTitle>
-            <CardDescription>새 계정을 만드세요</CardDescription>
+            <CardDescription>
+              {signupStep === "basic" ? "새 계정을 만드세요" : "조직을 선택하세요"}
+            </CardDescription>
           </div>
         </CardHeader>
         <CardContent>
@@ -110,6 +205,7 @@ export function SignUpForm({
                   required
                   value={name}
                   onChange={(e) => setName(e.target.value)}
+                  disabled={signupStep === "organization"}
                 />
               </div>
               <div className="grid gap-2">
@@ -121,11 +217,16 @@ export function SignUpForm({
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  disabled={signupStep === "organization"}
                 />
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="role">직군</Label>
-                <Select value={role} onValueChange={(value: "nurse" | "doctor") => setRole(value)}>
+                <Select
+                  value={role}
+                  onValueChange={(value: "nurse" | "doctor") => setRole(value)}
+                  disabled={signupStep === "organization"}
+                >
                   <SelectTrigger id="role">
                     <SelectValue placeholder="직군을 선택하세요" />
                   </SelectTrigger>
@@ -145,6 +246,7 @@ export function SignUpForm({
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  disabled={signupStep === "organization"}
                 />
               </div>
               <div className="grid gap-2">
@@ -157,12 +259,15 @@ export function SignUpForm({
                   required
                   value={repeatPassword}
                   onChange={(e) => setRepeatPassword(e.target.value)}
+                  disabled={signupStep === "organization"}
                 />
               </div>
               {error && <p className="text-sm text-red-500">{error}</p>}
-              <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? "계정 생성 중..." : "회원가입"}
-              </Button>
+              {signupStep === "basic" && (
+                <Button type="submit" className="w-full" disabled={isLoading}>
+                  {isLoading ? "계정 생성 중..." : "회원가입"}
+                </Button>
+              )}
             </div>
             <div className="mt-4 text-center text-sm">
               이미 계정이 있으신가요?{" "}
@@ -173,6 +278,24 @@ export function SignUpForm({
           </form>
         </CardContent>
       </Card>
+
+      {/* Organization Search Dialog */}
+      <OrganizationSearchDialog
+        open={showOrgSearch}
+        onOpenChange={setShowOrgSearch}
+        onSelectOrganization={handleSelectOrganization}
+        onCreateNew={() => {
+          setShowOrgSearch(false);
+          setShowOrgCreate(true);
+        }}
+      />
+
+      {/* Create Organization Dialog */}
+      <CreateOrganizationDialog
+        open={showOrgCreate}
+        onOpenChange={setShowOrgCreate}
+        onSuccess={handleCreateOrganization}
+      />
     </div>
   );
 }

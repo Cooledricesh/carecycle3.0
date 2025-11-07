@@ -22,7 +22,7 @@ import { ScheduleResumeDialog } from '@/components/schedules/schedule-resume-dia
 import type { ResumeOptions } from '@/lib/schedule-management/schedule-state-manager';
 import { ScheduleDateCalculator } from '@/lib/schedule-management/schedule-date-calculator';
 import { ChevronLeft, ChevronRight, Calendar, Clock, AlertCircle, ChevronUp, ChevronDown, Users, User } from 'lucide-react';
-import { useProfile } from '@/hooks/useProfile';
+import { useProfile, Profile } from '@/hooks/useProfile';
 import { useScheduleCompletion } from '@/hooks/useScheduleCompletion';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -70,6 +70,7 @@ export function CalendarView({ className }: CalendarViewProps) {
   const supabase = createClient();
   const { filters } = useFilterContext();
   const { data: profile } = useProfile();
+  const typedProfile = profile as Profile | null | undefined;
 
   useScheduleRefetch();
 
@@ -228,8 +229,12 @@ export function CalendarView({ className }: CalendarViewProps) {
   
   // 스케줄 액션 핸들러들
   const statusMutation = useMutation({
-    mutationFn: ({ id, status }: { id: string; status: 'active' | 'paused' }) =>
-      scheduleService.updateStatus(id, status),
+    mutationFn: ({ id, status }: { id: string; status: 'active' | 'paused' }) => {
+      if (!typedProfile?.organization_id) {
+        throw new Error('Organization ID not available');
+      }
+      return scheduleService.updateStatus(id, status, typedProfile.organization_id);
+    },
     onSuccess: async (_, variables) => {
       toast({
         title: "성공",
@@ -252,7 +257,12 @@ export function CalendarView({ className }: CalendarViewProps) {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: scheduleService.delete,
+    mutationFn: (id: string) => {
+      if (!typedProfile?.organization_id) {
+        throw new Error('Organization ID not available');
+      }
+      return scheduleService.delete(id, typedProfile.organization_id);
+    },
     onSuccess: async () => {
       toast({
         title: "성공",
@@ -288,9 +298,10 @@ export function CalendarView({ className }: CalendarViewProps) {
     if (!selectedScheduleForResume) return;
 
     try {
+      if (!typedProfile?.organization_id) return;
       // Use id fallback to handle objects with either id or schedule_id
       const scheduleId = (selectedScheduleForResume as any).id || (selectedScheduleForResume as any).schedule_id;
-      await scheduleService.resumeSchedule(scheduleId, options);
+      await scheduleService.resumeSchedule(scheduleId, typedProfile.organization_id, options);
 
       toast({
         title: "성공",
@@ -361,8 +372,8 @@ export function CalendarView({ className }: CalendarViewProps) {
                   <>
                     <User className="h-3 w-3" />
                     <span>
-                      {profile?.role === 'doctor' ? '내 환자' :
-                       profile?.role === 'nurse' ? `${profile?.care_type || '소속'} 환자` :
+                      {typedProfile?.role === 'doctor' ? '내 환자' :
+                       typedProfile?.role === 'nurse' ? `${typedProfile?.care_type || '소속'} 환자` :
                        '환자'}
                     </span>
                   </>

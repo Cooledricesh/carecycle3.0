@@ -174,8 +174,58 @@ docs/
 ├── API-REFERENCE.md                            # Complete API reference
 ├── openapi.yaml                                # OpenAPI 3.0 specification
 ├── medical-scheduler.postman_collection.json   # Postman collection
-└── medical-scheduler.postman_environment.json  # Postman environment
+├── medical-scheduler.postman_environment.json  # Postman environment
+├── api/                                         # API documentation
+├── db/                                          # Database schema & migrations
+├── code-quality/                                # Code quality guidelines
+├── adr/                                         # Architecture Decision Records
+├── security/                                    # Security documentation
+└── archive/                                     # Archived documents (see below)
 ```
+
+## 📦 Archive
+
+The `/docs/archive/` folder contains historical documentation from completed implementations. These documents are preserved for reference and learning purposes.
+
+### Archive Structure
+
+```
+docs/archive/
+├── multitenancy/          # Multitenancy implementation (completed)
+│   ├── MULTITENANCY_IMPLEMENTATION_STATUS.md
+│   ├── MULTITENANCY_IMPLEMENTATION_REPORT.md
+│   └── PHASE_3_QUICK_REFERENCE.md
+├── features/              # Feature implementation records
+│   ├── TDD_ORGANIZATION_SIGNUP_TESTS.md
+│   ├── ADMIN_ACTIVITY_LOG_PROBLEMS.md (failure analysis)
+│   └── ADMIN_ACTIVITY_TRACKING_V2_PLAN.md
+└── reviews/               # Code review reports
+    └── PR45_CODERABBIT_REVIEW_REPORT.md
+```
+
+### What's Archived
+
+**Multitenancy Implementation (Nov 2025)**
+- Complete implementation status tracking
+- Detailed progress reports for all phases
+- Quick reference guides for Phase 3 data isolation
+
+**Feature Development Records**
+- TDD test documentation for organization signup
+- Post-mortem analysis of failed implementations
+- Successful v2 implementation plans
+
+**Code Reviews**
+- PR45 security and code quality analysis
+- CodeRabbit automated review findings
+
+### Why Archive?
+
+Archived documents serve several purposes:
+1. **Historical Reference**: Track how features were implemented
+2. **Learning Resource**: Learn from both successes and failures
+3. **Pattern Library**: Reuse successful implementation patterns
+4. **Onboarding**: Help new team members understand system evolution
 
 ## 🤝 Support & Contributing
 

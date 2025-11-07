@@ -1,7 +1,6 @@
 'use client'
 
-import { createClient } from '@/lib/supabase/client'
-import type { SupabaseClient } from '@/lib/supabase/database'
+import { createClient, type SupabaseClient } from '@/lib/supabase/client'
 import type { Patient } from '@/types/patient'
 import { toCamelCase } from '@/lib/database-utils'
 
@@ -89,7 +88,7 @@ export class PatientArchiveService {
         originalPatient: toCamelCase(originalPatient) as Patient,
         archivedPatientId: patientId,
         archivedPatientNumber: archivedPatient.patient_number,
-        timestamp: archivedPatient.archived_at
+        timestamp: archivedPatient.archived_at || new Date().toISOString()
       }
 
       console.log('[PatientArchiveService.archivePatient] Successfully archived patient:', result)
@@ -223,7 +222,9 @@ export class PatientArchiveService {
           throw new Error(`일괄 아카이브 실패: ${bulkError.message}`)
         }
 
-        processedCount = result?.processed_count || 0
+        processedCount = typeof result === 'object' && result !== null && 'processed_count' in result
+          ? (result.processed_count as number)
+          : 0
         
         // Log successful archiving for each patient
         inactivePatients.slice(0, processedCount).forEach(patient => {

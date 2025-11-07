@@ -1,7 +1,6 @@
 'use client'
 
-import { createClient } from '@/lib/supabase/client'
-import type { SupabaseClient } from '@/lib/supabase/database'
+import { createClient, type SupabaseClient } from '@/lib/supabase/client'
 import {
   ScheduleCreateSchema,
   ScheduleUpdateSchema,
@@ -12,14 +11,22 @@ import {
   type ScheduleEditInput,
   type ScheduleCreateWithCustomItemInput
 } from '@/schemas/schedule'
-import type { Schedule, ScheduleWithDetails } from '@/types/schedule'
+import type { Schedule, ScheduleWithDetails, ScheduleRow } from '@/types/schedule'
 import { toCamelCase as snakeToCamel, toSnakeCase as camelToSnake } from '@/lib/database-utils'
 import { format, addDays } from 'date-fns'
 import { addWeeks } from '@/lib/utils/date'
 import type { ScheduleFilter } from '@/lib/filters/filter-types'
+import {
+  convertRowToSchedule,
+  extractPatientName,
+  extractItemName,
+  extractCareType,
+  extractDoctorId,
+  hasRelations
+} from '@/lib/schedule-management/schedule-type-mapper'
 
 export const scheduleService = {
-  async create(input: ScheduleCreateInput, supabase?: SupabaseClient): Promise<Schedule> {
+  async create(input: ScheduleCreateInput, organizationId: string, supabase?: SupabaseClient): Promise<Schedule> {
     const client = supabase || createClient()
     try {
       const validated = ScheduleCreateSchema.parse(input)
@@ -32,6 +39,7 @@ export const scheduleService = {
         .eq('patient_id', validated.patientId)
         .eq('item_id', validated.itemId)
         .eq('status', 'active')
+        .eq('organization_id', organizationId)
         .maybeSingle()
 
       if (existingSchedule) {
@@ -54,12 +62,13 @@ export const scheduleService = {
       // Calculate next_due_date from start_date
       const nextDueDate = validated.startDate
 
-      const { data, error } = await (client as any)
+      const { data, error } = await client
         .from('schedules')
         .insert({
           ...snakeData,
           next_due_date: nextDueDate,
-          status: 'active'
+          status: 'active',
+          organization_id: organizationId
         })
         .select()
         .single()
@@ -72,7 +81,12 @@ export const scheduleService = {
         }
         throw error
       }
-      return snakeToCamel(data) as Schedule
+
+      if (!data) {
+        throw new Error('스케줄 생성 실패: 데이터가 반환되지 않았습니다.')
+      }
+
+      return convertRowToSchedule(data)
     } catch (error: any) {
       console.error('Error creating schedule:', error)
       // Re-throw if it's already our custom error message
@@ -83,7 +97,7 @@ export const scheduleService = {
     }
   },
 
-  async createWithCustomItem(input: ScheduleCreateWithCustomItemInput, supabase?: SupabaseClient): Promise<Schedule> {
+  async createWithCustomItem(input: ScheduleCreateWithCustomItemInput, organizationId: string, supabase?: SupabaseClient): Promise<Schedule> {
     const client = supabase || createClient()
 
     // Validate input using Zod schema
@@ -104,6 +118,7 @@ export const scheduleService = {
         .from('items')
         .select('id')
         .eq('name', validatedInput.itemName)
+        .eq('organization_id', organizationId)
         .maybeSingle()
       
       if (existingItem) {
@@ -119,7 +134,8 @@ export const scheduleService = {
             category: validatedInput.category || 'other', // Use validated category or default to 'other'
             description: `${validatedInput.intervalWeeks}주 주기`,
             default_interval_weeks: validatedInput.intervalWeeks,
-            preparation_notes: null
+            preparation_notes: null,
+            organization_id: organizationId
           })
           .select()
           .single()
@@ -143,6 +159,7 @@ export const scheduleService = {
         .eq('patient_id', validatedInput.patientId)
         .eq('item_id', itemId)
         .eq('status', 'active')
+        .eq('organization_id', organizationId)
         .maybeSingle()
 
       if (existingSchedule) {
@@ -176,7 +193,8 @@ export const scheduleService = {
           requires_notification: true,
           notification_days_before: validatedInput.notificationDaysBefore ?? 7, // Use validated value or default to 7
           created_by: userId,
-          assigned_nurse_id: userId // Assign to the creator by default
+          assigned_nurse_id: userId, // Assign to the creator by default
+          organization_id: organizationId
         })
         .select()
         .single()
@@ -221,14 +239,14 @@ export const scheduleService = {
     }
   },
 
-  async getTodayChecklist(filters?: ScheduleFilter, supabase?: SupabaseClient): Promise<ScheduleWithDetails[]> {
+  async getTodayChecklist(organizationId: string, filters?: ScheduleFilter, supabase?: SupabaseClient): Promise<ScheduleWithDetails[]> {
     const client = supabase || createClient()
 
     const executeQuery = async (retryCount = 0): Promise<ScheduleWithDetails[]> => {
       try {
         console.log('[scheduleService.getTodayChecklist] Fetching with filters:', filters, '(attempt:', retryCount + 1, ')')
         const today = format(new Date(), 'yyyy-MM-dd')
-        
+
         const { data, error } = await client
           .from('schedules')
           .select(`
@@ -237,10 +255,11 @@ export const scheduleService = {
             items (*)
           `)
           .eq('status', 'active')
+          .eq('organization_id', organizationId)
           .lte('next_due_date', today)
           .order('priority', { ascending: false })
           .order('next_due_date', { ascending: true })
-        
+
         if (error) {
           console.error('[scheduleService.getTodayChecklist] Error:', error)
 
@@ -262,6 +281,8 @@ export const scheduleService = {
 
           return {
             ...schedule,
+            // Explicit schedule_id mapping (ScheduleWithDetails expects snake_case)
+            schedule_id: item.id,
             // Add flat fields for UI compatibility (matching scheduleServiceEnhanced pattern)
             patient_name: patients?.name || '',
             patient_care_type: patients?.care_type || '',
@@ -307,7 +328,7 @@ export const scheduleService = {
     return executeQuery()
   },
 
-  async getUpcomingSchedules(daysAhead: number = 7, filters?: ScheduleFilter, supabase?: SupabaseClient): Promise<ScheduleWithDetails[]> {
+  async getUpcomingSchedules(daysAhead: number = 7, organizationId: string, filters?: ScheduleFilter, supabase?: SupabaseClient): Promise<ScheduleWithDetails[]> {
     const client = supabase || createClient()
 
     const executeQuery = async (retryCount = 0): Promise<ScheduleWithDetails[]> => {
@@ -326,6 +347,7 @@ export const scheduleService = {
             items (*)
           `)
           .eq('status', 'active')
+          .eq('organization_id', organizationId)
           .gte('next_due_date', pastDate)
           .lte('next_due_date', futureDate)
         .order('next_due_date', { ascending: true })
@@ -351,6 +373,8 @@ export const scheduleService = {
 
           return {
             ...schedule,
+            // Explicit schedule_id mapping (ScheduleWithDetails expects snake_case)
+            schedule_id: item.id,
             // Add flat fields for UI compatibility (matching scheduleServiceEnhanced pattern)
             patient_name: patients?.name || '',
             patient_care_type: patients?.care_type || '',
@@ -396,7 +420,7 @@ export const scheduleService = {
     return executeQuery()
   },
 
-  async getByPatientId(patientId: string, supabase?: SupabaseClient): Promise<ScheduleWithDetails[]> {
+  async getByPatientId(patientId: string, organizationId: string, supabase?: SupabaseClient): Promise<ScheduleWithDetails[]> {
     const client = supabase || createClient()
     try {
       const { data, error } = await client
@@ -407,6 +431,7 @@ export const scheduleService = {
           items (*)
         `)
         .eq('patient_id', patientId)
+        .eq('organization_id', organizationId)
         .order('next_due_date', { ascending: true })
       
       if (error) throw error
@@ -425,7 +450,7 @@ export const scheduleService = {
     }
   },
 
-  async getById(id: string, supabase?: SupabaseClient): Promise<ScheduleWithDetails | null> {
+  async getById(id: string, organizationId: string, supabase?: SupabaseClient): Promise<ScheduleWithDetails | null> {
     const client = supabase || createClient()
     try {
       const { data, error } = await client
@@ -436,6 +461,7 @@ export const scheduleService = {
           items (*)
         `)
         .eq('id', id)
+        .eq('organization_id', organizationId)
         .single()
       
       if (error) {
@@ -455,16 +481,17 @@ export const scheduleService = {
     }
   },
 
-  async update(id: string, input: ScheduleUpdateInput, supabase?: SupabaseClient): Promise<Schedule> {
+  async update(id: string, input: ScheduleUpdateInput, organizationId: string, supabase?: SupabaseClient): Promise<Schedule> {
     const client = supabase || createClient()
     try {
       const validated = ScheduleUpdateSchema.parse(input)
       const snakeData = camelToSnake(validated)
-      
+
       const { data, error } = await client
         .from('schedules')
         .update(snakeData)
         .eq('id', id)
+        .eq('organization_id', organizationId)
         .select()
         .single()
       
@@ -476,7 +503,7 @@ export const scheduleService = {
     }
   },
 
-  async updateStatus(id: string, status: 'active' | 'paused' | 'completed' | 'cancelled', supabase?: SupabaseClient): Promise<void> {
+  async updateStatus(id: string, status: 'active' | 'paused' | 'completed' | 'cancelled', organizationId: string, supabase?: SupabaseClient): Promise<void> {
     const client = supabase || createClient()
 
     // Use the new ScheduleStateManager for pause/resume transitions
@@ -489,6 +516,7 @@ export const scheduleService = {
         .from('schedules')
         .select('*')
         .eq('id', id)
+        .eq('organization_id', organizationId)
         .single()
 
       if (fetchError || !schedule) {
@@ -518,6 +546,7 @@ export const scheduleService = {
         .from('schedules')
         .update({ status })
         .eq('id', id)
+        .eq('organization_id', organizationId)
 
       if (error) throw error
     } catch (error) {
@@ -527,8 +556,13 @@ export const scheduleService = {
   },
 
   // New method for advanced pause/resume with options
-  async pauseSchedule(id: string, options?: { reason?: string; notifyAssignedNurse?: boolean }, supabase?: SupabaseClient): Promise<void> {
+  async pauseSchedule(id: string, organizationId: string, options?: { reason?: string; notifyAssignedNurse?: boolean }, supabase?: SupabaseClient): Promise<void> {
     const client = supabase || createClient()
+
+    // Validate ownership
+    const schedule = await this.getById(id, organizationId, client)
+    if (!schedule) throw new Error('스케줄을 찾을 수 없습니다')
+
     const { ScheduleStateManager } = await import('@/lib/schedule-management/schedule-state-manager')
     const stateManager = new ScheduleStateManager(client)
 
@@ -537,6 +571,7 @@ export const scheduleService = {
 
   async resumeSchedule(
     id: string,
+    organizationId: string,
     options: {
       strategy: 'immediate' | 'next_cycle' | 'custom'
       customDate?: Date
@@ -545,19 +580,25 @@ export const scheduleService = {
     supabase?: SupabaseClient
   ): Promise<void> {
     const client = supabase || createClient()
+
+    // Validate ownership
+    const schedule = await this.getById(id, organizationId, client)
+    if (!schedule) throw new Error('스케줄을 찾을 수 없습니다')
+
     const { ScheduleStateManager } = await import('@/lib/schedule-management/schedule-state-manager')
     const stateManager = new ScheduleStateManager(client)
 
     await stateManager.resumeSchedule(id, options)
   },
 
-  async delete(id: string, supabase?: SupabaseClient): Promise<void> {
+  async delete(id: string, organizationId: string, supabase?: SupabaseClient): Promise<void> {
     const client = supabase || createClient()
     try {
       const { error } = await client
         .from('schedules')
         .update({ status: 'cancelled' })
         .eq('id', id)
+        .eq('organization_id', organizationId)
       
       if (error) throw error
     } catch (error) {
@@ -566,11 +607,11 @@ export const scheduleService = {
     }
   },
 
-  async getOverdueSchedules(supabase?: SupabaseClient): Promise<ScheduleWithDetails[]> {
+  async getOverdueSchedules(organizationId: string, supabase?: SupabaseClient): Promise<ScheduleWithDetails[]> {
     const client = supabase || createClient()
     try {
       const today = format(new Date(), 'yyyy-MM-dd')
-      
+
       const { data, error } = await client
         .from('schedules')
         .select(`
@@ -579,6 +620,7 @@ export const scheduleService = {
           items (*)
         `)
         .eq('status', 'active')
+        .eq('organization_id', organizationId)
         .lt('next_due_date', today)
         .order('next_due_date', { ascending: true })
       
@@ -598,7 +640,7 @@ export const scheduleService = {
     }
   },
 
-  async getAllSchedules(filters?: ScheduleFilter, supabase?: SupabaseClient): Promise<ScheduleWithDetails[]> {
+  async getAllSchedules(organizationId: string, filters?: ScheduleFilter, supabase?: SupabaseClient): Promise<ScheduleWithDetails[]> {
     const client = supabase || createClient()
 
     const executeQuery = async (retryCount = 0): Promise<ScheduleWithDetails[]> => {
@@ -613,6 +655,7 @@ export const scheduleService = {
             items (*)
           `)
           .in('status', ['active', 'paused'])  // Only show active and paused schedules, exclude cancelled and deleted
+          .eq('organization_id', organizationId)
 
         // Apply filters
         if (filters) {
@@ -652,6 +695,8 @@ export const scheduleService = {
 
           return {
             ...schedule,
+            // Explicit schedule_id mapping (ScheduleWithDetails expects snake_case)
+            schedule_id: item.id,
             // Add flat fields for UI compatibility (matching scheduleServiceEnhanced pattern)
             patient_name: patients?.name || '',
             patient_care_type: patients?.care_type || '',
@@ -717,7 +762,7 @@ export const scheduleService = {
     return executeQuery()
   },
 
-  async editSchedule(scheduleId: string, input: ScheduleEditInput, supabase?: SupabaseClient): Promise<Schedule> {
+  async editSchedule(scheduleId: string, input: ScheduleEditInput, organizationId: string, supabase?: SupabaseClient): Promise<Schedule> {
     const client = supabase || createClient()
 
     // Development-only logging without PHI
@@ -740,6 +785,7 @@ export const scheduleService = {
         .from('schedules')
         .select('start_date')
         .eq('id', scheduleId)
+        .eq('organization_id', organizationId)
         .single()
 
       if (fetchError) {
@@ -790,6 +836,7 @@ export const scheduleService = {
         .from('items')
         .select('id')
         .eq('name', validated.itemName)
+        .eq('organization_id', organizationId)
         .maybeSingle()
 
       if (existingItem) {
@@ -805,7 +852,8 @@ export const scheduleService = {
             category: 'other',
             description: `${validated.intervalWeeks}주 주기`,
             default_interval_weeks: validated.intervalWeeks,
-            preparation_notes: null
+            preparation_notes: null,
+            organization_id: organizationId
           })
           .select()
           .single()
@@ -841,6 +889,7 @@ export const scheduleService = {
         .from('schedules')
         .update(updateData)
         .eq('id', scheduleId)
+        .eq('organization_id', organizationId)
         .select()
         .single()
 
@@ -883,7 +932,7 @@ export const scheduleService = {
     executedDate: string,
     notes?: string,
     executedBy: string
-  }, supabase?: SupabaseClient): Promise<void> {
+  }, organizationId: string, supabase?: SupabaseClient): Promise<void> {
     const client = supabase || createClient()
     try {
       // 1. 스케줄 정보 조회
@@ -891,6 +940,7 @@ export const scheduleService = {
         .from('schedules')
         .select('*, items(*)')
         .eq('id', scheduleId)
+        .eq('organization_id', organizationId)
         .single()
 
       if (scheduleError) throw scheduleError
@@ -906,7 +956,7 @@ export const scheduleService = {
             p_planned_date: schedule.next_due_date,
             p_executed_date: input.executedDate,
             p_executed_by: input.executedBy,
-            p_notes: input.notes || null
+            p_notes: input.notes ?? undefined
           })
 
         if (rpcError) {
@@ -919,12 +969,13 @@ export const scheduleService = {
               .from('schedule_executions')
               .insert({
                 schedule_id: scheduleId,
+                organization_id: organizationId,
                 planned_date: schedule.next_due_date,
                 executed_date: input.executedDate,
                 executed_time: format(new Date(), 'HH:mm:ss'),
                 status: 'completed',
                 executed_by: input.executedBy,
-                notes: input.notes || null
+                notes: input.notes ?? undefined
               })
 
             if (executionError) {
@@ -990,6 +1041,7 @@ export const scheduleService = {
           last_executed_date: input.executedDate
         })
         .eq('id', scheduleId)
+        .eq('organization_id', organizationId)
 
       if (updateError) {
         console.error('Schedule update error:', updateError)
@@ -1001,7 +1053,7 @@ export const scheduleService = {
     }
   },
 
-  async getCalendarSchedules(startDate: string, endDate: string, filters?: ScheduleFilter, supabase?: SupabaseClient): Promise<ScheduleWithDetails[]> {
+  async getCalendarSchedules(startDate: string, endDate: string, organizationId: string, filters?: ScheduleFilter, supabase?: SupabaseClient): Promise<ScheduleWithDetails[]> {
     const client = supabase || createClient()
 
     try {
@@ -1009,7 +1061,7 @@ export const scheduleService = {
       const { data, error } = await client.rpc('get_calendar_schedules', {
         p_start_date: startDate,
         p_end_date: endDate,
-        p_user_id: null // Can be enhanced to pass user ID for role-based filtering
+        p_user_id: undefined // Can be enhanced to pass user ID for role-based filtering
       })
 
       if (error) {

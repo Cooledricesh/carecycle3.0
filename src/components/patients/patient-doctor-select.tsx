@@ -29,6 +29,7 @@ import type { Patient } from '@/types/patient'
 import { Loader2, UserCheck, Clock, UserPlus } from 'lucide-react'
 import { useQueryClient, useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
+import { useProfile, Profile } from '@/hooks/useProfile'
 
 interface PatientDoctorSelectProps {
   patient: Patient
@@ -51,6 +52,8 @@ export function PatientDoctorSelect({
   const queryClient = useQueryClient()
   const { data: doctors, isLoading: isLoadingDoctors } = useDoctors()
   const supabase = createClient()
+  const { data: profile } = useProfile()
+  const typedProfile = profile as Profile | null | undefined
 
   // Fetch pending (unregistered) doctor names
   const { data: pendingDoctors } = useQuery({
@@ -141,12 +144,17 @@ export function PatientDoctorSelect({
     setIsLoading(true)
 
     try {
+      if (!typedProfile?.organization_id) {
+        throw new Error('Organization ID not found');
+      }
+
       await patientService.update(
         patient.id,
         {
           doctorId: newDoctorId,
           assignedDoctorName: newDoctorName,
         },
+        typedProfile.organization_id,
         {
           signal: abortControllerRef.current.signal
         }

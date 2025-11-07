@@ -378,7 +378,7 @@ export default function AdminUsersPage() {
     );
   }
 
-  const pendingUsers = users.filter(u => u.approval_status === 'pending');
+  const pendingUsers = users.filter(u => u.approval_status === 'pending' || u.approval_status === null);
   const approvedUsers = users.filter(u => u.approval_status === 'approved');
   const rejectedUsers = users.filter(u => u.approval_status === 'rejected');
 
@@ -444,7 +444,7 @@ export default function AdminUsersPage() {
                     <TableCell>{user.care_type === '입원' ? '병동' : (user.care_type || '-')}</TableCell>
                     <TableCell>{getRoleBadge(user.role)}</TableCell>
                     <TableCell>
-                      {new Date(user.created_at).toLocaleDateString('ko-KR')}
+                      {user.created_at ? new Date(user.created_at).toLocaleDateString('ko-KR') : '-'}
                     </TableCell>
                     <TableCell className="text-right space-x-2">
                       <Button
@@ -575,7 +575,7 @@ export default function AdminUsersPage() {
                         getRoleBadge(user.role)
                       )}
                     </TableCell>
-                    <TableCell>{getStatusBadge(user.approval_status)}</TableCell>
+                    <TableCell>{getStatusBadge(user.approval_status || 'pending')}</TableCell>
                     <TableCell>
                       <Badge
                         variant={user.is_active ? "default" : "secondary"}
@@ -585,7 +585,7 @@ export default function AdminUsersPage() {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      {new Date(user.created_at).toLocaleDateString('ko-KR')}
+                      {user.created_at ? new Date(user.created_at).toLocaleDateString('ko-KR') : '-'}
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center justify-center gap-1">

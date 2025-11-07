@@ -95,11 +95,11 @@ export const ScheduleCreateSchema = z.object({
 )
 
 export const ScheduleUpdateSchema = z.object({
-  intervalDays: z
+  intervalWeeks: z
     .number()
     .int('정수를 입력해주세요')
-    .min(1, '최소 1일 이상 입력해주세요')
-    .max(365, '최대 365일까지 입력 가능합니다')
+    .min(1, '최소 1주 이상 입력해주세요')
+    .max(52, '최대 52주까지 입력 가능합니다')
     .optional(),
   
   startDate: z

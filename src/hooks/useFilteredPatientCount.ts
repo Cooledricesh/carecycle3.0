@@ -2,11 +2,12 @@
 
 import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
-import { useProfile } from './useProfile'
+import { useProfile, Profile } from './useProfile'
 import { useFilterContext } from '@/lib/filters/filter-context'
 
 export function useFilteredPatientCount() {
   const { data: profile } = useProfile()
+  const typedProfile = profile as Profile | null | undefined
   const { filters } = useFilterContext()
   const supabase = createClient()
 
@@ -32,9 +33,9 @@ export function useFilteredPatientCount() {
 
   // Get "my patients" count for doctors and nurses
   const { data: myPatientCount = 0 } = useQuery({
-    queryKey: ['my-patients', profile?.id, profile?.role, profile?.care_type],
+    queryKey: ['my-patients', profile?.id, typedProfile?.role, typedProfile?.care_type],
     queryFn: async () => {
-      if (!profile) return 0
+      if (!profile || !typedProfile) return 0
 
       let query = supabase
         .from('patients')
@@ -42,11 +43,11 @@ export function useFilteredPatientCount() {
         .eq('is_active', true)  // Always filter by active status
 
       // Filter based on role
-      if (profile.role === 'doctor') {
+      if (typedProfile.role === 'doctor') {
         query = query.eq('doctor_id', profile.id)
-      } else if (profile.role === 'nurse' && profile.care_type) {
-        query = query.eq('care_type', profile.care_type)
-      } else if (profile.role === 'admin') {
+      } else if (typedProfile.role === 'nurse' && typedProfile.care_type) {
+        query = query.eq('care_type', typedProfile.care_type)
+      } else if (typedProfile.role === 'admin') {
         // Admin sees all active patients
         const { count, error } = await query
         if (error) {
@@ -64,8 +65,8 @@ export function useFilteredPatientCount() {
       }
 
       console.log('[useFilteredPatientCount] My patients count:', {
-        role: profile.role,
-        careType: profile.care_type,
+        role: typedProfile.role,
+        careType: typedProfile.care_type,
         count
       })
 
@@ -79,7 +80,7 @@ export function useFilteredPatientCount() {
     totalCount: totalPatientCount,
     isLoading: false,
     isShowingAll: filters.showAll === true,
-    role: profile?.role,
-    careType: profile?.care_type
+    role: typedProfile?.role,
+    careType: typedProfile?.care_type
   }
 }

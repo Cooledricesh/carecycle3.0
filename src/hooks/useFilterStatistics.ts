@@ -15,7 +15,7 @@ export function useFilterStatistics(profile: Profile | null | undefined): UseFil
   const [urgentCount, setUrgentCount] = useState(0)
 
   useEffect(() => {
-    if (!profile) {
+    if (!profile || !profile.organization_id) {
       setStatistics(null)
       setUrgentCount(0)
       return
@@ -26,7 +26,8 @@ export function useFilterStatistics(profile: Profile | null | undefined): UseFil
         const userContext = {
           userId: profile.id,
           role: profile.role,
-          careType: profile.care_type
+          careType: profile.care_type,
+          organizationId: profile.organization_id
         }
 
         const stats = await scheduleServiceEnhanced.getFilterStatistics(userContext)
@@ -45,7 +46,7 @@ export function useFilterStatistics(profile: Profile | null | undefined): UseFil
 
     fetchStats()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [profile?.id, profile?.role, profile?.care_type])
+  }, [profile?.id, profile?.role, profile?.care_type, profile?.organization_id])
 
   return { statistics, urgentCount }
 }

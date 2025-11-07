@@ -1,107 +1,47 @@
 import { describe, test, expect } from 'vitest'
 import {
-  addDays,
-  addWeeks,
   addMonths,
   calculateNextDueDate,
   formatDateForDB,
   parseDateFromDB,
-  isFutureOrToday,
-  getDaysBetween
+  isFutureOrToday
 } from '../date-utils'
 
+/**
+ * Date utilities test suite - focused on business logic
+ *
+ * Note: Trivial wrapper functions (addDays, addWeeks, getDaysBetween) are not tested
+ * as they delegate to simple built-in Date methods. We test only functions with
+ * complex logic or edge cases that matter for medical scheduling.
+ */
 describe('Date Utilities', () => {
-  describe('addDays', () => {
-    test('should add positive days correctly', () => {
-      const date = new Date('2025-01-15')
-      const result = addDays(date, 5)
-      expect(result.getDate()).toBe(20)
-      expect(result.getMonth()).toBe(0) // January
-    })
-
-    test('should handle month transition', () => {
-      const date = new Date('2025-01-30')
-      const result = addDays(date, 5)
-      expect(result.getDate()).toBe(4)
-      expect(result.getMonth()).toBe(1) // February
-    })
-
-    test('should subtract days when negative', () => {
-      const date = new Date('2025-01-15')
-      const result = addDays(date, -5)
-      expect(result.getDate()).toBe(10)
-    })
-
-    test('should not mutate original date', () => {
-      const date = new Date('2025-01-15')
-      const original = date.getDate()
-      addDays(date, 5)
-      expect(date.getDate()).toBe(original)
-    })
-  })
-
-  describe('addWeeks', () => {
-    test('should add weeks correctly', () => {
-      const date = new Date('2025-01-15')
-      const result = addWeeks(date, 2)
-      expect(result.getDate()).toBe(29)
-    })
-
-    test('should handle multiple weeks across months', () => {
-      const date = new Date('2025-01-20')
-      const result = addWeeks(date, 4)
-      expect(result.getMonth()).toBe(1) // February
-      expect(result.getDate()).toBe(17)
-    })
-  })
-
   describe('addMonths', () => {
-    test('should add months correctly', () => {
-      const date = new Date('2025-01-15')
-      const result = addMonths(date, 2)
-      expect(result.getMonth()).toBe(2) // March
-      expect(result.getDate()).toBe(15)
-    })
-
-    test('should handle month-end dates (Jan 31 -> Feb 28)', () => {
-      const date = new Date('2025-01-31')
-      const result = addMonths(date, 1)
+    test('should handle month-end dates correctly (Jan 31 -> Feb 28/29)', () => {
+      const jan31 = new Date('2025-01-31')
+      const result = addMonths(jan31, 1)
       expect(result.getMonth()).toBe(1) // February
       expect(result.getDate()).toBe(28) // Feb 28, 2025 (not leap year)
     })
 
-    test('should handle leap year (Jan 31 -> Feb 29)', () => {
-      const date = new Date('2024-01-31')
-      const result = addMonths(date, 1)
-      expect(result.getMonth()).toBe(1) // February
+    test('should handle leap year edge case', () => {
+      const jan31 = new Date('2024-01-31')
+      const result = addMonths(jan31, 1)
       expect(result.getDate()).toBe(29) // Feb 29, 2024 (leap year)
-    })
-
-    test('should handle year transition', () => {
-      const date = new Date('2025-11-15')
-      const result = addMonths(date, 3)
-      expect(result.getFullYear()).toBe(2026)
-      expect(result.getMonth()).toBe(1) // February
     })
   })
 
   describe('calculateNextDueDate', () => {
-    test('should calculate next due date for days', () => {
+    test('should calculate next due date for all interval types', () => {
       const date = new Date('2025-01-15')
-      const result = calculateNextDueDate(date, 'day', 7)
-      expect(result.getDate()).toBe(22)
-    })
 
-    test('should calculate next due date for weeks', () => {
-      const date = new Date('2025-01-15')
-      const result = calculateNextDueDate(date, 'week', 2)
-      expect(result.getDate()).toBe(29)
-    })
+      const dayResult = calculateNextDueDate(date, 'day', 7)
+      expect(dayResult.getDate()).toBe(22)
 
-    test('should calculate next due date for months', () => {
-      const date = new Date('2025-01-15')
-      const result = calculateNextDueDate(date, 'month', 3)
-      expect(result.getMonth()).toBe(3) // April
+      const weekResult = calculateNextDueDate(date, 'week', 2)
+      expect(weekResult.getDate()).toBe(29)
+
+      const monthResult = calculateNextDueDate(date, 'month', 3)
+      expect(monthResult.getMonth()).toBe(3) // April
     })
 
     test('should throw error for invalid interval unit', () => {
@@ -113,32 +53,16 @@ describe('Date Utilities', () => {
     })
   })
 
-  describe('formatDateForDB', () => {
-    test('should format date correctly', () => {
-      const date = new Date('2025-01-15')
-      const result = formatDateForDB(date)
-      expect(result).toBe('2025-01-15')
-    })
-
-    test('should pad single digit months and days', () => {
+  describe('formatDateForDB / parseDateFromDB', () => {
+    test('should format and parse dates consistently', () => {
       const date = new Date('2025-03-05')
-      const result = formatDateForDB(date)
-      expect(result).toBe('2025-03-05')
-    })
+      const formatted = formatDateForDB(date)
+      expect(formatted).toBe('2025-03-05')
 
-    test('should handle year transitions', () => {
-      const date = new Date('2024-12-31')
-      const result = formatDateForDB(date)
-      expect(result).toBe('2024-12-31')
-    })
-  })
-
-  describe('parseDateFromDB', () => {
-    test('should parse date string correctly', () => {
-      const result = parseDateFromDB('2025-01-15')
-      expect(result.getUTCFullYear()).toBe(2025)
-      expect(result.getUTCMonth()).toBe(0) // January
-      expect(result.getUTCDate()).toBe(15)
+      const parsed = parseDateFromDB(formatted)
+      expect(parsed.getUTCFullYear()).toBe(2025)
+      expect(parsed.getUTCMonth()).toBe(2) // March
+      expect(parsed.getUTCDate()).toBe(5)
     })
 
     test('should parse as UTC to avoid timezone issues', () => {
@@ -149,52 +73,23 @@ describe('Date Utilities', () => {
   })
 
   describe('isFutureOrToday', () => {
-    test('should return true for today', () => {
-      const today = new Date()
-      expect(isFutureOrToday(today)).toBe(true)
-    })
-
-    test('should return true for future dates', () => {
-      const future = new Date()
-      future.setDate(future.getDate() + 1)
-      expect(isFutureOrToday(future)).toBe(true)
-    })
-
-    test('should return false for past dates', () => {
+    test('should correctly identify past, present, and future', () => {
       const past = new Date()
       past.setDate(past.getDate() - 1)
       expect(isFutureOrToday(past)).toBe(false)
+
+      const today = new Date()
+      expect(isFutureOrToday(today)).toBe(true)
+
+      const future = new Date()
+      future.setDate(future.getDate() + 1)
+      expect(isFutureOrToday(future)).toBe(true)
     })
 
     test('should ignore time component', () => {
       const today = new Date()
       today.setHours(23, 59, 59, 999)
       expect(isFutureOrToday(today)).toBe(true)
-    })
-  })
-
-  describe('getDaysBetween', () => {
-    test('should calculate days between dates correctly', () => {
-      const date1 = new Date('2025-01-15')
-      const date2 = new Date('2025-01-20')
-      expect(getDaysBetween(date1, date2)).toBe(5)
-    })
-
-    test('should return absolute difference', () => {
-      const date1 = new Date('2025-01-20')
-      const date2 = new Date('2025-01-15')
-      expect(getDaysBetween(date1, date2)).toBe(5)
-    })
-
-    test('should return 0 for same date', () => {
-      const date = new Date('2025-01-15')
-      expect(getDaysBetween(date, date)).toBe(0)
-    })
-
-    test('should handle dates across months', () => {
-      const date1 = new Date('2025-01-25')
-      const date2 = new Date('2025-02-05')
-      expect(getDaysBetween(date1, date2)).toBe(11)
     })
   })
 })

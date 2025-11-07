@@ -111,6 +111,7 @@ export class AdminFilterStrategy implements FilterStrategy {
         )
       `)
       .in('status', ['active', 'paused'])
+      .eq('organization_id', userContext.organizationId)
 
     // Admin can filter by care types if specified
     if (filters.careTypes?.length) {

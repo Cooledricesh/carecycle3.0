@@ -42,7 +42,7 @@ import { useIsMobile } from '@/hooks/useIsMobile'
 import { touchTarget, responsiveText, responsivePadding, responsiveSpacing } from '@/lib/utils'
 import { FilterProvider } from '@/providers/filter-provider'
 import { SimpleFilterToggle } from '@/components/filters/SimpleFilterToggle'
-import { useProfile } from '@/hooks/useProfile'
+import { useProfile, Profile } from '@/hooks/useProfile'
 
 interface PatientsContentProps {
   userRole?: string
@@ -435,18 +435,19 @@ function PatientsContent({ userRole }: PatientsContentProps) {
 
 export default function PatientsPage() {
   const { data: profile } = useProfile()
+  const typedProfile = profile as Profile | null | undefined
 
   return (
     <FilterProvider persistToUrl={true}>
       <div className="space-y-4">
         {/* Show filter toggle for nurse and doctor */}
-        {profile && (profile.role === 'nurse' || profile.role === 'doctor') && (
+        {typedProfile && (typedProfile.role === 'nurse' || typedProfile.role === 'doctor') && (
           <div className="p-3 bg-gray-50 border rounded-lg">
             <SimpleFilterToggle />
           </div>
         )}
 
-        <PatientsContent userRole={profile?.role} />
+        <PatientsContent userRole={typedProfile?.role} />
       </div>
     </FilterProvider>
   )

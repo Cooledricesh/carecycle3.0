@@ -9,12 +9,13 @@ const signupSchema = z.object({
   role: z.enum(["nurse", "admin", "doctor"]).default("nurse"),
   care_type: z.string().optional(),
   phone: z.string().optional(),
+  organization_id: z.string().min(1, "Organization ID is required"),
 });
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { email, password, name, role, care_type, phone } = signupSchema.parse(body);
+    const { email, password, name, role, care_type, phone, organization_id } = signupSchema.parse(body);
 
     const supabase = await createClient();
 
@@ -65,6 +66,7 @@ export async function POST(request: NextRequest) {
         role,
         care_type: finalCareType,
         phone: phone || null,
+        organization_id,
       });
 
     if (profileError) {

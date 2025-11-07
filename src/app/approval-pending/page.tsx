@@ -12,9 +12,16 @@ interface UserProfile {
   email: string
   name: string
   role: string
-  approval_status: 'pending' | 'approved' | 'rejected'
+  approval_status: 'pending' | 'approved' | 'rejected' | null
   is_active: boolean
-  created_at: string
+  created_at: string | null
+  updated_at?: string | null
+  organization_id?: string
+  care_type?: string | null
+  phone?: string | null
+  approved_at?: string | null
+  approved_by?: string | null
+  rejection_reason?: string | null
 }
 
 export default function ApprovalPendingPage() {
@@ -188,7 +195,7 @@ function ApprovalPendingPageContent() {
                 <p><span className="font-medium">Name:</span> {profile.name}</p>
                 <p><span className="font-medium">Email:</span> {profile.email}</p>
                 <p><span className="font-medium">Role:</span> {profile.role}</p>
-                <p><span className="font-medium">Registered:</span> {new Date(profile.created_at).toLocaleDateString()}</p>
+                <p><span className="font-medium">Registered:</span> {profile.created_at ? new Date(profile.created_at).toLocaleDateString() : 'N/A'}</p>
                 <p>
                   <span className="font-medium">Status:</span>{' '}
                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${
@@ -198,7 +205,7 @@ function ApprovalPendingPageContent() {
                       ? 'bg-red-100 text-red-800'
                       : 'bg-yellow-100 text-yellow-800'
                   }`}>
-                    {profile.approval_status.charAt(0).toUpperCase() + profile.approval_status.slice(1)}
+                    {profile.approval_status ? profile.approval_status.charAt(0).toUpperCase() + profile.approval_status.slice(1) : 'Pending'}
                   </span>
                 </p>
               </div>

@@ -1,11 +1,28 @@
-import { createClient } from '@/lib/supabase/client'
-import type { SupabaseClient } from '@/lib/supabase/database'
+import { createClient, type SupabaseClient } from '@/lib/supabase/client'
 import type {
   ActivityStats,
   ActivityFilters,
   PaginatedAuditLogs,
   AuditLog,
+  ActivityOperation,
 } from '@/types/activity'
+
+// Valid operation types for runtime validation
+const VALID_OPERATIONS: ActivityOperation[] = ['INSERT', 'UPDATE', 'DELETE', 'LOGIN', 'LOGOUT']
+
+/**
+ * Validates and safely casts operation string to ActivityOperation type
+ * @param operation - Raw operation string from database
+ * @returns Valid ActivityOperation or 'UNKNOWN' if invalid
+ */
+function validateOperation(operation: string): ActivityOperation {
+  if (VALID_OPERATIONS.includes(operation as ActivityOperation)) {
+    return operation as ActivityOperation
+  }
+
+  console.error('[activityService] Invalid operation value detected:', operation)
+  return 'UNKNOWN'
+}
 
 export const activityService = {
   async getStats(supabase?: SupabaseClient): Promise<ActivityStats> {
@@ -111,22 +128,29 @@ export const activityService = {
     }
 
     const logs: AuditLog[] =
-      data?.map((row) => ({
-        id: row.id,
-        tableName: row.table_name,
-        operation: row.operation,
-        recordId: row.record_id,
-        oldValues: row.old_values,
-        newValues: row.new_values,
-        userId: row.user_id,
-        userEmail: row.user_email,
-        // Use the user_name field from audit_logs (populated by our migration)
-        userName: row.user_name || null,
-        userRole: row.user_role,
-        timestamp: row.timestamp,
-        ipAddress: row.ip_address,
-        userAgent: row.user_agent,
-      })) || []
+      data?.map((row) => {
+        // Validate required audit fields for integrity
+        if (!row.timestamp) {
+          throw new Error(`Audit log ${row.id} missing required timestamp - data integrity violation`)
+        }
+
+        return {
+          id: row.id,
+          tableName: row.table_name,
+          operation: validateOperation(row.operation),
+          recordId: row.record_id,
+          oldValues: row.old_values as Record<string, any> | null,
+          newValues: row.new_values as Record<string, any> | null,
+          userId: row.user_id,
+          userEmail: row.user_email,
+          // Use the user_name field from audit_logs (populated by our migration)
+          userName: row.user_name || null,
+          userRole: row.user_role,
+          timestamp: row.timestamp,
+          ipAddress: typeof row.ip_address === 'string' ? row.ip_address : null,
+          userAgent: row.user_agent,
+        }
+      }) || []
 
     const total = count || 0
     const totalPages = Math.ceil(total / limit)
