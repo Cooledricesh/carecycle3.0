@@ -268,7 +268,7 @@ describe('Organization Service', () => {
       mockSupabase = {
         from: vi.fn(),
         rpc: vi.fn(async () => ({
-          data: { organization_id: 'new-org-id' },
+          data: 'new-org-id',
           error: null
         }))
       };
@@ -278,6 +278,7 @@ describe('Organization Service', () => {
       const result = await organizationService.createOrganizationAndRegisterUser(
         mockSupabase as unknown as SupabaseClient<Database>,
         'user-123',
+        'Test User',
         '테스트병원',
         'admin'
       );
@@ -289,7 +290,7 @@ describe('Organization Service', () => {
 
     it('should call RPC function with correct parameters', async () => {
       const rpcSpy = vi.fn(async () => ({
-        data: { organization_id: 'new-org-id' },
+        data: 'new-org-id',
         error: null
       }));
 
@@ -298,13 +299,15 @@ describe('Organization Service', () => {
       await organizationService.createOrganizationAndRegisterUser(
         mockSupabase as unknown as SupabaseClient<Database>,
         'user-123',
+        'Test User',
         '테스트병원',
         'admin'
       );
 
       expect(rpcSpy).toHaveBeenCalledWith('create_organization_and_register_user', {
-        p_user_id: 'user-123',
         p_organization_name: '테스트병원',
+        p_user_id: 'user-123',
+        p_user_name: 'Test User',
         p_user_role: 'admin'
       });
     });
@@ -318,6 +321,7 @@ describe('Organization Service', () => {
       const result = await organizationService.createOrganizationAndRegisterUser(
         mockSupabase as unknown as SupabaseClient<Database>,
         'user-123',
+        'Test User',
         '테스트병원',
         'admin'
       );

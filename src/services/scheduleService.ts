@@ -1062,7 +1062,7 @@ export const scheduleService = {
         p_start_date: startDate,
         p_end_date: endDate,
         p_organization_id: organizationId,
-        p_user_id: undefined // Can be enhanced to pass user ID for role-based filtering
+        p_user_id: null // Can be enhanced to pass user ID for role-based filtering
       })
 
       if (error) {
