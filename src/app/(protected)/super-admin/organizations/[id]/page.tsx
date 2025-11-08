@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, use } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -43,11 +43,11 @@ interface Organization {
 }
 
 interface PageProps {
-  params: Promise<{ id: string }>;
+  params: { id: string };
 }
 
 export default function OrganizationDetailPage({ params }: PageProps) {
-  const resolvedParams = use(params);
+  const { id } = params;
   const router = useRouter();
   const [organization, setOrganization] = useState<Organization | null>(null);
   const [loading, setLoading] = useState(true);
@@ -57,7 +57,7 @@ export default function OrganizationDetailPage({ params }: PageProps) {
   const fetchOrganization = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`/api/super-admin/organizations/${resolvedParams.id}`);
+      const response = await fetch(`/api/super-admin/organizations/${id}`);
 
       if (!response.ok) {
         throw new Error('조직 정보를 불러오는데 실패했습니다');
@@ -80,7 +80,7 @@ export default function OrganizationDetailPage({ params }: PageProps) {
   useEffect(() => {
     fetchOrganization();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [resolvedParams.id]);
+  }, [id]);
 
   const handleRoleChange = async (userId: string, newRole: 'admin' | 'doctor' | 'nurse') => {
     setUpdating(userId);

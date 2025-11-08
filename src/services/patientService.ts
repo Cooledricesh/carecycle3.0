@@ -38,6 +38,7 @@ export const patientService = {
       const insertData = {
         name: validated.name,
         patient_number: validated.patientNumber,
+        department: validated.department || null,
         care_type: validated.careType || null,
         doctor_id: validated.doctorId || null,
         is_active: validated.isActive ?? true,
