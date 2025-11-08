@@ -11,7 +11,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { canCancelInvitation } from '@/services/invitation-validation-service';
 import type { UserRole, InvitationUpdate } from '@/lib/database.types';
 
@@ -117,16 +117,36 @@ export async function DELETE(
     }
 
     // Hard delete - permanently remove invitation from database
-    const { error: deleteError } = await supabase
+    console.log('[DELETE Invitation] Attempting to delete invitation:', id);
+    console.log('[DELETE Invitation] User:', user.id, 'Organization:', userProfile.organization_id);
+
+    // Use service client to bypass RLS policies for delete operation
+    const serviceSupabase = await createServiceClient();
+    const { data: deletedData, error: deleteError } = await serviceSupabase
       .from('invitations')
       .delete()
-      .eq('id', id);
+      .eq('id', id)
+      .select();
+
+    console.log('[DELETE Invitation] Delete result:', { deletedData, deleteError });
 
     if (deleteError) {
-      console.error('Failed to delete invitation:', deleteError);
-      return NextResponse.json({ error: 'Failed to delete invitation' }, { status: 500 });
+      console.error('[DELETE Invitation] Failed to delete invitation:', deleteError);
+      return NextResponse.json({
+        error: 'Failed to delete invitation',
+        details: deleteError.message
+      }, { status: 500 });
     }
 
+    if (!deletedData || deletedData.length === 0) {
+      console.warn('[DELETE Invitation] No rows deleted - possible RLS policy blocking');
+      return NextResponse.json({
+        error: 'Failed to delete invitation - no rows affected (RLS policy may be blocking)',
+        hint: 'Check RLS policies on invitations table'
+      }, { status: 500 });
+    }
+
+    console.log('[DELETE Invitation] Successfully deleted:', deletedData);
     return NextResponse.json(
       { message: 'Invitation deleted successfully' },
       { status: 200 }

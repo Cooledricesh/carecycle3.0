@@ -14,6 +14,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { tokenService } from '@/services/invitation-token-service';
+import { sendInvitationEmail } from '@/lib/email';
 import { z } from 'zod';
 import type { UserRole } from '@/lib/database.types';
 
@@ -172,6 +173,22 @@ export async function POST(request: NextRequest) {
         { error: 'Failed to create invitation' },
         { status: 500 }
       );
+    }
+
+    // Send invitation email
+    const invitationLink = `${process.env.NEXT_PUBLIC_APP_URL}/auth/accept-invitation/${token}`;
+    const emailResult = await sendInvitationEmail({
+      to: email,
+      invitationLink,
+      role,
+    });
+
+    // Log email sending result (but don't fail the request if email fails)
+    if (!emailResult.success) {
+      console.error('Failed to send invitation email:', emailResult.error);
+      console.log('Invitation created successfully, but email was not sent. Admin can copy link manually.');
+    } else {
+      console.log('Invitation email sent successfully to:', email);
     }
 
     return NextResponse.json(invitation, { status: 201 });

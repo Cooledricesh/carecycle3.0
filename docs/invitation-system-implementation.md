@@ -205,7 +205,7 @@ All operations use:
 1. Admin clicks "Invite User" button
 2. Fills in email and role
 3. System creates invitation with 7-day expiry
-4. (Future: Email sent with invitation link)
+4. ✅ **System automatically sends invitation email** (Updated: 2025-01-08)
 
 ### User Accepts Invitation:
 1. User clicks invitation link (contains token)
@@ -224,12 +224,33 @@ All operations use:
 
 ---
 
+## ✅ Email Integration (Completed: 2025-01-08)
+
+Automatic email sending has been implemented using Resend:
+- ✅ Sends invitation email with token link automatically
+- ✅ Beautiful HTML email template with branding
+- ✅ Graceful fallback to manual copy if email fails
+- ✅ Configuration guide: `/docs/EMAIL_INVITATION_SETUP.md`
+
+**Setup Required**:
+1. Sign up at https://resend.com
+2. Add `RESEND_API_KEY` to `.env.local`
+3. Add `INVITATION_EMAIL_FROM` to `.env.local`
+4. Restart dev server
+
+**Files Added**:
+- `/src/lib/email.ts` - Email sending utility
+- `/docs/EMAIL_INVITATION_SETUP.md` - Setup guide
+
+**Files Modified**:
+- `/src/app/api/admin/invitations/route.ts` - Added email sending
+- `/.env.example` - Added Resend config
+
 ## Next Steps (Future Enhancements)
 
-1. **Email Integration**
-   - Send invitation email with token link
-   - Email templates with branding
-   - Resend invitation option
+1. **Resend invitation option**
+   - UI button to resend invitation email
+   - Track resend count
 
 2. **Invitation Analytics**
    - Track acceptance rate

@@ -56,7 +56,7 @@ const inviteSchema = z.object({
 type InviteFormData = {
   email: string;
   role: 'admin' | 'doctor' | 'nurse' | '';
-  care_type?: '외래' | '입원' | '낮병원' | '';
+  care_type?: '외래' | '입원' | '낮병원';
 };
 
 export function InviteUserModal({ open, onOpenChange }: InviteUserModalProps) {
@@ -66,7 +66,7 @@ export function InviteUserModal({ open, onOpenChange }: InviteUserModalProps) {
   const [formData, setFormData] = useState<InviteFormData>({
     email: '',
     role: '',
-    care_type: '',
+    care_type: undefined,
   });
 
   const [errors, setErrors] = useState<{
@@ -77,6 +77,7 @@ export function InviteUserModal({ open, onOpenChange }: InviteUserModalProps) {
 
   const createInvitationMutation = useMutation({
     mutationFn: async (data: { email: string; role: string; care_type?: string }) => {
+      console.log('[InviteUserModal] Mutation started with data:', data);
       const response = await fetch('/api/admin/invitations', {
         method: 'POST',
         headers: {
@@ -85,21 +86,27 @@ export function InviteUserModal({ open, onOpenChange }: InviteUserModalProps) {
         body: JSON.stringify(data),
       });
 
+      console.log('[InviteUserModal] Response status:', response.status);
+
       if (!response.ok) {
         const error = await response.json();
+        console.error('[InviteUserModal] API error:', error);
         throw new Error(error.error || 'Failed to create invitation');
       }
 
-      return response.json();
+      const result = await response.json();
+      console.log('[InviteUserModal] Success response:', result);
+      return result;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      console.log('[InviteUserModal] onSuccess triggered with data:', data);
       toast({
         title: '초대장 전송 완료',
         description: '사용자 초대가 성공적으로 완료되었습니다.',
       });
 
       // Reset form
-      setFormData({ email: '', role: '', care_type: '' });
+      setFormData({ email: '', role: '', care_type: undefined });
       setErrors({});
 
       // Refetch invitations list
@@ -109,6 +116,7 @@ export function InviteUserModal({ open, onOpenChange }: InviteUserModalProps) {
       onOpenChange(false);
     },
     onError: (error: Error) => {
+      console.error('[InviteUserModal] onError triggered:', error);
       toast({
         title: '초대 전송 실패',
         description: error.message,
@@ -119,12 +127,14 @@ export function InviteUserModal({ open, onOpenChange }: InviteUserModalProps) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('[InviteUserModal] Submit clicked, formData:', formData);
 
     // Validate
     const validation = inviteSchema.safeParse(formData);
 
     if (!validation.success) {
-      const fieldErrors: { email?: string; role?: string } = {};
+      console.log('[InviteUserModal] Validation failed:', validation.error.errors);
+      const fieldErrors: { email?: string; role?: string; care_type?: string } = {};
       validation.error.errors.forEach((err) => {
         if (err.path[0]) {
           fieldErrors[err.path[0] as keyof typeof fieldErrors] = err.message;
@@ -133,6 +143,8 @@ export function InviteUserModal({ open, onOpenChange }: InviteUserModalProps) {
       setErrors(fieldErrors);
       return;
     }
+
+    console.log('[InviteUserModal] Validation passed');
 
     // Clear errors
     setErrors({});
@@ -148,6 +160,7 @@ export function InviteUserModal({ open, onOpenChange }: InviteUserModalProps) {
       mutationData.care_type = formData.care_type;
     }
 
+    console.log('[InviteUserModal] Sending mutation with data:', mutationData);
     createInvitationMutation.mutate(mutationData);
   };
 
@@ -180,7 +193,7 @@ export function InviteUserModal({ open, onOpenChange }: InviteUserModalProps) {
             <Select
               value={formData.role}
               onValueChange={(value) =>
-                setFormData({ ...formData, role: value as 'admin' | 'doctor' | 'nurse', care_type: '' })
+                setFormData({ ...formData, role: value as 'admin' | 'doctor' | 'nurse', care_type: undefined })
               }
             >
               <SelectTrigger className={errors.role ? 'border-red-500' : ''}>
@@ -199,7 +212,7 @@ export function InviteUserModal({ open, onOpenChange }: InviteUserModalProps) {
             <div className="space-y-2">
               <Label htmlFor="care_type">케어 타입</Label>
               <Select
-                value={formData.care_type}
+                value={formData.care_type || ''}
                 onValueChange={(value) =>
                   setFormData({ ...formData, care_type: value as '외래' | '입원' | '낮병원' })
                 }
