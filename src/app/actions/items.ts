@@ -14,10 +14,10 @@ export async function deleteItemAction(id: string) {
       throw new Error('인증되지 않은 사용자입니다.')
     }
 
-    // 관리자 권한 확인
+    // 관리자 권한 및 organization_id 확인
     const { data: profile } = await userClient
       .from('profiles')
-      .select('role')
+      .select('role, organization_id')
       .eq('id', user.id)
       .single()
 
@@ -25,14 +25,33 @@ export async function deleteItemAction(id: string) {
       throw new Error('관리자 권한이 필요합니다.')
     }
 
+    if (!profile?.organization_id) {
+      throw new Error('조직 정보가 없습니다.')
+    }
+
+    const organizationId = profile.organization_id
+
     // Service Client로 작업 (RLS 우회)
     const serviceClient = await createServiceClient()
+
+    // 0. item이 해당 조직에 속하는지 확인
+    const { data: item, error: itemError } = await serviceClient
+      .from('items')
+      .select('id, organization_id')
+      .eq('id', id)
+      .eq('organization_id', organizationId)
+      .single()
+
+    if (itemError || !item) {
+      throw new Error('항목을 찾을 수 없거나 접근 권한이 없습니다.')
+    }
 
     // 1. 관련 스케줄 찾기
     const { data: schedules, error: schedulesError } = await serviceClient
       .from('schedules')
       .select('id')
       .eq('item_id', id)
+      .eq('organization_id', organizationId)
 
     if (schedulesError) {
       console.error('Error fetching schedules:', schedulesError)
@@ -83,11 +102,12 @@ export async function deleteItemAction(id: string) {
       throw new Error(`스케줄 삭제 실패: ${schedulesDeleteError.message}`)
     }
 
-    // 3. item 삭제
+    // 3. item 삭제 (organization_id 필터링 추가)
     const { error: deleteError } = await serviceClient
       .from('items')
       .delete()
       .eq('id', id)
+      .eq('organization_id', organizationId)
 
     if (deleteError) {
       console.error('Error deleting item:', deleteError)

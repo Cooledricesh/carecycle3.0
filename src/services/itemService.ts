@@ -1,29 +1,32 @@
 'use client'
 
-import { createClient } from '@/lib/supabase/client'
-import { 
-  ItemCreateSchema, 
+import { createClient, type SupabaseClient } from '@/lib/supabase/client'
+import {
+  ItemCreateSchema,
   ItemUpdateSchema,
   type ItemCreateInput,
-  type ItemUpdateInput 
+  type ItemUpdateInput
 } from '@/schemas/item'
 import type { Item } from '@/types/item'
 import { toCamelCase, toSnakeCase } from '@/lib/database-utils'
 
-const supabase = createClient()
-
 export const itemService = {
-  async create(input: ItemCreateInput): Promise<Item> {
+  async create(input: ItemCreateInput, organizationId: string, supabase?: SupabaseClient): Promise<Item> {
+    if (!organizationId) {
+      throw new Error('Organization ID is required')
+    }
+
     try {
+      const client = supabase || createClient()
       const validated = ItemCreateSchema.parse(input)
-      const snakeData = toSnakeCase(validated)
-      
-      const { data, error } = await supabase
+      const snakeData = toSnakeCase({ ...validated, organizationId })
+
+      const { data, error } = await client
         .from('items')
         .insert(snakeData)
         .select()
         .single()
-      
+
       if (error) throw error
       return toCamelCase(data) as Item
     } catch (error) {
@@ -32,15 +35,21 @@ export const itemService = {
     }
   },
 
-  async getAll(): Promise<Item[]> {
+  async getAll(organizationId: string, supabase?: SupabaseClient): Promise<Item[]> {
+    if (!organizationId) {
+      throw new Error('Organization ID is required')
+    }
+
     try {
-      const { data, error } = await supabase
+      const client = supabase || createClient()
+      const { data, error } = await client
         .from('items')
         .select('*')
+        .eq('organization_id', organizationId)
         .eq('is_active', true)
         .order('sort_order', { ascending: true })
         .order('name', { ascending: true })
-      
+
       if (error) throw error
       return (data || []).map(item => toCamelCase(item) as Item)
     } catch (error) {
@@ -49,15 +58,21 @@ export const itemService = {
     }
   },
 
-  async getByCategory(category: string): Promise<Item[]> {
+  async getByCategory(category: string, organizationId: string, supabase?: SupabaseClient): Promise<Item[]> {
+    if (!organizationId) {
+      throw new Error('Organization ID is required')
+    }
+
     try {
-      const { data, error } = await supabase
+      const client = supabase || createClient()
+      const { data, error } = await client
         .from('items')
         .select('*')
         .eq('category', category)
+        .eq('organization_id', organizationId)
         .eq('is_active', true)
         .order('sort_order', { ascending: true })
-      
+
       if (error) throw error
       return (data || []).map(item => toCamelCase(item) as Item)
     } catch (error) {
@@ -66,19 +81,25 @@ export const itemService = {
     }
   },
 
-  async getById(id: string): Promise<Item | null> {
+  async getById(id: string, organizationId: string, supabase?: SupabaseClient): Promise<Item | null> {
+    if (!organizationId) {
+      throw new Error('Organization ID is required')
+    }
+
     try {
-      const { data, error } = await supabase
+      const client = supabase || createClient()
+      const { data, error } = await client
         .from('items')
         .select('*')
         .eq('id', id)
+        .eq('organization_id', organizationId)
         .single()
-      
+
       if (error) {
         if (error.code === 'PGRST116') return null
         throw error
       }
-      
+
       return toCamelCase(data) as Item
     } catch (error) {
       console.error('Error fetching item:', error)
@@ -86,19 +107,25 @@ export const itemService = {
     }
   },
 
-  async getByCode(code: string): Promise<Item | null> {
+  async getByCode(code: string, organizationId: string, supabase?: SupabaseClient): Promise<Item | null> {
+    if (!organizationId) {
+      throw new Error('Organization ID is required')
+    }
+
     try {
-      const { data, error } = await supabase
+      const client = supabase || createClient()
+      const { data, error } = await client
         .from('items')
         .select('*')
         .eq('code', code)
+        .eq('organization_id', organizationId)
         .single()
-      
+
       if (error) {
         if (error.code === 'PGRST116') return null
         throw error
       }
-      
+
       return toCamelCase(data) as Item
     } catch (error) {
       console.error('Error fetching item by code:', error)
@@ -106,18 +133,24 @@ export const itemService = {
     }
   },
 
-  async update(id: string, input: ItemUpdateInput): Promise<Item> {
+  async update(id: string, input: ItemUpdateInput, organizationId: string, supabase?: SupabaseClient): Promise<Item> {
+    if (!organizationId) {
+      throw new Error('Organization ID is required')
+    }
+
     try {
+      const client = supabase || createClient()
       const validated = ItemUpdateSchema.parse(input)
       const snakeData = toSnakeCase(validated)
-      
-      const { data, error } = await supabase
+
+      const { data, error } = await client
         .from('items')
         .update(snakeData)
         .eq('id', id)
+        .eq('organization_id', organizationId)
         .select()
         .single()
-      
+
       if (error) throw error
       return toCamelCase(data) as Item
     } catch (error) {
@@ -126,13 +159,19 @@ export const itemService = {
     }
   },
 
-  async delete(id: string): Promise<void> {
+  async delete(id: string, organizationId: string, supabase?: SupabaseClient): Promise<void> {
+    if (!organizationId) {
+      throw new Error('Organization ID is required')
+    }
+
     try {
-      const { error } = await supabase
+      const client = supabase || createClient()
+      const { error } = await client
         .from('items')
         .update({ is_active: false })
         .eq('id', id)
-      
+        .eq('organization_id', organizationId)
+
       if (error) throw error
     } catch (error) {
       console.error('Error deleting item:', error)

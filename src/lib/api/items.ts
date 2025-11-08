@@ -4,12 +4,13 @@ import { createClient } from '@/lib/supabase/client'
 import type { Item, ItemInsert, ItemUpdate } from '@/lib/database.types'
 import { deleteItemAction } from '@/app/actions/items'
 
-export async function getItems() {
+export async function getItems(organizationId: string) {
   const supabase = createClient()
-  
+
   const { data, error } = await supabase
     .from('items')
     .select('*')
+    .eq('organization_id', organizationId)
     .eq('is_active', true)
     .order('sort_order', { ascending: true })
     .order('category', { ascending: true })
@@ -23,12 +24,13 @@ export async function getItems() {
   return data
 }
 
-export async function getAllItems() {
+export async function getAllItems(organizationId: string) {
   const supabase = createClient()
-  
+
   const { data, error } = await supabase
     .from('items')
     .select('*')
+    .eq('organization_id', organizationId)
     .order('is_active', { ascending: false })
     .order('sort_order', { ascending: true })
     .order('category', { ascending: true })
@@ -42,13 +44,14 @@ export async function getAllItems() {
   return data
 }
 
-export async function getItemById(id: string) {
+export async function getItemById(id: string, organizationId: string) {
   const supabase = createClient()
-  
+
   const { data, error } = await supabase
     .from('items')
     .select('*')
     .eq('id', id)
+    .eq('organization_id', organizationId)
     .single()
 
   if (error) {
@@ -59,24 +62,25 @@ export async function getItemById(id: string) {
   return data
 }
 
-async function generateItemCode(category: string): Promise<string> {
+async function generateItemCode(category: string, organizationId: string): Promise<string> {
   const supabase = createClient()
-  
+
   // 카테고리별 접두사 설정
   const prefix = {
     'injection': 'INJ',
     'test': 'TST',
     'other': 'OTH'
   }[category] || 'ITM'
-  
-  // 해당 카테고리의 마지막 코드 찾기
+
+  // 해당 조직 내 카테고리의 마지막 코드 찾기
   const { data } = await supabase
     .from('items')
     .select('code')
+    .eq('organization_id', organizationId)
     .like('code', `${prefix}%`)
     .order('code', { ascending: false })
     .limit(1)
-  
+
   let nextNumber = 1
   if (data && data.length > 0) {
     const lastCode = data[0].code
@@ -85,21 +89,22 @@ async function generateItemCode(category: string): Promise<string> {
       nextNumber = lastNumber + 1
     }
   }
-  
+
   return `${prefix}${String(nextNumber).padStart(3, '0')}`
 }
 
-export async function createItem(item: Omit<ItemInsert, 'id' | 'created_at' | 'updated_at' | 'code'>) {
+export async function createItem(item: Omit<ItemInsert, 'id' | 'created_at' | 'updated_at' | 'code'>, organizationId: string) {
   const supabase = createClient()
-  
-  // 코드 자동 생성
-  const code = await generateItemCode(item.category)
-  
+
+  // 코드 자동 생성 (조직별)
+  const code = await generateItemCode(item.category, organizationId)
+
   const { data, error } = await supabase
     .from('items')
     .insert({
       ...item,
       code,
+      organization_id: organizationId,
       is_active: item.is_active ?? true,
       requires_notification: item.requires_notification ?? true,
       notification_days_before: item.notification_days_before ?? 7,
@@ -118,9 +123,9 @@ export async function createItem(item: Omit<ItemInsert, 'id' | 'created_at' | 'u
   return data
 }
 
-export async function updateItem(id: string, updates: ItemUpdate) {
+export async function updateItem(id: string, updates: ItemUpdate, organizationId: string) {
   const supabase = createClient()
-  
+
   const { data, error } = await supabase
     .from('items')
     .update({
@@ -128,6 +133,7 @@ export async function updateItem(id: string, updates: ItemUpdate) {
       updated_at: new Date().toISOString()
     })
     .eq('id', id)
+    .eq('organization_id', organizationId)
     .select()
     .single()
 
@@ -144,16 +150,17 @@ export async function deleteItem(id: string) {
   return await deleteItemAction(id)
 }
 
-export async function toggleItemStatus(id: string, isActive: boolean) {
+export async function toggleItemStatus(id: string, isActive: boolean, organizationId: string) {
   const supabase = createClient()
-  
+
   const { data, error } = await supabase
     .from('items')
-    .update({ 
+    .update({
       is_active: isActive,
       updated_at: new Date().toISOString()
     })
     .eq('id', id)
+    .eq('organization_id', organizationId)
     .select()
     .single()
 
@@ -165,13 +172,14 @@ export async function toggleItemStatus(id: string, isActive: boolean) {
   return data
 }
 
-export async function getItemsByCategory(category: string) {
+export async function getItemsByCategory(category: string, organizationId: string) {
   const supabase = createClient()
-  
+
   const { data, error } = await supabase
     .from('items')
     .select('*')
     .eq('category', category)
+    .eq('organization_id', organizationId)
     .eq('is_active', true)
     .order('sort_order', { ascending: true })
     .order('name', { ascending: true })
@@ -184,12 +192,13 @@ export async function getItemsByCategory(category: string) {
   return data
 }
 
-export async function searchItems(searchTerm: string) {
+export async function searchItems(searchTerm: string, organizationId: string) {
   const supabase = createClient()
-  
+
   const { data, error } = await supabase
     .from('items')
     .select('*')
+    .eq('organization_id', organizationId)
     .or(`name.ilike.%${searchTerm}%,code.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`)
     .eq('is_active', true)
     .order('category', { ascending: true })
