@@ -114,6 +114,10 @@ describe('itemService - Multitenancy Data Isolation', () => {
         name: '새 검사',
         category: 'test' as const,
         defaultIntervalWeeks: 4,
+        requiresNotification: false,
+        notificationDaysBefore: 7,
+        isActive: true,
+        sortOrder: 0,
       };
 
       // Act
@@ -134,6 +138,10 @@ describe('itemService - Multitenancy Data Isolation', () => {
         name: '새 검사',
         category: 'test' as const,
         defaultIntervalWeeks: 4,
+        requiresNotification: false,
+        notificationDaysBefore: 7,
+        isActive: true,
+        sortOrder: 0,
       };
 
       // Act & Assert

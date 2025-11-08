@@ -1564,18 +1564,3 @@ export const Constants = {
     },
   },
 } as const
-
-// Export commonly used types
-export type Profile = Tables<"profiles">
-export type ProfileInsert = TablesInsert<"profiles">
-export type ProfileUpdate = TablesUpdate<"profiles">
-export type Item = Tables<"items">
-export type ItemInsert = TablesInsert<"items">
-export type ItemUpdate = TablesUpdate<"items">
-export type PatientSchedule = Tables<"schedules">
-export type PatientScheduleInsert = TablesInsert<"schedules">
-export type PatientScheduleUpdate = TablesUpdate<"schedules">
-export type ItemCategory = string
-export type ExecutionStatus = Database["public"]["Enums"]["execution_status"]
-export type ScheduleStatus = Database["public"]["Enums"]["schedule_status"]
-export type UserRole = Database["public"]["Enums"]["user_role"]

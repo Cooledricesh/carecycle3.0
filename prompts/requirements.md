@@ -1,0 +1,3 @@
+- @vooster-docs/prd.md @docs/db/dbschema.md @docs/multitenancy.md 문서를 읽는다. 
+- '/auth/signup'페이지에서 신규 회원 가입을 신청할 때 소속기관을 신규 생성하거나 기존에 있는 기관을 선택하는 ui가 추가되어야 해. 
+- '/dashboard'페이지에서 이제 본인의 소속기관 이름이 왼쪽 상단 프로필을 표시하는 부분에 직급과 함께 같이 나오면 좋겠어. 
