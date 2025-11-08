@@ -12,17 +12,24 @@ import type { Item, ItemInsert } from '@/lib/database.types'
 import { mapErrorToUserMessage } from '@/lib/error-mapper'
 import { scheduleServiceEnhanced } from '@/services/scheduleServiceEnhanced'
 import { eventManager } from '@/lib/events/schedule-event-manager'
+import { useProfile, Profile } from '@/hooks/useProfile'
 
 export function useItemMutations() {
   const queryClient = useQueryClient()
   const { toast } = useToast()
+  const { data: profile } = useProfile()
+  const typedProfile = profile as Profile | null | undefined
 
   /**
    * 아이템 생성 뮤테이션
    */
   const createMutation = useMutation({
-    mutationFn: (data: Omit<ItemInsert, 'id' | 'created_at' | 'updated_at' | 'code'>) =>
-      createItem(data),
+    mutationFn: (data: Omit<ItemInsert, 'id' | 'created_at' | 'updated_at' | 'code'>) => {
+      if (!typedProfile?.organization_id) {
+        throw new Error('Organization ID not available')
+      }
+      return createItem(data, typedProfile.organization_id)
+    },
     onSuccess: () => {
       scheduleServiceEnhanced.clearCache()
       eventManager.emitScheduleChange()
@@ -46,8 +53,12 @@ export function useItemMutations() {
    * 아이템 수정 뮤테이션
    */
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Partial<Item> }) =>
-      updateItem(id, data),
+    mutationFn: ({ id, data }: { id: string; data: Partial<Item> }) => {
+      if (!typedProfile?.organization_id) {
+        throw new Error('Organization ID not available')
+      }
+      return updateItem(id, data, typedProfile.organization_id)
+    },
     onMutate: async ({ id, data }) => {
       // 낙관적 업데이트
       await queryClient.cancelQueries({ queryKey: ['items'] })
@@ -135,8 +146,12 @@ export function useItemMutations() {
    * 아이템 상태 토글 뮤테이션
    */
   const toggleStatusMutation = useMutation({
-    mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) =>
-      toggleItemStatus(id, isActive),
+    mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) => {
+      if (!typedProfile?.organization_id) {
+        throw new Error('Organization ID not available')
+      }
+      return toggleItemStatus(id, isActive, typedProfile.organization_id)
+    },
     onMutate: async ({ id, isActive }) => {
       // 낙관적 업데이트
       await queryClient.cancelQueries({ queryKey: ['items'] })

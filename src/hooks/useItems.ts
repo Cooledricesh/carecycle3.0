@@ -3,14 +3,24 @@
 import { useQuery } from '@tanstack/react-query'
 import { getAllItems, getItemById } from '@/lib/api/items'
 import type { Item } from '@/lib/database.types'
+import { useProfile, Profile } from '@/hooks/useProfile'
 
 /**
  * 전체 아이템 목록을 가져오는 훅
  */
 export function useItems() {
+  const { data: profile } = useProfile()
+  const typedProfile = profile as Profile | null | undefined
+
   const query = useQuery({
-    queryKey: ['items'],
-    queryFn: getAllItems,
+    queryKey: ['items', typedProfile?.organization_id],
+    queryFn: async () => {
+      if (!typedProfile?.organization_id) {
+        throw new Error('Organization ID not available')
+      }
+      return await getAllItems(typedProfile.organization_id)
+    },
+    enabled: !!typedProfile?.organization_id,
     staleTime: 5 * 60 * 1000, // 5분
     gcTime: 10 * 60 * 1000, // 10분 (이전 cacheTime)
   })
@@ -28,10 +38,18 @@ export function useItems() {
  * 특정 아이템을 가져오는 훅
  */
 export function useItem(id: string | null) {
+  const { data: profile } = useProfile()
+  const typedProfile = profile as Profile | null | undefined
+
   const query = useQuery({
-    queryKey: ['items', id],
-    queryFn: () => getItemById(id!),
-    enabled: !!id,
+    queryKey: ['items', id, typedProfile?.organization_id],
+    queryFn: async () => {
+      if (!typedProfile?.organization_id) {
+        throw new Error('Organization ID not available')
+      }
+      return await getItemById(id!, typedProfile.organization_id)
+    },
+    enabled: !!id && !!typedProfile?.organization_id,
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
   })
