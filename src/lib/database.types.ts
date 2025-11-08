@@ -79,32 +79,52 @@ export type Database = {
           email: string
           expires_at: string
           id: string
+          invited_by: string | null
           organization_id: string
-          role: string
+          role: Database["public"]["Enums"]["user_role"]
           status: string
           token: string
+          updated_at: string
         }
         Insert: {
           created_at?: string
           email: string
           expires_at?: string
           id?: string
+          invited_by?: string | null
           organization_id: string
-          role?: string
+          role?: Database["public"]["Enums"]["user_role"]
           status?: string
           token?: string
+          updated_at?: string
         }
         Update: {
           created_at?: string
           email?: string
           expires_at?: string
           id?: string
+          invited_by?: string | null
           organization_id?: string
-          role?: string
+          role?: Database["public"]["Enums"]["user_role"]
           status?: string
           token?: string
+          updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "invitations_invited_by_fkey"
+            columns: ["invited_by"]
+            isOneToOne: false
+            referencedRelation: "profile_basic_info"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invitations_invited_by_fkey"
+            columns: ["invited_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "invitations_organization_id_fkey"
             columns: ["organization_id"]
@@ -1702,7 +1722,7 @@ export const Constants = {
   },
 } as const
 
-// Commonly used type exports
+// Convenient type aliases for commonly used types
 export type Profile = Database['public']['Tables']['profiles']['Row']
 export type ProfileInsert = Database['public']['Tables']['profiles']['Insert']
 export type ProfileUpdate = Database['public']['Tables']['profiles']['Update']
@@ -1711,15 +1731,23 @@ export type Item = Database['public']['Tables']['items']['Row']
 export type ItemInsert = Database['public']['Tables']['items']['Insert']
 export type ItemUpdate = Database['public']['Tables']['items']['Update']
 
-export type Schedule = Database['public']['Tables']['schedules']['Row']
-export type ScheduleInsert = Database['public']['Tables']['schedules']['Insert']
-export type ScheduleUpdate = Database['public']['Tables']['schedules']['Update']
-
 export type Patient = Database['public']['Tables']['patients']['Row']
 export type PatientInsert = Database['public']['Tables']['patients']['Insert']
 export type PatientUpdate = Database['public']['Tables']['patients']['Update']
 
-// ItemCategory is a string literal union, not an enum in the database
-export type ItemCategory = 'test' | 'injection' | 'medication' | 'procedure' | 'other'
-export type ScheduleStatus = Database['public']['Enums']['schedule_status']
+export type Schedule = Database['public']['Tables']['schedules']['Row']
+export type ScheduleInsert = Database['public']['Tables']['schedules']['Insert']
+export type ScheduleUpdate = Database['public']['Tables']['schedules']['Update']
+
+export type Invitation = Database['public']['Tables']['invitations']['Row']
+export type InvitationInsert = Database['public']['Tables']['invitations']['Insert']
+export type InvitationUpdate = Database['public']['Tables']['invitations']['Update']
+
+// Enum types
 export type UserRole = Database['public']['Enums']['user_role']
+export type ApprovalStatus = Database['public']['Enums']['approval_status']
+export type ScheduleStatus = Database['public']['Enums']['schedule_status']
+export type ExecutionStatus = Database['public']['Enums']['execution_status']
+
+// String types (not enums in database)
+export type ItemCategory = string

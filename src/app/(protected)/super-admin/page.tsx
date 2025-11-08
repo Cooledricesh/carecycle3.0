@@ -1,57 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Building2, Users, UserPlus } from 'lucide-react';
-
-interface Stats {
-  organizations: {
-    total: number;
-    active: number;
-    inactive: number;
-  };
-  users: {
-    total: number;
-    by_role: {
-      admin: number;
-      doctor: number;
-      nurse: number;
-    };
-  };
-  join_requests: {
-    pending: number;
-    approved: number;
-    rejected: number;
-  };
-}
+import { useSuperAdminStats } from '@/hooks/useSuperAdminStats';
 
 export default function SuperAdminDashboard() {
-  const [stats, setStats] = useState<Stats | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        const response = await fetch('/api/super-admin/stats');
-
-        if (!response.ok) {
-          throw new Error('Failed to fetch stats');
-        }
-
-        const data = await response.json();
-        setStats(data.stats);
-      } catch (err) {
-        console.error('Error fetching stats:', err);
-        setError(err instanceof Error ? err.message : 'Unknown error');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchStats();
-  }, []);
+  const { data, isLoading: loading, error } = useSuperAdminStats();
 
   if (loading) {
     return (
@@ -70,12 +25,16 @@ export default function SuperAdminDashboard() {
             <CardDescription>통계를 불러올 수 없습니다</CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-destructive">{error}</p>
+            <p className="text-sm text-destructive">
+              {error instanceof Error ? error.message : '알 수 없는 오류'}
+            </p>
           </CardContent>
         </Card>
       </div>
     );
   }
+
+  const stats = data?.stats;
 
   return (
     <div className="container mx-auto p-6">

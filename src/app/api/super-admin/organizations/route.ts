@@ -37,24 +37,30 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    // For each organization, get user count
+    // Get all user counts in a single query to avoid N+1 problem
     type Organization = Database['public']['Tables']['organizations']['Row'];
-    const transformedOrganizations = await Promise.all(
-      (organizations as Organization[] || []).map(async (org) => {
-        const { count } = await supabase
-          .from('profiles')
-          .select('*', { count: 'exact', head: true })
-          .eq('organization_id', org.id);
+    type ProfileOrgData = { organization_id: string | null };
 
-        return {
-          id: org.id,
-          name: org.name,
-          is_active: org.is_active,
-          created_at: org.created_at,
-          user_count: count || 0,
-        };
-      })
-    );
+    const { data: profiles } = await supabase
+      .from('profiles')
+      .select('organization_id')
+      .not('organization_id', 'is', null);
+
+    // Group user counts by organization_id
+    const userCountMap = ((profiles || []) as ProfileOrgData[]).reduce((acc, profile) => {
+      const orgId = profile.organization_id as string;
+      acc[orgId] = (acc[orgId] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+    // Transform organizations with user counts
+    const transformedOrganizations = (organizations as Organization[] || []).map((org) => ({
+      id: org.id,
+      name: org.name,
+      is_active: org.is_active,
+      created_at: org.created_at,
+      user_count: userCountMap[org.id] || 0,
+    }));
 
     return NextResponse.json({ organizations: transformedOrganizations });
   } catch (error) {

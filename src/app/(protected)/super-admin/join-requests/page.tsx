@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -11,7 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { useToast } from '@/hooks/use-toast';
+import { useSuperAdminJoinRequests } from '@/hooks/useSuperAdminJoinRequests';
 import { Clock, Check, X } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -29,38 +29,13 @@ interface JoinRequest {
 }
 
 export default function SuperAdminJoinRequestsPage() {
-  const [requests, setRequests] = useState<JoinRequest[]>([]);
-  const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
-  const { toast } = useToast();
 
-  useEffect(() => {
-    const fetchJoinRequests = async () => {
-      try {
-        setLoading(true);
+  const { data, isLoading: loading } = useSuperAdminJoinRequests({
+    status: filter === 'all' ? null : filter,
+  });
 
-        // Fetch all join requests using Super Admin API
-        const response = await fetch('/api/super-admin/join-requests');
-        if (!response.ok) {
-          throw new Error('가입 요청을 불러오는데 실패했습니다');
-        }
-
-        const data = await response.json();
-        setRequests(data.requests || []);
-      } catch (error) {
-        console.error('Error fetching join requests:', error);
-        toast({
-          title: '오류',
-          description: error instanceof Error ? error.message : '가입 요청을 불러오는데 실패했습니다.',
-          variant: 'destructive',
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchJoinRequests();
-  }, [toast]);
+  const requests = data?.requests || [];
 
   const getRoleLabel = (role: string) => {
     switch (role) {

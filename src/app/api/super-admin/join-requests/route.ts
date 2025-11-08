@@ -10,6 +10,14 @@ import { createServiceClient } from '@/lib/supabase/server';
  *   - status: string (optional) - filter by status (pending, approved, rejected)
  *   - organization_id: string (optional) - filter by organization
  */
+/**
+ * Validates if a string is a valid UUID v4 format
+ */
+function isValidUUID(uuid: string): boolean {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(uuid);
+}
+
 export async function GET(request: NextRequest) {
   try {
     // Verify Super Admin access
@@ -19,6 +27,14 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const statusFilter = searchParams.get('status');
     const organizationFilter = searchParams.get('organization_id');
+
+    // Validate organization_id if provided
+    if (organizationFilter && !isValidUUID(organizationFilter)) {
+      return NextResponse.json(
+        { error: 'Invalid organization_id format. Must be a valid UUID.' },
+        { status: 400 }
+      );
+    }
 
     // Build query
     let query = supabase
