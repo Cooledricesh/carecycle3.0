@@ -145,6 +145,7 @@ export async function POST(request: NextRequest) {
     // Create profile
     // Note: care_type must be NULL for admin/doctor/super_admin (per CHECK constraint)
     // For nurse: care_type must be one of: '외래', '입원', '낮병원'
+    // Use profile data directly from buildProfileData - it already handles care_type correctly
     const profilePayload: any = {
       id: userId,
       email: profileData.email,
@@ -153,15 +154,8 @@ export async function POST(request: NextRequest) {
       approval_status: profileData.approval_status,
       name: profileData.name,
       is_active: true,
+      care_type: profileData.care_type,
     };
-
-    // Handle care_type based on role
-    if (profileData.role === 'admin' || profileData.role === 'doctor' || profileData.role === 'super_admin') {
-      profilePayload.care_type = null;
-    } else if (profileData.role === 'nurse') {
-      // Use care_type from profileData (which came from invitation)
-      profilePayload.care_type = profileData.care_type;
-    }
 
     console.log('[Signup] Upserting profile with payload:', JSON.stringify(profilePayload, null, 2));
 

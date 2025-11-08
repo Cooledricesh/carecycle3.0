@@ -18,6 +18,30 @@ interface UseOrganizationsOptions {
   isActive?: boolean | null;
 }
 
+/**
+ * Safely extracts error message from fetch response
+ * Handles JSON parse failures and various error shapes
+ */
+async function extractErrorMessage(response: Response, defaultMessage: string): Promise<string> {
+  try {
+    const error = await response.json();
+
+    // Check various error message locations
+    if (typeof error.error === 'string') {
+      return error.error;
+    } else if (error.error?.message) {
+      return error.error.message;
+    } else if (error.message) {
+      return error.message;
+    }
+
+    return defaultMessage;
+  } catch {
+    // JSON parse failed or other error - return default
+    return defaultMessage;
+  }
+}
+
 export function useSuperAdminOrganizations(options: UseOrganizationsOptions = {}) {
   const queryClient = useQueryClient();
 
@@ -32,20 +56,7 @@ export function useSuperAdminOrganizations(options: UseOrganizationsOptions = {}
       const response = await fetch(`/api/super-admin/organizations?${params.toString()}`);
 
       if (!response.ok) {
-        const error = await response.json();
-        // Extract error message properly - error.error might be an object
-        let errorMessage = '조직 목록 조회 실패';
-        try {
-          if (typeof error.error === 'string') {
-            errorMessage = error.error;
-          } else if (error.error?.message) {
-            errorMessage = error.error.message;
-          } else if (error.message) {
-            errorMessage = error.message;
-          }
-        } catch {
-          // Use default error message if extraction fails
-        }
+        const errorMessage = await extractErrorMessage(response, '조직 목록 조회 실패');
         throw new Error(errorMessage);
       }
 
@@ -63,20 +74,7 @@ export function useSuperAdminOrganizations(options: UseOrganizationsOptions = {}
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        // Extract error message properly - error.error might be an object
-        let errorMessage = '조직 생성 실패';
-        try {
-          if (typeof error.error === 'string') {
-            errorMessage = error.error;
-          } else if (error.error?.message) {
-            errorMessage = error.error.message;
-          } else if (error.message) {
-            errorMessage = error.message;
-          }
-        } catch {
-          // Use default error message if extraction fails
-        }
+        const errorMessage = await extractErrorMessage(response, '조직 생성 실패');
         throw new Error(errorMessage);
       }
 
@@ -98,20 +96,7 @@ export function useSuperAdminOrganizations(options: UseOrganizationsOptions = {}
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        // Extract error message properly - error.error might be an object
-        let errorMessage = '조직 수정 실패';
-        try {
-          if (typeof error.error === 'string') {
-            errorMessage = error.error;
-          } else if (error.error?.message) {
-            errorMessage = error.error.message;
-          } else if (error.message) {
-            errorMessage = error.message;
-          }
-        } catch {
-          // Use default error message if extraction fails
-        }
+        const errorMessage = await extractErrorMessage(response, '조직 수정 실패');
         throw new Error(errorMessage);
       }
 
