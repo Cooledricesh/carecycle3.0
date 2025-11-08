@@ -931,7 +931,8 @@ export const scheduleService = {
   async markAsCompleted(scheduleId: string, input: {
     executedDate: string,
     notes?: string,
-    executedBy: string
+    executedBy: string,
+    metadata?: Record<string, any>
   }, organizationId: string, supabase?: SupabaseClient): Promise<void> {
     const client = supabase || createClient()
     try {
@@ -975,7 +976,8 @@ export const scheduleService = {
                 executed_time: format(new Date(), 'HH:mm:ss'),
                 status: 'completed',
                 executed_by: input.executedBy,
-                notes: input.notes ?? undefined
+                notes: input.notes ?? undefined,
+                metadata: input.metadata ?? undefined
               })
 
             if (executionError) {
@@ -989,6 +991,7 @@ export const scheduleService = {
                     status: 'completed',
                     executed_by: input.executedBy,
                     notes: input.notes || null,
+                    metadata: input.metadata || null,
                     updated_at: new Date().toISOString()
                   })
                   .eq('schedule_id', scheduleId)

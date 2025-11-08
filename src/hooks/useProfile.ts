@@ -9,7 +9,9 @@ export interface Profile {
   email: string;
   name: string;
   role: 'admin' | 'nurse' | 'doctor' | 'super_admin';
-  care_type: string | null;
+  care_type: string | null; // Deprecated: use department_name instead (kept for Phase 2 transition)
+  department_id: string | null; // FK to departments table
+  department_name: string | null; // Joined from departments table
   organization_id: string | null; // Allow null for super_admin
   organization_name: string | null; // Joined from organizations table
   phone?: string | null;
@@ -44,7 +46,8 @@ export function useProfile() {
         .from('profiles')
         .select(`
           *,
-          organization_name:organizations(name)
+          organization_name:organizations(name),
+          department_name:departments(name)
         `)
         .eq('id', user.id)
         .single();
@@ -57,17 +60,19 @@ export function useProfile() {
           return null;
         }
 
-        // Transform nested organization data to flat structure
+        // Transform nested organization and department data to flat structure
         if (data) {
           const rawData = data as any;
           const organizationData = rawData.organization_name;
+          const departmentData = rawData.department_name;
 
-          // Extract all profile fields
-          const { organization_name: orgNameNested, ...profileFields } = rawData;
+          // Extract all profile fields (exclude nested objects)
+          const { organization_name: orgNameNested, department_name: deptNameNested, ...profileFields } = rawData;
 
           return {
             ...profileFields,
-            organization_name: organizationData?.name || null
+            organization_name: organizationData?.name || null,
+            department_name: departmentData?.name || null
           } as Profile;
         }
 

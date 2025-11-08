@@ -658,6 +658,7 @@ export type Database = {
           executed_time: string | null
           id: string
           is_rescheduled: boolean | null
+          metadata: any | null
           notes: string | null
           organization_id: string
           original_date: string | null
@@ -676,6 +677,7 @@ export type Database = {
           executed_time?: string | null
           id?: string
           is_rescheduled?: boolean | null
+          metadata?: any | null
           notes?: string | null
           organization_id: string
           original_date?: string | null
@@ -694,6 +696,7 @@ export type Database = {
           executed_time?: string | null
           id?: string
           is_rescheduled?: boolean | null
+          metadata?: any | null
           notes?: string | null
           organization_id?: string
           original_date?: string | null

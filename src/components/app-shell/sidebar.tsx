@@ -200,7 +200,7 @@ export function Sidebar({ onNavigate }: SidebarProps = {}) {
                        typedProfile.role === 'doctor' ? '의사' :
                        typedProfile.role === 'admin' ? '관리자' :
                        typedProfile.role === 'super_admin' ? 'Super Admin' : '사용자'}
-                      {typedProfile.care_type && ` • ${typedProfile.care_type}`}
+                      {typedProfile.department_name && ` • ${typedProfile.department_name}`}
                     </p>
                   </>
                 ) : user ? (

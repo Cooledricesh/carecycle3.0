@@ -104,12 +104,70 @@ export function getStatusBadgeClass(variant: ScheduleStatusInfo['variant']): str
 }
 
 /**
+ * 스케줄의 완료 여부를 확인합니다.
+ * @param schedule 스케줄 정보
+ * @returns 완료 여부
+ */
+function isScheduleCompleted(schedule: any): boolean {
+  return schedule.display_type === 'completed'
+}
+
+/**
+ * 스케줄의 날짜 문자열을 추출합니다.
+ * @param schedule 스케줄 정보
+ * @returns 날짜 문자열
+ */
+function getScheduleDateString(schedule: any): string {
+  return hasSnakeCaseDate(schedule) ? schedule.next_due_date : schedule.nextDueDate
+}
+
+/**
+ * 두 스케줄을 날짜로 비교합니다.
+ * @param a 첫 번째 스케줄
+ * @param b 두 번째 스케줄
+ * @param descending 내림차순 여부 (기본값: false)
+ * @returns 비교 결과
+ */
+function compareDates(a: any, b: any, descending = false): number {
+  const dateStringA = getScheduleDateString(a)
+  const dateStringB = getScheduleDateString(b)
+  const dateA = safeParse(dateStringA)
+  const dateB = safeParse(dateStringB)
+
+  if (!dateA || !dateB) return 0
+
+  const diff = dateA.getTime() - dateB.getTime()
+  return descending ? -diff : diff
+}
+
+/**
  * 스케줄 목록을 우선순위에 따라 정렬합니다.
+ * Phase 3.1: 완료 여부를 1순위로, 미완료 항목이 항상 먼저 오도록 정렬
+ *
+ * 정렬 순서:
+ * 1. 완료 여부 (미완료 먼저)
+ * 2. 완료된 항목: 날짜 내림차순 (최근 먼저)
+ * 3. 미완료 항목: 우선순위 (지연 > 오늘 > 가까운 미래 > 먼 미래) → 날짜 오름차순
+ *
  * @param schedules 스케줄 목록
  * @returns 정렬된 스케줄 목록
  */
 export function sortSchedulesByPriority<T extends ScheduleWithDetails | Schedule | ScheduleWithRelations>(schedules: T[]): T[] {
   return [...schedules].sort((a, b) => {
+    const isCompletedA = isScheduleCompleted(a)
+    const isCompletedB = isScheduleCompleted(b)
+
+    // 1순위: 완료 여부 (미완료가 먼저)
+    if (isCompletedA !== isCompletedB) {
+      return isCompletedA ? 1 : -1
+    }
+
+    // 완료된 항목들은 날짜 내림차순 (최근 항목이 먼저)
+    if (isCompletedA && isCompletedB) {
+      return compareDates(a, b, true)
+    }
+
+    // 미완료 항목들은 기존 우선순위 로직 적용
     const statusA = getScheduleStatusLabel(a)
     const statusB = getScheduleStatusLabel(b)
 
@@ -118,13 +176,7 @@ export function sortSchedulesByPriority<T extends ScheduleWithDetails | Schedule
       return statusA.priority - statusB.priority
     }
 
-    // 같은 우선순위면 날짜로 정렬
-    const dateStringA = hasSnakeCaseDate(a) ? a.next_due_date : (a as any).nextDueDate
-    const dateStringB = hasSnakeCaseDate(b) ? b.next_due_date : (b as any).nextDueDate
-    const dateA = safeParse(dateStringA)
-    const dateB = safeParse(dateStringB)
-    
-    if (!dateA || !dateB) return 0
-    return dateA.getTime() - dateB.getTime()
+    // 같은 우선순위면 날짜로 정렬 (오름차순)
+    return compareDates(a, b)
   })
 }
