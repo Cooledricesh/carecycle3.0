@@ -13,7 +13,10 @@ import {
   Settings,
   ChevronLeft,
   ChevronRight,
-  List
+  List,
+  Building2,
+  UserPlus,
+  LayoutDashboard
 } from 'lucide-react';
 import { AppIcon } from '@/components/ui/app-icon';
 import { Button } from '@/components/ui/button';
@@ -52,6 +55,13 @@ const navigation: NavItem[] = [
 const adminNavigation: NavItem[] = [
   { name: '관리자 대시보드', href: '/admin', icon: Settings, roles: ['admin'] },
   { name: '사용자 관리', href: '/admin/users', icon: UserCog, roles: ['admin'] },
+];
+
+const superAdminNavigation: NavItem[] = [
+  { name: '대시보드', href: '/super-admin', icon: LayoutDashboard },
+  { name: '조직 관리', href: '/super-admin/organizations', icon: Building2 },
+  { name: '사용자 관리', href: '/super-admin/users', icon: Users },
+  { name: '가입 요청', href: '/super-admin/join-requests', icon: UserPlus },
 ];
 
 interface SidebarProps {
@@ -117,9 +127,18 @@ export function Sidebar({ onNavigate }: SidebarProps = {}) {
   // Show all basic navigation if no profile, add admin navigation if admin
   const userRole = typedProfile?.role || 'nurse';
 
-  const allNavigation = userRole === 'admin'
-    ? [...navigation, ...adminNavigation]
-    : navigation;
+  // Determine navigation based on role
+  let allNavigation: NavItem[];
+  if (userRole === 'super_admin') {
+    // Super Admin sees only super admin navigation
+    allNavigation = superAdminNavigation;
+  } else if (userRole === 'admin') {
+    // Admin sees regular navigation + admin navigation
+    allNavigation = [...navigation, ...adminNavigation];
+  } else {
+    // Regular users see only basic navigation
+    allNavigation = navigation;
+  }
 
   // Filter navigation based on roles if specified
   const filteredNavigation = allNavigation.filter(item => {
@@ -175,7 +194,8 @@ export function Sidebar({ onNavigate }: SidebarProps = {}) {
                   <>
                     {typedProfile.role === 'nurse' ? '스텝' :
                      typedProfile.role === 'doctor' ? '의사' :
-                     typedProfile.role === 'admin' ? '관리자' : '사용자'}
+                     typedProfile.role === 'admin' ? '관리자' :
+                     typedProfile.role === 'super_admin' ? 'Super Admin' : '사용자'}
                     {typedProfile.care_type && ` • ${typedProfile.care_type}`}
                   </>
                 ) : user ? (
@@ -211,7 +231,7 @@ export function Sidebar({ onNavigate }: SidebarProps = {}) {
 
               if (isHydrated) {
                 // Define section roots that should only match exactly
-                const sectionRoots = ['/dashboard', '/admin'];
+                const sectionRoots = ['/dashboard', '/admin', '/super-admin'];
 
                 if (sectionRoots.includes(item.href)) {
                   // For section roots, only mark active on exact match

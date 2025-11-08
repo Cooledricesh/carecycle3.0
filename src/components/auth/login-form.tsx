@@ -34,15 +34,30 @@ export function LoginForm({
     setError(null);
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { error, data } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
       if (error) throw error;
 
+      // Get user profile to determine redirect destination
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', data.user.id)
+        .single() as { data: { role: 'admin' | 'doctor' | 'nurse' | 'super_admin' } | null };
+
+      // Redirect based on role
+      let redirectPath = "/dashboard";
+      if (profile?.role === "super_admin") {
+        redirectPath = "/super-admin";
+      } else if (profile?.role === "admin") {
+        redirectPath = "/admin";
+      }
+
       // 하드 리디렉트로 세션 쿠키 반영
-      window.location.href = "/dashboard";
+      window.location.href = redirectPath;
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : "로그인 중 오류가 발생했습니다.";
 

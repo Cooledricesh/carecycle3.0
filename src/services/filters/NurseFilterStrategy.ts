@@ -116,7 +116,11 @@ export class NurseFilterStrategy implements FilterStrategy {
         )
       `)
       .eq('status', 'active')
-      .eq('organization_id', userContext.organizationId)
+
+    // Apply organization filter (skip for super_admin who has null organization_id)
+    if (userContext.organizationId) {
+      query = query.eq('organization_id', userContext.organizationId)
+    }
 
     // Apply care type filtering
     if (!filters.showAll && userContext.careType) {

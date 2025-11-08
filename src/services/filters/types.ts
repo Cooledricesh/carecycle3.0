@@ -4,9 +4,9 @@ import type { ScheduleWithDetails } from '@/types/schedule'
 
 export interface UserContext {
   userId: string
-  role: 'doctor' | 'nurse' | 'admin'
+  role: 'doctor' | 'nurse' | 'admin' | 'super_admin'
   careType?: string | null
-  organizationId: string
+  organizationId: string | null // Allow null for super_admin
 }
 
 export interface FilterOptions {

@@ -8,9 +8,9 @@ export interface Profile {
   id: string;
   email: string;
   name: string;
-  role: 'admin' | 'nurse' | 'doctor';
+  role: 'admin' | 'nurse' | 'doctor' | 'super_admin';
   care_type: string | null;
-  organization_id: string;
+  organization_id: string | null; // Allow null for super_admin
   phone?: string | null;
   is_active?: boolean;
   created_at: string | null;

@@ -2,7 +2,7 @@
 
 import type { ScheduleFilter } from './filter-types'
 
-export type UserRole = 'doctor' | 'nurse' | 'admin'
+export type UserRole = 'doctor' | 'nurse' | 'admin' | 'super_admin'
 
 export interface UserContext {
   id: string
