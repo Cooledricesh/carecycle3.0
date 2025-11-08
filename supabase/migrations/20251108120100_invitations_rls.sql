@@ -41,13 +41,18 @@ WITH CHECK (
 );
 
 -- UPDATE: Admin and super_admin can update invitations from their organization
--- Only allow updating status (to 'cancelled') and updated_at
+-- USING: Only allow updating pending invitations (not expired, not already accepted/cancelled)
+-- WITH CHECK: Restrict status transitions to valid states (accepted, cancelled)
+-- Note: Application layer further restricts updates to status and updated_at fields only
+-- RLS provides organization boundary and status transition enforcement
 CREATE POLICY "invitations_update_policy"
 ON public.invitations
 FOR UPDATE
 TO authenticated
 USING (
-  EXISTS (
+  -- Can only update pending invitations from their organization
+  invitations.status = 'pending'
+  AND EXISTS (
     SELECT 1 FROM public.profiles
     WHERE profiles.id = auth.uid()
     AND profiles.organization_id = invitations.organization_id
@@ -55,7 +60,9 @@ USING (
   )
 )
 WITH CHECK (
-  EXISTS (
+  -- After update, status must be a valid terminal state
+  invitations.status IN ('accepted', 'cancelled')
+  AND EXISTS (
     SELECT 1 FROM public.profiles
     WHERE profiles.id = auth.uid()
     AND profiles.organization_id = invitations.organization_id

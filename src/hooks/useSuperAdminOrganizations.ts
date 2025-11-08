@@ -33,7 +33,7 @@ export function useSuperAdminOrganizations(options: UseOrganizationsOptions = {}
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || '조직 목록 조회 실패');
+        throw new Error(error.error?.message || error.error || '조직 목록 조회 실패');
       }
 
       return response.json();
@@ -51,7 +51,7 @@ export function useSuperAdminOrganizations(options: UseOrganizationsOptions = {}
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || '조직 생성 실패');
+        throw new Error(error.error?.message || error.error || '조직 생성 실패');
       }
 
       return response.json();
@@ -73,7 +73,7 @@ export function useSuperAdminOrganizations(options: UseOrganizationsOptions = {}
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || '조직 수정 실패');
+        throw new Error(error.error?.message || error.error || '조직 수정 실패');
       }
 
       return response.json();

@@ -41,10 +41,15 @@ export async function GET(request: NextRequest) {
     type Organization = Database['public']['Tables']['organizations']['Row'];
     type ProfileOrgData = { organization_id: string | null };
 
-    const { data: profiles } = await supabase
+    const { data: profiles, error: profileError } = await supabase
       .from('profiles')
       .select('organization_id')
       .not('organization_id', 'is', null);
+
+    if (profileError) {
+      console.error('Failed to fetch profiles for user count:', profileError);
+      // Continue with empty profiles array instead of failing the request
+    }
 
     // Group user counts by organization_id
     const userCountMap = ((profiles || []) as ProfileOrgData[]).reduce((acc, profile) => {
@@ -54,7 +59,7 @@ export async function GET(request: NextRequest) {
     }, {} as Record<string, number>);
 
     // Transform organizations with user counts
-    const transformedOrganizations = (organizations as Organization[] || []).map((org) => ({
+    const transformedOrganizations = ((organizations || []) as Organization[]).map((org) => ({
       id: org.id,
       name: org.name,
       is_active: org.is_active,

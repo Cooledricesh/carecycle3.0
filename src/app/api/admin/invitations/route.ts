@@ -176,7 +176,16 @@ export async function POST(request: NextRequest) {
     }
 
     // Send invitation email
-    const invitationLink = `${process.env.NEXT_PUBLIC_APP_URL}/auth/accept-invitation/${token}`;
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+    if (!appUrl) {
+      console.error('NEXT_PUBLIC_APP_URL is not configured');
+      return NextResponse.json(
+        { error: 'Server configuration error: APP_URL not set' },
+        { status: 500 }
+      );
+    }
+
+    const invitationLink = `${appUrl}/auth/accept-invitation/${token}`;
     const emailResult = await sendInvitationEmail({
       to: email,
       invitationLink,

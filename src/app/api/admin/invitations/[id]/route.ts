@@ -121,11 +121,15 @@ export async function DELETE(
     console.log('[DELETE Invitation] User:', user.id, 'Organization:', userProfile.organization_id);
 
     // Use service client to bypass RLS policies for delete operation
+    // Add status and expiry conditions to prevent deleting accepted/expired invitations
     const serviceSupabase = await createServiceClient();
+    const nowIso = new Date().toISOString();
     const { data: deletedData, error: deleteError } = await serviceSupabase
       .from('invitations')
       .delete()
       .eq('id', id)
+      .eq('status', 'pending')
+      .gt('expires_at', nowIso)
       .select();
 
     console.log('[DELETE Invitation] Delete result:', { deletedData, deleteError });
@@ -139,11 +143,10 @@ export async function DELETE(
     }
 
     if (!deletedData || deletedData.length === 0) {
-      console.warn('[DELETE Invitation] No rows deleted - possible RLS policy blocking');
+      console.warn('[DELETE Invitation] No rows deleted - invitation state changed before deletion');
       return NextResponse.json({
-        error: 'Failed to delete invitation - no rows affected (RLS policy may be blocking)',
-        hint: 'Check RLS policies on invitations table'
-      }, { status: 500 });
+        error: 'Invitation can no longer be deleted because its status or expiry changed'
+      }, { status: 409 });
     }
 
     console.log('[DELETE Invitation] Successfully deleted:', deletedData);

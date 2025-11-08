@@ -6,7 +6,7 @@
  * Public page for accepting invitations and creating accounts
  */
 
-import { useState, useEffect, use } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { z } from 'zod';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -17,7 +17,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle, CheckCircle } from 'lucide-react';
 
 interface PageProps {
-  params: Promise<{ token: string }>;
+  params: { token: string };
 }
 
 const signupSchema = z.object({
@@ -35,8 +35,7 @@ interface VerificationResponse {
 }
 
 export default function AcceptInvitationPage({ params }: PageProps) {
-  const resolvedParams = use(params);
-  const token = resolvedParams.token;
+  const { token } = params;
   const router = useRouter();
 
   const [isVerifying, setIsVerifying] = useState(true);
@@ -124,7 +123,7 @@ export default function AcceptInvitationPage({ params }: PageProps) {
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || '계정 생성에 실패했습니다');
+        throw new Error(error.error?.message || error.error || '계정 생성에 실패했습니다');
       }
 
       setSubmitSuccess(true);

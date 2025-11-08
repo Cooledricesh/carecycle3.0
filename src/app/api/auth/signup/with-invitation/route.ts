@@ -135,6 +135,7 @@ export async function POST(request: NextRequest) {
       email: invitationData.email,
       role: invitationData.role as 'admin' | 'doctor' | 'nurse' | 'super_admin',
       organization_id: invitationData.organization_id,
+      care_type: invitationData.care_type,
     };
 
     const profileData = buildProfileData(invitationInfo, { name, password });
@@ -156,8 +157,8 @@ export async function POST(request: NextRequest) {
     if (profileData.role === 'admin' || profileData.role === 'doctor' || profileData.role === 'super_admin') {
       profilePayload.care_type = null;
     } else if (profileData.role === 'nurse') {
-      // Use care_type from invitation
-      profilePayload.care_type = invitationData.care_type;
+      // Use care_type from profileData (which came from invitation)
+      profilePayload.care_type = profileData.care_type;
     }
 
     console.log('[Signup] Upserting profile with payload:', JSON.stringify(profilePayload, null, 2));

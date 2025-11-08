@@ -22,6 +22,12 @@ CHECK (
   OR care_type IN ('외래', '입원', '낮병원')
 );
 
+-- Backfill existing nurse invitations with default care_type
+-- This prevents constraint violation when adding the nurse care_type check
+UPDATE public.invitations
+SET care_type = '외래'
+WHERE role = 'nurse' AND care_type IS NULL;
+
 -- Add check constraint to ensure nurse invitations have care_type
 ALTER TABLE public.invitations
 ADD CONSTRAINT check_nurse_care_type

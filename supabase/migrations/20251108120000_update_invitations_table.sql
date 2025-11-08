@@ -61,9 +61,10 @@ BEGIN
     AND data_type = 'text'
   ) THEN
     -- First update any invalid roles to 'nurse' (default)
+    -- Preserve super_admin role
     UPDATE public.invitations
     SET role = 'nurse'
-    WHERE role NOT IN ('admin', 'doctor', 'nurse');
+    WHERE role NOT IN ('admin', 'doctor', 'nurse', 'super_admin');
 
     -- Drop default before changing type
     ALTER TABLE public.invitations ALTER COLUMN role DROP DEFAULT;
