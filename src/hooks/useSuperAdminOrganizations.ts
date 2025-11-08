@@ -33,7 +33,20 @@ export function useSuperAdminOrganizations(options: UseOrganizationsOptions = {}
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error?.message || error.error || '조직 목록 조회 실패');
+        // Extract error message properly - error.error might be an object
+        let errorMessage = '조직 목록 조회 실패';
+        try {
+          if (typeof error.error === 'string') {
+            errorMessage = error.error;
+          } else if (error.error?.message) {
+            errorMessage = error.error.message;
+          } else if (error.message) {
+            errorMessage = error.message;
+          }
+        } catch {
+          // Use default error message if extraction fails
+        }
+        throw new Error(errorMessage);
       }
 
       return response.json();
@@ -51,7 +64,20 @@ export function useSuperAdminOrganizations(options: UseOrganizationsOptions = {}
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error?.message || error.error || '조직 생성 실패');
+        // Extract error message properly - error.error might be an object
+        let errorMessage = '조직 생성 실패';
+        try {
+          if (typeof error.error === 'string') {
+            errorMessage = error.error;
+          } else if (error.error?.message) {
+            errorMessage = error.error.message;
+          } else if (error.message) {
+            errorMessage = error.message;
+          }
+        } catch {
+          // Use default error message if extraction fails
+        }
+        throw new Error(errorMessage);
       }
 
       return response.json();
@@ -73,7 +99,20 @@ export function useSuperAdminOrganizations(options: UseOrganizationsOptions = {}
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error?.message || error.error || '조직 수정 실패');
+        // Extract error message properly - error.error might be an object
+        let errorMessage = '조직 수정 실패';
+        try {
+          if (typeof error.error === 'string') {
+            errorMessage = error.error;
+          } else if (error.error?.message) {
+            errorMessage = error.error.message;
+          } else if (error.message) {
+            errorMessage = error.message;
+          }
+        } catch {
+          // Use default error message if extraction fails
+        }
+        throw new Error(errorMessage);
       }
 
       return response.json();

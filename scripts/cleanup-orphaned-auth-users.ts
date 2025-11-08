@@ -6,10 +6,10 @@
  * creating the auth user but before creating the profile.
  *
  * Usage:
- *   npx tsx scripts/cleanup-orphaned-auth-users.ts [--dry-run] [--delete]
+ *   npx tsx scripts/cleanup-orphaned-auth-users.ts [--delete]
  *
  * Options:
- *   --dry-run: Show orphaned users without deleting (default)
+ *   (default): Show orphaned users without deleting (dry-run mode)
  *   --delete: Actually delete orphaned users (use with caution!)
  */
 
@@ -20,34 +20,76 @@ async function findOrphanedAuthUsers() {
 
   console.log('🔍 Checking for orphaned auth users...\n');
 
-  // Get all auth users
-  const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers();
+  // Get all auth users with pagination
+  let allAuthUsers: any[] = [];
+  let page = 1;
+  const perPage = 1000;
 
-  if (authError) {
-    console.error('❌ Failed to list auth users:', authError);
-    process.exit(1);
+  while (true) {
+    const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers({
+      page,
+      perPage,
+    });
+
+    if (authError) {
+      console.error('❌ Failed to list auth users:', authError);
+      process.exit(1);
+    }
+
+    allAuthUsers = allAuthUsers.concat(authUsers.users);
+
+    // Break if we got less than perPage (last page)
+    if (authUsers.users.length < perPage) {
+      break;
+    }
+
+    page++;
+    console.log(`📄 Fetched page ${page - 1} (${authUsers.users.length} users)...`);
   }
 
-  console.log(`📊 Found ${authUsers.users.length} total auth users`);
+  console.log(`📊 Found ${allAuthUsers.length} total auth users`);
 
-  // Get all profiles
-  const { data: profiles, error: profilesError } = await supabase
-    .from('profiles')
-    .select('id, email');
+  // Get all profiles with pagination
+  let allProfiles: any[] = [];
+  let from = 0;
+  const limit = 1000;
 
-  if (profilesError || !profiles) {
-    console.error('❌ Failed to list profiles:', profilesError);
-    process.exit(1);
+  while (true) {
+    const { data: profiles, error: profilesError } = await supabase
+      .from('profiles')
+      .select('id, email')
+      .range(from, from + limit - 1);
+
+    if (profilesError) {
+      console.error('❌ Failed to list profiles:', profilesError);
+      process.exit(1);
+    }
+
+    if (!profiles || profiles.length === 0) {
+      break;
+    }
+
+    allProfiles = allProfiles.concat(profiles);
+
+    // Break if we got less than limit (last page)
+    if (profiles.length < limit) {
+      break;
+    }
+
+    from += limit;
+    console.log(`📄 Fetched profiles batch (${profiles.length} profiles)...`);
   }
 
-  console.log(`📊 Found ${profiles.length} profiles\n`);
+  console.log(`📊 Found ${allProfiles.length} profiles\n`);
 
-  // Create a Set of profile emails for faster lookup
-  const profileEmails = new Set(profiles.map((p: { id: string; email: string }) => p.email));
+  // Create a Set of profile emails (normalized to lowercase) for faster lookup
+  const profileEmails = new Set(
+    allProfiles.map((p: { id: string; email: string }) => p.email.toLowerCase())
+  );
 
-  // Find orphaned users
-  const orphanedUsers = authUsers.users.filter(user => {
-    return user.email && !profileEmails.has(user.email);
+  // Find orphaned users (normalize emails for comparison)
+  const orphanedUsers = allAuthUsers.filter(user => {
+    return user.email && !profileEmails.has(user.email.toLowerCase());
   });
 
   return { orphanedUsers, supabase };

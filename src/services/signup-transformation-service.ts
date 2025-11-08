@@ -4,11 +4,13 @@
  * Pure functions for transforming invitation data into signup data.
  */
 
+import { type CareType } from '@/lib/filters/filter-types';
+
 export interface InvitationInfo {
   email: string;
   role: 'admin' | 'doctor' | 'nurse' | 'super_admin';
   organization_id: string;
-  care_type?: string | null;
+  care_type?: CareType | null;
 }
 
 export interface SignupRequest {
@@ -22,7 +24,7 @@ export interface ProfileData {
   organization_id: string;
   approval_status: 'approved';
   name: string;
-  care_type?: string | null;
+  care_type?: CareType | null;
 }
 
 /**

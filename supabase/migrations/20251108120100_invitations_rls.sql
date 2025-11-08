@@ -42,9 +42,8 @@ WITH CHECK (
 
 -- UPDATE: Admin and super_admin can update invitations from their organization
 -- USING: Only allow updating pending invitations (not expired, not already accepted/cancelled)
--- WITH CHECK: Restrict status transitions to valid states (accepted, cancelled)
--- Note: Application layer further restricts updates to status and updated_at fields only
--- RLS provides organization boundary and status transition enforcement
+-- WITH CHECK: Restrict status transitions and updated_at to prevent data manipulation
+-- Column-level privileges ensure only status and updated_at can be modified
 CREATE POLICY "invitations_update_policy"
 ON public.invitations
 FOR UPDATE
@@ -60,8 +59,10 @@ USING (
   )
 )
 WITH CHECK (
-  -- After update, status must be a valid terminal state
+  -- After update, status must be 'accepted' or 'cancelled'
   invitations.status IN ('accepted', 'cancelled')
+  -- Ensure updated_at is not backdated
+  AND invitations.updated_at >= (SELECT updated_at FROM public.invitations WHERE id = invitations.id)
   AND EXISTS (
     SELECT 1 FROM public.profiles
     WHERE profiles.id = auth.uid()
@@ -69,6 +70,10 @@ WITH CHECK (
     AND profiles.role IN ('admin', 'super_admin')
   )
 );
+
+-- Revoke all UPDATE privileges and grant only for specific columns
+REVOKE UPDATE ON public.invitations FROM authenticated;
+GRANT UPDATE (status, updated_at) ON public.invitations TO authenticated;
 
 -- DELETE: No hard deletes allowed, use soft delete via status update
 -- Super admin can delete for emergency cleanup only

@@ -18,7 +18,6 @@ import { createServiceClient } from '@/lib/supabase/server';
 import { tokenService, type Invitation } from '@/services/invitation-token-service';
 import {
   buildProfileData,
-  validateSignupRequest,
   type InvitationInfo,
 } from '@/services/signup-transformation-service';
 import { z } from 'zod';
@@ -54,12 +53,6 @@ export async function POST(request: NextRequest) {
 
     const { token, password, name } = validation.data;
     console.log('[Signup] Validation passed');
-
-    // Additional validation using pure function
-    const signupValidation = validateSignupRequest({ name, password });
-    if (!signupValidation.valid) {
-      return NextResponse.json({ error: signupValidation.error }, { status: 400 });
-    }
 
     // Use service client for database operations (public endpoint)
     const supabase = await createServiceClient();
@@ -107,28 +100,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if user already exists in auth.users
-    const { data: existingAuthUsers, error: listUsersError } = await supabase.auth.admin.listUsers();
-
-    if (listUsersError) {
-      console.error('[Signup] Failed to check existing auth users:', listUsersError);
-    } else {
-      const authUserExists = existingAuthUsers.users.some(
-        (user) => user.email === invitationData.email
-      );
-
-      if (authUserExists) {
-        console.error('[Signup] User exists in auth.users but not in profiles - orphaned user detected');
-        return NextResponse.json(
-          {
-            error: 'This email was previously registered but account setup was incomplete. Please contact support to resolve this issue.',
-            code: 'orphaned_auth_user'
-          },
-          { status: 409 }
-        );
-      }
-    }
-
     // Validate nurse role has care_type
     if (invitationData.role === 'nurse' && !invitationData.care_type) {
       console.error('[Signup] Nurse invitation missing care_type');
@@ -166,7 +137,7 @@ export async function POST(request: NextRequest) {
       email: invitationData.email,
       role: invitationData.role as 'admin' | 'doctor' | 'nurse' | 'super_admin',
       organization_id: invitationData.organization_id,
-      care_type: invitationData.care_type,
+      care_type: invitationData.care_type as '외래' | '입원' | '낮병원' | null,
     };
 
     const profileData = buildProfileData(invitationInfo, { name, password });
