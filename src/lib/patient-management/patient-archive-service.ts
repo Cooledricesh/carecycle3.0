@@ -40,7 +40,7 @@ export class PatientArchiveService {
       console.log('[PatientArchiveService.archivePatient] Archiving patient:', patientId, options)
 
       // First, get the current patient data
-      const { data: originalPatient, error: fetchError } = await this.supabase
+      const { data: originalPatient, error: fetchError } = await (this.supabase as any)
         .from('patients')
         .select('*')
         .eq('id', patientId)
@@ -57,7 +57,7 @@ export class PatientArchiveService {
       }
 
       // Archive the patient using the database function
-      const { error: archiveError } = await this.supabase
+      const { error: archiveError } = await (this.supabase as any)
         .rpc('archive_patient_with_timestamp', { patient_id: patientId })
 
       if (archiveError) {
@@ -66,8 +66,8 @@ export class PatientArchiveService {
       }
 
       // Get the archived patient data to return the new patient number
-      const { data: archivedPatient, error: archivedFetchError } = await this.supabase
-        .from('patients')
+      const { data: archivedPatient, error: archivedFetchError } = await (this.supabase as any)
+          .from('patients')
         .select('*')
         .eq('id', patientId)
         .single()
@@ -112,7 +112,7 @@ export class PatientArchiveService {
       if (action === 'deactivate') {
         // Soft delete all related schedules by changing status to 'cancelled'
         // Note: schedules table uses 'status' enum field, not 'is_active' boolean
-        const { error: schedulesError } = await this.supabase
+        const { error: schedulesError } = await (this.supabase as any)
           .from('schedules')
           .update({ 
             status: 'cancelled',
@@ -162,7 +162,7 @@ export class PatientArchiveService {
         throw error
       }
 
-      return (archivedPatients || []).map(patient => ({
+      return (archivedPatients || []).map((patient: any) => ({
         id: patient.id,
         originalPatientNumber: patient.original_patient_number || '',
         archivedPatientNumber: patient.patient_number,
@@ -186,8 +186,8 @@ export class PatientArchiveService {
       cutoffDate.setDate(cutoffDate.getDate() - olderThanDays)
 
       // Find inactive patients older than cutoff date
-      const { data: inactivePatients, error: fetchError } = await this.supabase
-        .from('patients')
+      const { data: inactivePatients, error: fetchError } = await (this.supabase as any)
+          .from('patients')
         .select('id, patient_number, name, updated_at')
         .eq('is_active', false)
         .eq('archived', false)
@@ -212,8 +212,8 @@ export class PatientArchiveService {
 
       try {
         // Use database transaction for atomic bulk operation
-        const { data: result, error: bulkError } = await this.supabase.rpc('bulk_archive_patients', {
-          patient_ids: inactivePatients.map(p => p.id),
+        const { data: result, error: bulkError } = await (this.supabase as any).rpc('bulk_archive_patients', {
+          patient_ids: inactivePatients.map((p: any) => p.id),
           archive_reason: reasonText
         })
 
@@ -227,7 +227,7 @@ export class PatientArchiveService {
           : 0
         
         // Log successful archiving for each patient
-        inactivePatients.slice(0, processedCount).forEach(patient => {
+        inactivePatients.slice(0, processedCount).forEach((patient: any) => {
           console.log(`[PatientArchiveService.bulkArchiveInactivePatients] Archived patient ${patient.patient_number}`)
         })
 
@@ -267,8 +267,8 @@ export class PatientArchiveService {
       cutoffDate.setMonth(cutoffDate.getMonth() - olderThanMonths)
 
       // Find old archived patients
-      const { data: oldArchives, error: fetchError } = await this.supabase
-        .from('patients')
+      const { data: oldArchives, error: fetchError } = await (this.supabase as any)
+          .from('patients')
         .select('id, patient_number, archived_at')
         .eq('archived', true)
         .lt('archived_at', cutoffDate.toISOString())
@@ -285,8 +285,8 @@ export class PatientArchiveService {
       for (const archive of oldArchives || []) {
         try {
           // Hard delete old archived patients
-          const { error: deleteError } = await this.supabase
-            .from('patients')
+          const { error: deleteError } = await (this.supabase as any)
+          .from('patients')
             .delete()
             .eq('id', archive.id)
 

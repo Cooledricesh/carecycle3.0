@@ -37,7 +37,7 @@ export async function GET() {
     const {
       data: { user },
       error: authError,
-    } = await supabase.auth.getUser()
+    } = await (supabase as any).auth.getUser()
 
     if (authError || !user) {
       return NextResponse.json({ error: '인증이 필요합니다.' }, { status: 401 })
@@ -47,7 +47,7 @@ export async function GET() {
       .from('profiles')
       .select('role, approval_status, is_active')
       .eq('id', user.id)
-      .single()
+      .single<{ role: string; approval_status: string; is_active: boolean }>()
 
     if (profileError || !profile) {
       return NextResponse.json(

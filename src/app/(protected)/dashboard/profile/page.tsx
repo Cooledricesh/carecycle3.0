@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useAuth } from "@/providers/auth-provider-simple";
 import { useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
+import type { Database } from "@/lib/database.types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -76,22 +77,13 @@ export default function ProfilePage() {
         throw new Error("프로필 정보를 찾을 수 없습니다");
       }
 
-      const updateData: {
-        name: string;
-        phone: string;
-        care_type?: string | null;
-      } = {
+      const updateData: Database['public']['Tables']['profiles']['Update'] = {
         name: formData.name,
         phone: formData.phone,
+        care_type: profile.role === 'nurse' ? (formData.care_type || null) : null,
       };
 
-      if (profile.role === 'nurse') {
-        updateData.care_type = formData.care_type || null;
-      } else {
-        updateData.care_type = null;
-      }
-
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from("profiles")
         .update(updateData)
         .eq("id", profile.id);

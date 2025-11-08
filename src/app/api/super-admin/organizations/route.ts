@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireSuperAdmin } from '@/lib/auth/super-admin-guard';
 import { createServiceClient } from '@/lib/supabase/server';
 import { createOrganizationSchema } from '@/lib/validations/super-admin';
+import type { Database, Json } from '@/lib/database.types';
 
 /**
  * GET /api/super-admin/organizations
@@ -37,8 +38,9 @@ export async function GET(request: NextRequest) {
     }
 
     // For each organization, get user count
+    type Organization = Database['public']['Tables']['organizations']['Row'];
     const transformedOrganizations = await Promise.all(
-      (organizations || []).map(async (org) => {
+      (organizations as Organization[] || []).map(async (org) => {
         const { count } = await supabase
           .from('profiles')
           .select('*', { count: 'exact', head: true })
@@ -97,9 +99,14 @@ export async function POST(request: NextRequest) {
     const { name } = validation.data;
 
     // Create organization
-    const { data: organization, error: createError } = await supabase
+    type Organization = Database['public']['Tables']['organizations']['Row'];
+    const insertData: Database['public']['Tables']['organizations']['Insert'] = {
+      name,
+      is_active: true
+    };
+    const { data: organization, error: createError } = await (supabase as any)
       .from('organizations')
-      .insert({ name, is_active: true })
+      .insert(insertData)
       .select()
       .single();
 
@@ -107,16 +114,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: createError.message }, { status: 500 });
     }
 
+    const org = organization as Organization;
+
     // Create audit log
-    await supabase.from('audit_logs').insert({
-      organization_id: organization.id,
+    const auditLog: Database['public']['Tables']['audit_logs']['Insert'] = {
+      organization_id: org.id,
       user_id: user.id,
-      user_email: user.email,
+      user_email: user.email ?? null,
       operation: 'organization_created',
       table_name: 'organizations',
-      record_id: organization.id,
-      new_values: { name, is_active: true },
-    });
+      record_id: org.id,
+      new_values: { name, is_active: true } as unknown as Json,
+    };
+    await (supabase as any).from('audit_logs').insert(auditLog);
 
     return NextResponse.json({ organization }, { status: 201 });
   } catch (error) {

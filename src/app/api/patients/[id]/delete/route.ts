@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
+import type { Database } from '@/lib/database.types'
 
 export async function POST(
   request: Request,
@@ -21,9 +22,9 @@ export async function POST(
     
     // Try to update patient with regular client first
     // The database trigger will automatically cascade delete all related schedules
-    const { error: updateError } = await supabase
+    const { error: updateError } = await (supabase as any)
       .from('patients')
-      .update({ 
+      .update({
         is_active: false,
         updated_at: new Date().toISOString()
       })
@@ -40,8 +41,8 @@ export async function POST(
     
     // Deactivate patient with service client
     // The database trigger will automatically cascade delete all related schedules
-    const { error: adminError } = await serviceSupabase
-      .from('patients')
+    const { error: adminError } = await (serviceSupabase as any)
+          .from('patients')
       .update({ 
         is_active: false,
         updated_at: new Date().toISOString()

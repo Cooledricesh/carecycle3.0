@@ -49,16 +49,16 @@ export const activityService = {
     const activeUsers = activeUsersResult.count || 0
     const todayActivities = todayLogsResult.count || 0
 
-    const { data: connectionCheck } = await client
-      .from('profiles')
+    const { data: connectionCheck } = await (client as any)
+          .from('profiles')
       .select('id')
       .limit(1)
       .single()
 
     const systemStatus = connectionCheck ? 'healthy' : 'error'
 
-    const { count: criticalAlerts } = await client
-      .from('audit_logs')
+    const { count: criticalAlerts } = await (client as any)
+          .from('audit_logs')
       .select('id', { count: 'exact', head: true })
       .eq('operation', 'DELETE')
       .gte('timestamp', todayISO)
@@ -128,7 +128,7 @@ export const activityService = {
     }
 
     const logs: AuditLog[] =
-      data?.map((row) => {
+      data?.map((row: any) => {
         // Validate required audit fields for integrity
         if (!row.timestamp) {
           throw new Error(`Audit log ${row.id} missing required timestamp - data integrity violation`)

@@ -68,7 +68,7 @@ export function useItem(id: string | null) {
 export function useActiveItems() {
   const { items, ...rest } = useItems()
 
-  const activeItems = items.filter(item => item.is_active === true)
+  const activeItems = items.filter((item: Item) => item.is_active === true)
 
   return {
     items: activeItems,
@@ -84,7 +84,7 @@ export function useItemsByCategory(category: string | 'all') {
 
   const filteredItems = category === 'all'
     ? items
-    : items.filter(item => item.category === category)
+    : items.filter((item: Item) => item.category === category)
 
   return {
     items: filteredItems,
@@ -100,14 +100,14 @@ export function useItemsStatistics() {
 
   const statistics = {
     total: items.length,
-    active: items.filter(item => item.is_active).length,
-    inactive: items.filter(item => !item.is_active).length,
+    active: items.filter((item: Item) => item.is_active).length,
+    inactive: items.filter((item: Item) => !item.is_active).length,
     byCategory: {
-      injection: items.filter(item => item.category === 'injection').length,
-      test: items.filter(item => item.category === 'test').length,
-      other: items.filter(item => item.category === 'other').length,
+      injection: items.filter((item: Item) => item.category === 'injection').length,
+      test: items.filter((item: Item) => item.category === 'test').length,
+      other: items.filter((item: Item) => item.category === 'other').length,
     },
-    withNotification: items.filter(item => item.requires_notification).length,
+    withNotification: items.filter((item: Item) => item.requires_notification).length,
   }
 
   return {

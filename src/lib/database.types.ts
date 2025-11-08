@@ -21,7 +21,7 @@ export type Database = {
           new_values: Json | null
           old_values: Json | null
           operation: string
-          organization_id: string
+          organization_id: string | null
           record_id: string | null
           table_name: string
           timestamp: string | null
@@ -37,7 +37,7 @@ export type Database = {
           new_values?: Json | null
           old_values?: Json | null
           operation: string
-          organization_id: string
+          organization_id?: string | null
           record_id?: string | null
           table_name: string
           timestamp?: string | null
@@ -53,7 +53,7 @@ export type Database = {
           new_values?: Json | null
           old_values?: Json | null
           operation?: string
-          organization_id?: string
+          organization_id?: string | null
           record_id?: string | null
           table_name?: string
           timestamp?: string | null
@@ -297,6 +297,13 @@ export type Database = {
             foreignKeyName: "notifications_recipient_id_fkey"
             columns: ["recipient_id"]
             isOneToOne: false
+            referencedRelation: "profile_basic_info"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_recipient_id_fkey"
+            columns: ["recipient_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -320,18 +327,21 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          is_active: boolean
           name: string
           updated_at: string
         }
         Insert: {
           created_at?: string
           id?: string
+          is_active?: boolean
           name: string
           updated_at?: string
         }
         Update: {
           created_at?: string
           id?: string
+          is_active?: boolean
           name?: string
           updated_at?: string
         }
@@ -388,7 +398,21 @@ export type Database = {
             foreignKeyName: "patient_schedules_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
+            referencedRelation: "profile_basic_info"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_schedules_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_schedules_nurse_id_fkey"
+            columns: ["nurse_id"]
+            isOneToOne: false
+            referencedRelation: "profile_basic_info"
             referencedColumns: ["id"]
           },
           {
@@ -457,6 +481,13 @@ export type Database = {
             foreignKeyName: "patients_doctor_id_fkey"
             columns: ["doctor_id"]
             isOneToOne: false
+            referencedRelation: "profile_basic_info"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patients_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -480,7 +511,7 @@ export type Database = {
           id: string
           is_active: boolean
           name: string
-          organization_id: string
+          organization_id: string | null
           phone: string | null
           rejection_reason: string | null
           role: Database["public"]["Enums"]["user_role"]
@@ -498,7 +529,7 @@ export type Database = {
           id: string
           is_active?: boolean
           name: string
-          organization_id: string
+          organization_id?: string | null
           phone?: string | null
           rejection_reason?: string | null
           role?: Database["public"]["Enums"]["user_role"]
@@ -516,13 +547,20 @@ export type Database = {
           id?: string
           is_active?: boolean
           name?: string
-          organization_id?: string
+          organization_id?: string | null
           phone?: string | null
           rejection_reason?: string | null
           role?: Database["public"]["Enums"]["user_role"]
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "profiles_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profile_basic_info"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "profiles_approved_by_fkey"
             columns: ["approved_by"]
@@ -571,6 +609,13 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "query_performance_log_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profile_basic_info"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "query_performance_log_user_id_fkey"
             columns: ["user_id"]
@@ -640,7 +685,21 @@ export type Database = {
             foreignKeyName: "schedule_executions_doctor_id_at_completion_fkey"
             columns: ["doctor_id_at_completion"]
             isOneToOne: false
+            referencedRelation: "profile_basic_info"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "schedule_executions_doctor_id_at_completion_fkey"
+            columns: ["doctor_id_at_completion"]
+            isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "schedule_executions_executed_by_fkey"
+            columns: ["executed_by"]
+            isOneToOne: false
+            referencedRelation: "profile_basic_info"
             referencedColumns: ["id"]
           },
           {
@@ -705,6 +764,13 @@ export type Database = {
           schedule_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "schedule_logs_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
+            referencedRelation: "profile_basic_info"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "schedule_logs_changed_by_fkey"
             columns: ["changed_by"]
@@ -794,7 +860,21 @@ export type Database = {
             foreignKeyName: "schedules_assigned_nurse_id_fkey"
             columns: ["assigned_nurse_id"]
             isOneToOne: false
+            referencedRelation: "profile_basic_info"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "schedules_assigned_nurse_id_fkey"
+            columns: ["assigned_nurse_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "schedules_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profile_basic_info"
             referencedColumns: ["id"]
           },
           {
@@ -867,6 +947,13 @@ export type Database = {
             foreignKeyName: "user_preferences_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: true
+            referencedRelation: "profile_basic_info"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_preferences_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -905,6 +992,13 @@ export type Database = {
           urgency_level: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "patients_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "profile_basic_info"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "patients_doctor_id_fkey"
             columns: ["doctor_id"]
@@ -971,6 +1065,13 @@ export type Database = {
             foreignKeyName: "patients_doctor_id_fkey"
             columns: ["doctor_id"]
             isOneToOne: false
+            referencedRelation: "profile_basic_info"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patients_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -986,6 +1087,41 @@ export type Database = {
           total_size_pretty: string | null
         }
         Relationships: []
+      }
+      profile_basic_info: {
+        Row: {
+          created_at: string | null
+          id: string | null
+          is_active: boolean | null
+          name: string | null
+          organization_id: string | null
+          role: Database["public"]["Enums"]["user_role"] | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string | null
+          is_active?: boolean | null
+          name?: string | null
+          organization_id?: string | null
+          role?: Database["public"]["Enums"]["user_role"] | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string | null
+          is_active?: boolean | null
+          name?: string | null
+          organization_id?: string | null
+          role?: Database["public"]["Enums"]["user_role"] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Functions: {
@@ -1149,7 +1285,7 @@ export type Database = {
           id: string
           is_active: boolean
           name: string
-          organization_id: string
+          organization_id: string | null
           phone: string | null
           rejection_reason: string | null
           role: Database["public"]["Enums"]["user_role"]
@@ -1313,6 +1449,7 @@ export type Database = {
       is_admin: { Args: { user_id: string }; Returns: boolean }
       is_approved: { Args: { user_id: string }; Returns: boolean }
       is_current_user_admin: { Args: never; Returns: boolean }
+      is_super_admin: { Args: never; Returns: boolean }
       is_user_active_and_approved: { Args: never; Returns: boolean }
       is_user_admin: { Args: never; Returns: boolean }
       refresh_dashboard_summary: { Args: never; Returns: undefined }
@@ -1414,7 +1551,7 @@ export type Database = {
         | "completed"
         | "deleted"
         | "cancelled"
-      user_role: "nurse" | "admin" | "doctor"
+      user_role: "nurse" | "admin" | "doctor" | "super_admin"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1560,7 +1697,29 @@ export const Constants = {
         "deleted",
         "cancelled",
       ],
-      user_role: ["nurse", "admin", "doctor"],
+      user_role: ["nurse", "admin", "doctor", "super_admin"],
     },
   },
 } as const
+
+// Commonly used type exports
+export type Profile = Database['public']['Tables']['profiles']['Row']
+export type ProfileInsert = Database['public']['Tables']['profiles']['Insert']
+export type ProfileUpdate = Database['public']['Tables']['profiles']['Update']
+
+export type Item = Database['public']['Tables']['items']['Row']
+export type ItemInsert = Database['public']['Tables']['items']['Insert']
+export type ItemUpdate = Database['public']['Tables']['items']['Update']
+
+export type Schedule = Database['public']['Tables']['schedules']['Row']
+export type ScheduleInsert = Database['public']['Tables']['schedules']['Insert']
+export type ScheduleUpdate = Database['public']['Tables']['schedules']['Update']
+
+export type Patient = Database['public']['Tables']['patients']['Row']
+export type PatientInsert = Database['public']['Tables']['patients']['Insert']
+export type PatientUpdate = Database['public']['Tables']['patients']['Update']
+
+// ItemCategory is a string literal union, not an enum in the database
+export type ItemCategory = 'test' | 'injection' | 'medication' | 'procedure' | 'other'
+export type ScheduleStatus = Database['public']['Enums']['schedule_status']
+export type UserRole = Database['public']['Enums']['user_role']

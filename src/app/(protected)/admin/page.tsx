@@ -21,7 +21,7 @@ export default function AdminPage() {
     async function checkAuth() {
       const {
         data: { user },
-      } = await supabase.auth.getUser()
+      } = await (supabase as any).auth.getUser()
 
       if (!user) {
         router.push('/auth/login')
@@ -32,7 +32,7 @@ export default function AdminPage() {
         .from('profiles')
         .select('role')
         .eq('id', user.id)
-        .single()
+        .single<{ role: string }>()
 
       if (profile?.role !== 'admin') {
         router.push('/dashboard')

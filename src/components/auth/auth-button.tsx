@@ -25,7 +25,7 @@ export async function AuthButton() {
     .from("profiles")
     .select("name, role")
     .eq("id", user.id)
-    .single();
+    .single<{ name: string; role: string }>();
 
   return (
     <div className="flex items-center gap-4">

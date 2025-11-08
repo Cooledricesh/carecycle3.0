@@ -48,8 +48,8 @@ export const patientService = {
       console.log('[patientService.create] Insert data:', insertData)
       console.log('[patientService.create] Auth user ID:', session?.user?.id)
       
-      const { data, error } = await client
-        .from('patients')
+      const { data, error } = await (client as any)
+          .from('patients')
         .insert(insertData)
         .select()
         .single()
@@ -213,8 +213,8 @@ export const patientService = {
   async getById(id: string, organizationId: string, supabase?: SupabaseClient): Promise<Patient | null> {
     const client = supabase || createClient()
     try {
-      const { data, error } = await client
-        .from('patients')
+      const { data, error } = await (client as any)
+          .from('patients')
         .select(`
           *,
           assigned_doctor_name,
@@ -245,8 +245,8 @@ export const patientService = {
   async getByPatientNumber(patientNumber: string, organizationId: string, supabase?: SupabaseClient): Promise<Patient | null> {
     const client = supabase || createClient()
     try {
-      const { data, error } = await client
-        .from('patients')
+      const { data, error } = await (client as any)
+          .from('patients')
         .select('*')
         .eq('patient_number', patientNumber)
         .eq('is_active', true)
@@ -310,7 +310,7 @@ export const patientService = {
       const snakeData = toSnakeCase(validated)
 
       // Build the query with native AbortSignal support
-      const baseQuery = client
+      const baseQuery = (client as any)
         .from('patients')
         .update(snakeData)
         .eq('id', id)
@@ -411,8 +411,8 @@ export const patientService = {
       console.log('[patientService.delete] Attempting to delete patient with id:', id)
 
       // First, check if the patient exists
-      const { data: existingPatient, error: fetchError } = await client
-        .from('patients')
+      const { data: existingPatient, error: fetchError } = await (client as any)
+          .from('patients')
         .select('*')
         .eq('id', id)
         .eq('organization_id', organizationId)
@@ -430,8 +430,8 @@ export const patientService = {
       
       // Perform the soft delete on the patient
       // The database trigger will automatically cascade delete all related schedules
-      const { error } = await client
-        .from('patients')
+      const { error } = await (client as any)
+          .from('patients')
         .update({
           is_active: false,
           updated_at: new Date().toISOString()
@@ -492,8 +492,8 @@ export const patientService = {
       // Sanitize query input
       const sanitizedQuery = query.replace(/[%_]/g, '\\$&')
 
-      const { data, error } = await client
-        .from('patients')
+      const { data, error } = await (client as any)
+          .from('patients')
         .select('*')
         .eq('is_active', true)
         .eq('organization_id', organizationId)
@@ -501,7 +501,7 @@ export const patientService = {
         .limit(20)
       
       if (error) throw error
-      return (data || []).map(item => toCamelCase(item) as Patient)
+      return (data || []).map((item: any) => toCamelCase(item) as Patient)
     } catch (error) {
       console.error('Error searching patients:', error)
       throw new Error('환자 검색에 실패했습니다')

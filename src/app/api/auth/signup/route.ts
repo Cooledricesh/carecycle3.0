@@ -57,8 +57,8 @@ export async function POST(request: NextRequest) {
     }
     // Admin and doctor remain null (already initialized as null)
 
-    const { error: profileError } = await serviceSupabase
-      .from("profiles")
+    const { error: profileError } = await (serviceSupabase as any)
+          .from("profiles")
       .insert({
         id: data.user.id,
         email,

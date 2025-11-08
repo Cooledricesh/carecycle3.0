@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireSuperAdmin } from '@/lib/auth/super-admin-guard';
 import { createServiceClient } from '@/lib/supabase/server';
 import { updateUserRoleSchema } from '@/lib/validations/super-admin';
+import type { Database, Json } from '@/lib/database.types';
+
+type Profile = Database['public']['Tables']['profiles']['Row'];
 
 /**
  * PATCH /api/super-admin/users/[id]
@@ -39,7 +42,7 @@ export async function PATCH(
     // Get current user data
     const { data: targetUser, error: userError } = await supabase
       .from('profiles')
-      .select('*, organization_id, role')
+      .select('*')
       .eq('id', id)
       .single();
 
@@ -47,12 +50,14 @@ export async function PATCH(
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
+    const user = targetUser as Profile;
+
     // CRITICAL: If removing admin role, check minimum admin count
-    if (targetUser.role === 'admin' && newRole !== 'admin') {
+    if (user.role === 'admin' && newRole !== 'admin' && user.organization_id) {
       const { count: adminCount } = await supabase
         .from('profiles')
         .select('*', { count: 'exact', head: true })
-        .eq('organization_id', targetUser.organization_id)
+        .eq('organization_id', user.organization_id)
         .eq('role', 'admin');
 
       if ((adminCount || 0) <= 1) {
@@ -64,9 +69,10 @@ export async function PATCH(
     }
 
     // Update user role
-    const { data: updatedUser, error: updateError } = await supabase
+    const updateData: Database['public']['Tables']['profiles']['Update'] = { role: newRole };
+    const { data: updatedUser, error: updateError } = await (supabase as any)
       .from('profiles')
-      .update({ role: newRole })
+      .update(updateData)
       .eq('id', id)
       .select()
       .single();
@@ -75,20 +81,23 @@ export async function PATCH(
       return NextResponse.json({ error: updateError.message }, { status: 500 });
     }
 
+    const updated = updatedUser as Profile;
+
     // Create audit log
     const operation = newRole === 'admin' ? 'admin_assigned' : 'user_role_changed';
-    await supabase.from('audit_logs').insert({
-      organization_id: targetUser.organization_id,
+    const auditLog: Database['public']['Tables']['audit_logs']['Insert'] = {
+      organization_id: user.organization_id ?? null,
       user_id: superAdmin.id,
-      user_email: superAdmin.email,
+      user_email: superAdmin.email ?? null,
       operation,
       table_name: 'profiles',
       record_id: id,
-      old_values: { role: targetUser.role },
-      new_values: { role: newRole },
-    });
+      old_values: { role: user.role } as unknown as Json,
+      new_values: { role: newRole } as unknown as Json,
+    };
+    await (supabase as any).from('audit_logs').insert(auditLog);
 
-    return NextResponse.json({ user: updatedUser });
+    return NextResponse.json({ user: updated });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Internal server error';
 
@@ -123,7 +132,7 @@ export async function DELETE(
     // Get user data
     const { data: targetUser, error: userError } = await supabase
       .from('profiles')
-      .select('*, organization_id, role')
+      .select('*')
       .eq('id', id)
       .single();
 
@@ -131,12 +140,14 @@ export async function DELETE(
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
+    const user = targetUser as Profile;
+
     // CRITICAL: If user is admin, check minimum admin count
-    if (targetUser.role === 'admin') {
+    if (user.role === 'admin' && user.organization_id) {
       const { count: activeAdminCount } = await supabase
         .from('profiles')
         .select('*', { count: 'exact', head: true })
-        .eq('organization_id', targetUser.organization_id)
+        .eq('organization_id', user.organization_id)
         .eq('role', 'admin')
         .eq('is_active', true);
 
@@ -149,9 +160,10 @@ export async function DELETE(
     }
 
     // Soft delete (set is_active = false)
-    const { error: updateError } = await supabase
+    const updateData: Database['public']['Tables']['profiles']['Update'] = { is_active: false };
+    const { error: updateError } = await (supabase as any)
       .from('profiles')
-      .update({ is_active: false })
+      .update(updateData)
       .eq('id', id);
 
     if (updateError) {
@@ -159,16 +171,17 @@ export async function DELETE(
     }
 
     // Create audit log
-    await supabase.from('audit_logs').insert({
-      organization_id: targetUser.organization_id,
+    const auditLog: Database['public']['Tables']['audit_logs']['Insert'] = {
+      organization_id: user.organization_id ?? null,
       user_id: superAdmin.id,
-      user_email: superAdmin.email,
+      user_email: superAdmin.email ?? null,
       operation: 'user_deactivated',
       table_name: 'profiles',
       record_id: id,
-      old_values: { is_active: true },
-      new_values: { is_active: false },
-    });
+      old_values: { is_active: true } as unknown as Json,
+      new_values: { is_active: false } as unknown as Json,
+    };
+    await (supabase as any).from('audit_logs').insert(auditLog);
 
     return NextResponse.json({ success: true });
   } catch (error) {

@@ -33,8 +33,8 @@ export const scheduleService = {
       const snakeData = camelToSnake(validated)
 
       // Check if there's already an active schedule for this patient-item combination
-      const { data: existingSchedule } = await client
-        .from('schedules')
+      const { data: existingSchedule } = await (client as any)
+          .from('schedules')
         .select('id')
         .eq('patient_id', validated.patientId)
         .eq('item_id', validated.itemId)
@@ -44,7 +44,7 @@ export const scheduleService = {
 
       if (existingSchedule) {
         // Get item name for better error message
-        const { data: itemData } = await client
+        const { data: itemData } = await (client as any)
           .from('items')
           .select('name')
           .eq('id', validated.itemId)
@@ -62,8 +62,8 @@ export const scheduleService = {
       // Calculate next_due_date from start_date
       const nextDueDate = validated.startDate
 
-      const { data, error } = await client
-        .from('schedules')
+      const { data, error } = await (client as any)
+          .from('schedules')
         .insert({
           ...snakeData,
           next_due_date: nextDueDate,
@@ -114,8 +114,8 @@ export const scheduleService = {
       let itemId: string
       
       // Check if item with this name already exists
-      const { data: existingItem } = await client
-        .from('items')
+      const { data: existingItem } = await (client as any)
+          .from('items')
         .select('id')
         .eq('name', validatedInput.itemName)
         .eq('organization_id', organizationId)
@@ -153,8 +153,8 @@ export const scheduleService = {
       }
       
       // Check if there's already an active schedule for this patient-item combination
-      const { data: existingSchedule } = await client
-        .from('schedules')
+      const { data: existingSchedule } = await (client as any)
+          .from('schedules')
         .select('id')
         .eq('patient_id', validatedInput.patientId)
         .eq('item_id', itemId)
@@ -247,7 +247,7 @@ export const scheduleService = {
         console.log('[scheduleService.getTodayChecklist] Fetching with filters:', filters, '(attempt:', retryCount + 1, ')')
         const today = format(new Date(), 'yyyy-MM-dd')
 
-        const { data, error } = await client
+        const { data, error } = await (client as any)
           .from('schedules')
           .select(`
             *,
@@ -274,7 +274,7 @@ export const scheduleService = {
           throw error
         }
 
-        let schedules = (data || []).map(item => {
+        let schedules = (data || []).map((item: any) => {
           const schedule = snakeToCamel(item) as any
           const patients = (item as any).patients
           const items = (item as any).items
@@ -301,7 +301,7 @@ export const scheduleService = {
         if (filters) {
           // Filter by care types
           if (filters.careTypes && filters.careTypes.length > 0) {
-            schedules = schedules.filter(schedule => {
+            schedules = schedules.filter((schedule: any) => {
               const careType = schedule.patient_care_type || (schedule as any).patient?.careType
               return careType && filters.careTypes.includes(careType as any)
             })
@@ -309,7 +309,7 @@ export const scheduleService = {
 
           // Filter by doctor (for "my patients" view)
           if (filters.doctorId) {
-            schedules = schedules.filter(schedule => {
+            schedules = schedules.filter((schedule: any) => {
               // Access doctor_id from the flattened schedule or from nested patient
               const doctorId = schedule.doctor_id || (schedule as any).patient?.doctorId
               return doctorId === filters.doctorId
@@ -339,7 +339,7 @@ export const scheduleService = {
         // Include schedules from 7 days before their due date
         const pastDate = format(addDays(today, -7), 'yyyy-MM-dd')
 
-        const { data, error } = await client
+        const { data, error } = await (client as any)
           .from('schedules')
           .select(`
             *,
@@ -366,7 +366,7 @@ export const scheduleService = {
           throw error
         }
 
-        let schedules = (data || []).map(item => {
+        let schedules = (data || []).map((item: any) => {
           const schedule = snakeToCamel(item) as any
           const patients = (item as any).patients
           const items = (item as any).items
@@ -393,7 +393,7 @@ export const scheduleService = {
         if (filters) {
           // Filter by care types
           if (filters.careTypes && filters.careTypes.length > 0) {
-            schedules = schedules.filter(schedule => {
+            schedules = schedules.filter((schedule: any) => {
               const careType = schedule.patient_care_type || (schedule as any).patient?.careType
               return careType && filters.careTypes.includes(careType as any)
             })
@@ -401,7 +401,7 @@ export const scheduleService = {
 
           // Filter by doctor (for "my patients" view)
           if (filters.doctorId) {
-            schedules = schedules.filter(schedule => {
+            schedules = schedules.filter((schedule: any) => {
               // Access doctor_id from the flattened schedule or from nested patient
               const doctorId = schedule.doctor_id || (schedule as any).patient?.doctorId
               return doctorId === filters.doctorId
@@ -423,8 +423,8 @@ export const scheduleService = {
   async getByPatientId(patientId: string, organizationId: string, supabase?: SupabaseClient): Promise<ScheduleWithDetails[]> {
     const client = supabase || createClient()
     try {
-      const { data, error } = await client
-        .from('schedules')
+      const { data, error } = await (client as any)
+          .from('schedules')
         .select(`
           *,
           patients (*),
@@ -436,7 +436,7 @@ export const scheduleService = {
       
       if (error) throw error
       
-      return (data || []).map(item => {
+      return (data || []).map((item: any) => {
         const schedule = snakeToCamel(item) as any
         return {
           ...schedule,
@@ -453,8 +453,8 @@ export const scheduleService = {
   async getById(id: string, organizationId: string, supabase?: SupabaseClient): Promise<ScheduleWithDetails | null> {
     const client = supabase || createClient()
     try {
-      const { data, error } = await client
-        .from('schedules')
+      const { data, error } = await (client as any)
+          .from('schedules')
         .select(`
           *,
           patients (*),
@@ -487,8 +487,8 @@ export const scheduleService = {
       const validated = ScheduleUpdateSchema.parse(input)
       const snakeData = camelToSnake(validated)
 
-      const { data, error } = await client
-        .from('schedules')
+      const { data, error } = await (client as any)
+          .from('schedules')
         .update(snakeData)
         .eq('id', id)
         .eq('organization_id', organizationId)
@@ -512,8 +512,8 @@ export const scheduleService = {
       const stateManager = new ScheduleStateManager(client)
 
       // Get current schedule to check its status
-      const { data: schedule, error: fetchError } = await client
-        .from('schedules')
+      const { data: schedule, error: fetchError } = await (client as any)
+          .from('schedules')
         .select('*')
         .eq('id', id)
         .eq('organization_id', organizationId)
@@ -542,8 +542,8 @@ export const scheduleService = {
 
     // For other status changes, use the original logic
     try {
-      const { error } = await client
-        .from('schedules')
+      const { error } = await (client as any)
+          .from('schedules')
         .update({ status })
         .eq('id', id)
         .eq('organization_id', organizationId)
@@ -594,8 +594,8 @@ export const scheduleService = {
   async delete(id: string, organizationId: string, supabase?: SupabaseClient): Promise<void> {
     const client = supabase || createClient()
     try {
-      const { error } = await client
-        .from('schedules')
+      const { error } = await (client as any)
+          .from('schedules')
         .update({ status: 'cancelled' })
         .eq('id', id)
         .eq('organization_id', organizationId)
@@ -612,8 +612,8 @@ export const scheduleService = {
     try {
       const today = format(new Date(), 'yyyy-MM-dd')
 
-      const { data, error } = await client
-        .from('schedules')
+      const { data, error } = await (client as any)
+          .from('schedules')
         .select(`
           *,
           patients (*),
@@ -626,7 +626,7 @@ export const scheduleService = {
       
       if (error) throw error
       
-      return (data || []).map(item => {
+      return (data || []).map((item: any) => {
         const schedule = snakeToCamel(item) as any
         return {
           ...schedule,
@@ -688,7 +688,7 @@ export const scheduleService = {
           throw error
         }
 
-        let schedules = (data || []).map(item => {
+        let schedules = (data || []).map((item: any) => {
           const schedule = snakeToCamel(item) as any
           const patients = (item as any).patients
           const items = (item as any).items
@@ -715,7 +715,7 @@ export const scheduleService = {
         if (filters) {
           // Filter by care types
           if (filters.careTypes && filters.careTypes.length > 0) {
-            schedules = schedules.filter(schedule => {
+            schedules = schedules.filter((schedule: any) => {
               const careType = schedule.patient_care_type || (schedule as any).patient?.careType
               return careType && filters.careTypes.includes(careType as any)
             })
@@ -781,8 +781,8 @@ export const scheduleService = {
       if (process.env.NODE_ENV === 'development') {
         console.log('[editSchedule] Fetching schedule with ID:', scheduleId)
       }
-      const { data: currentSchedule, error: fetchError } = await client
-        .from('schedules')
+      const { data: currentSchedule, error: fetchError } = await (client as any)
+          .from('schedules')
         .select('start_date')
         .eq('id', scheduleId)
         .eq('organization_id', organizationId)
@@ -832,8 +832,8 @@ export const scheduleService = {
       let itemId: string
 
       // Check if item with this name already exists
-      const { data: existingItem } = await client
-        .from('items')
+      const { data: existingItem } = await (client as any)
+          .from('items')
         .select('id')
         .eq('name', validated.itemName)
         .eq('organization_id', organizationId)
@@ -885,8 +885,8 @@ export const scheduleService = {
         })
       }
 
-      const { data, error } = await client
-        .from('schedules')
+      const { data, error } = await (client as any)
+          .from('schedules')
         .update(updateData)
         .eq('id', scheduleId)
         .eq('organization_id', organizationId)
@@ -936,8 +936,8 @@ export const scheduleService = {
     const client = supabase || createClient()
     try {
       // 1. 스케줄 정보 조회
-      const { data: schedule, error: scheduleError } = await client
-        .from('schedules')
+      const { data: schedule, error: scheduleError } = await (client as any)
+          .from('schedules')
         .select('*, items(*)')
         .eq('id', scheduleId)
         .eq('organization_id', organizationId)
@@ -950,7 +950,7 @@ export const scheduleService = {
       // RPC 함수가 존재하는지 먼저 확인하고, 없으면 기존 방식 사용
       try {
         // 새로운 UPSERT 함수 사용 시도
-        const { error: rpcError } = await client
+        const { error: rpcError } = await (client as any)
           .rpc('complete_schedule_execution', {
             p_schedule_id: scheduleId,
             p_planned_date: schedule.next_due_date,
@@ -965,8 +965,8 @@ export const scheduleService = {
             console.log('RPC function not found, using fallback method')
 
             // 기존 INSERT 방식 (중복 시 실패할 수 있음)
-            const { error: executionError } = await client
-              .from('schedule_executions')
+            const { error: executionError } = await (client as any)
+          .from('schedule_executions')
               .insert({
                 schedule_id: scheduleId,
                 organization_id: organizationId,
@@ -981,8 +981,8 @@ export const scheduleService = {
             if (executionError) {
               // 중복 키 에러인 경우 UPDATE 시도
               if (executionError.code === '23505') {
-                const { error: updateError } = await client
-                  .from('schedule_executions')
+                const { error: updateError } = await (client as any)
+          .from('schedule_executions')
                   .update({
                     executed_date: input.executedDate,
                     executed_time: format(new Date(), 'HH:mm:ss'),
@@ -1034,8 +1034,8 @@ export const scheduleService = {
       }
 
       // 4. schedules 테이블의 next_due_date와 last_executed_date 업데이트
-      const { error: updateError } = await client
-        .from('schedules')
+      const { error: updateError } = await (client as any)
+          .from('schedules')
         .update({
           next_due_date: format(nextDueDate, 'yyyy-MM-dd'),
           last_executed_date: input.executedDate
@@ -1058,7 +1058,7 @@ export const scheduleService = {
 
     try {
       // Use the new database function for optimized calendar queries
-      const { data, error } = await client.rpc('get_calendar_schedules', {
+      const { data, error } = await (client as any).rpc('get_calendar_schedules', {
         p_start_date: startDate,
         p_end_date: endDate,
         p_user_id: undefined // Can be enhanced to pass user ID for role-based filtering

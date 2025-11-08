@@ -7,8 +7,8 @@ import { deleteItemAction } from '@/app/actions/items'
 export async function getItems(organizationId: string) {
   const supabase = createClient()
 
-  const { data, error } = await supabase
-    .from('items')
+  const { data, error } = await (supabase as any)
+          .from('items')
     .select('*')
     .eq('organization_id', organizationId)
     .eq('is_active', true)
@@ -27,8 +27,8 @@ export async function getItems(organizationId: string) {
 export async function getAllItems(organizationId: string) {
   const supabase = createClient()
 
-  const { data, error } = await supabase
-    .from('items')
+  const { data, error } = await (supabase as any)
+          .from('items')
     .select('*')
     .eq('organization_id', organizationId)
     .order('is_active', { ascending: false })
@@ -47,8 +47,8 @@ export async function getAllItems(organizationId: string) {
 export async function getItemById(id: string, organizationId: string) {
   const supabase = createClient()
 
-  const { data, error } = await supabase
-    .from('items')
+  const { data, error } = await (supabase as any)
+          .from('items')
     .select('*')
     .eq('id', id)
     .eq('organization_id', organizationId)
@@ -73,8 +73,8 @@ async function generateItemCode(category: string, organizationId: string): Promi
   }[category] || 'ITM'
 
   // 해당 조직 내 카테고리의 마지막 코드 찾기
-  const { data } = await supabase
-    .from('items')
+  const { data } = await (supabase as any)
+          .from('items')
     .select('code')
     .eq('organization_id', organizationId)
     .like('code', `${prefix}%`)
@@ -99,8 +99,8 @@ export async function createItem(item: Omit<ItemInsert, 'id' | 'created_at' | 'u
   // 코드 자동 생성 (조직별)
   const code = await generateItemCode(item.category, organizationId)
 
-  const { data, error } = await supabase
-    .from('items')
+  const { data, error } = await (supabase as any)
+          .from('items')
     .insert({
       ...item,
       code,
@@ -126,8 +126,8 @@ export async function createItem(item: Omit<ItemInsert, 'id' | 'created_at' | 'u
 export async function updateItem(id: string, updates: ItemUpdate, organizationId: string) {
   const supabase = createClient()
 
-  const { data, error } = await supabase
-    .from('items')
+  const { data, error } = await (supabase as any)
+          .from('items')
     .update({
       ...updates,
       updated_at: new Date().toISOString()
@@ -153,8 +153,8 @@ export async function deleteItem(id: string) {
 export async function toggleItemStatus(id: string, isActive: boolean, organizationId: string) {
   const supabase = createClient()
 
-  const { data, error } = await supabase
-    .from('items')
+  const { data, error } = await (supabase as any)
+          .from('items')
     .update({
       is_active: isActive,
       updated_at: new Date().toISOString()
@@ -175,8 +175,8 @@ export async function toggleItemStatus(id: string, isActive: boolean, organizati
 export async function getItemsByCategory(category: string, organizationId: string) {
   const supabase = createClient()
 
-  const { data, error } = await supabase
-    .from('items')
+  const { data, error } = await (supabase as any)
+          .from('items')
     .select('*')
     .eq('category', category)
     .eq('organization_id', organizationId)
@@ -195,8 +195,8 @@ export async function getItemsByCategory(category: string, organizationId: strin
 export async function searchItems(searchTerm: string, organizationId: string) {
   const supabase = createClient()
 
-  const { data, error } = await supabase
-    .from('items')
+  const { data, error } = await (supabase as any)
+          .from('items')
     .select('*')
     .eq('organization_id', organizationId)
     .or(`name.ilike.%${searchTerm}%,code.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`)

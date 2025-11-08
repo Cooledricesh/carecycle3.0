@@ -62,7 +62,7 @@ export function useCalendarSchedules(currentDate: Date) {
             }
           },
           userContext,
-          supabase
+          supabase as any
         )
 
         // The RPC function now returns both scheduled and completed items with proper filtering
@@ -107,8 +107,8 @@ export function useScheduleExecutions(date: Date | null) {
 
       const dateString = format(date, 'yyyy-MM-dd')
 
-      const { data, error } = await supabase
-        .from('schedule_executions')
+      const { data, error } = await (supabase as any)
+          .from('schedule_executions')
         .select(`
           *,
           schedules!inner (
@@ -139,7 +139,7 @@ export function useScheduleExecutions(date: Date | null) {
       }
 
       // Transform to match ScheduleWithDetails format
-      return (data || []).map(execution => ({
+      return (data || []).map((execution: any) => ({
         id: execution.id,
         schedule_id: execution.schedule_id,
         patient_id: execution.schedules.patient_id,

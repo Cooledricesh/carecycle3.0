@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireSuperAdmin } from '@/lib/auth/super-admin-guard';
 import { createServiceClient } from '@/lib/supabase/server';
 import { updateOrganizationSchema } from '@/lib/validations/super-admin';
+import type { Database, Json } from '@/lib/database.types';
+
+type Organization = Database['public']['Tables']['organizations']['Row'];
+type Profile = Database['public']['Tables']['profiles']['Row'];
 
 /**
  * GET /api/super-admin/organizations/[id]
@@ -32,17 +36,19 @@ export async function GET(
     // Get users in organization
     const { data: users, error: usersError } = await supabase
       .from('profiles')
-      .select('id, user_name, user_email, role, is_active, created_at')
+      .select('id, name, email, role, is_active, created_at')
       .eq('organization_id', id);
 
     if (usersError) {
       return NextResponse.json({ error: usersError.message }, { status: 500 });
     }
 
+    const org = organization as Organization;
+
     return NextResponse.json({
       organization: {
-        ...organization,
-        users: users || [],
+        ...org,
+        users: (users as Partial<Profile>[]) || [],
       },
     });
   } catch (error) {
@@ -98,10 +104,13 @@ export async function PATCH(
       return NextResponse.json({ error: 'Organization not found' }, { status: 404 });
     }
 
+    const oldOrg = oldOrganization as Organization;
+
     // Update organization
-    const { data: organization, error: updateError } = await supabase
+    const updateData: Database['public']['Tables']['organizations']['Update'] = validation.data;
+    const { data: organization, error: updateError } = await (supabase as any)
       .from('organizations')
-      .update(validation.data)
+      .update(updateData)
       .eq('id', id)
       .select()
       .single();
@@ -110,19 +119,22 @@ export async function PATCH(
       return NextResponse.json({ error: updateError.message }, { status: 500 });
     }
 
+    const org = organization as Organization;
+
     // Create audit log
-    await supabase.from('audit_logs').insert({
+    const auditLog: Database['public']['Tables']['audit_logs']['Insert'] = {
       organization_id: id,
       user_id: user.id,
-      user_email: user.email,
+      user_email: user.email ?? null,
       operation: validation.data.is_active === false ? 'organization_deactivated' : 'organization_updated',
       table_name: 'organizations',
       record_id: id,
-      old_values: oldOrganization,
-      new_values: validation.data,
-    });
+      old_values: oldOrg as unknown as Json,
+      new_values: validation.data as unknown as Json,
+    };
+    await (supabase as any).from('audit_logs').insert(auditLog);
 
-    return NextResponse.json({ organization });
+    return NextResponse.json({ organization: org });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Internal server error';
 
@@ -165,10 +177,13 @@ export async function DELETE(
       return NextResponse.json({ error: 'Organization not found' }, { status: 404 });
     }
 
+    const org = organization as Organization;
+
     // Soft delete (set is_active = false)
-    const { error: updateError } = await supabase
+    const updateData: Database['public']['Tables']['organizations']['Update'] = { is_active: false };
+    const { error: updateError } = await (supabase as any)
       .from('organizations')
-      .update({ is_active: false })
+      .update(updateData)
       .eq('id', id);
 
     if (updateError) {
@@ -176,16 +191,17 @@ export async function DELETE(
     }
 
     // Create audit log
-    await supabase.from('audit_logs').insert({
+    const auditLog: Database['public']['Tables']['audit_logs']['Insert'] = {
       organization_id: id,
       user_id: user.id,
-      user_email: user.email,
+      user_email: user.email ?? null,
       operation: 'organization_deactivated',
       table_name: 'organizations',
       record_id: id,
-      old_values: organization,
-      new_values: { is_active: false },
-    });
+      old_values: org as unknown as Json,
+      new_values: { is_active: false } as unknown as Json,
+    };
+    await (supabase as any).from('audit_logs').insert(auditLog);
 
     return NextResponse.json({ success: true });
   } catch (error) {

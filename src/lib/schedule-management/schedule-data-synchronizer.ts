@@ -18,7 +18,7 @@ export class ScheduleDataSynchronizer {
   private supabase: SupabaseClient
 
   constructor(supabaseClient?: SupabaseClient) {
-    this.supabase = supabaseClient || createClient()
+    this.supabase = (supabaseClient || createClient()) as any
   }
 
   /**

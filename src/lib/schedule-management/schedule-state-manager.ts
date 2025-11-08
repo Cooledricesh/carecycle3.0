@@ -73,7 +73,7 @@ export class ScheduleStateManager {
     this.supabase = supabaseClient || createClient()
     this.validator = validator || new ScheduleStateValidator()
     this.calculator = calculator || new ScheduleDateCalculator()
-    this.synchronizer = synchronizer || new ScheduleDataSynchronizer(this.supabase)
+    this.synchronizer = synchronizer || new ScheduleDataSynchronizer(this.supabase as any)
   }
 
   /**
@@ -84,8 +84,8 @@ export class ScheduleStateManager {
   async pauseSchedule(scheduleId: string, options?: PauseOptions): Promise<void> {
     try {
       // 1. Get current schedule
-      const { data: scheduleRow, error: fetchError } = await this.supabase
-        .from('schedules')
+      const { data: scheduleRow, error: fetchError } = await (this.supabase as any)
+          .from('schedules')
         .select('*')
         .eq('id', scheduleId)
         .single()
@@ -113,8 +113,8 @@ export class ScheduleStateManager {
       // 4. Begin transaction (conceptual - Supabase doesn't support client-side transactions)
 
       // 5. Update schedule status
-      const { error: updateError } = await this.supabase
-        .from('schedules')
+      const { error: updateError } = await (this.supabase as any)
+          .from('schedules')
         .update({
           status: 'paused',
           updated_at: new Date().toISOString()
@@ -169,8 +169,8 @@ export class ScheduleStateManager {
   async resumeSchedule(scheduleId: string, options: ResumeOptions): Promise<void> {
     try {
       // 1. Get current schedule with additional details
-      const { data: scheduleRow, error: fetchError } = await this.supabase
-        .from('schedules')
+      const { data: scheduleRow, error: fetchError } = await (this.supabase as any)
+          .from('schedules')
         .select(`
           *,
           patients (name),
@@ -238,8 +238,8 @@ export class ScheduleStateManager {
             return
           }
 
-          const { data: profile } = await this.supabase
-            .from('profiles')
+          const { data: profile } = await (this.supabase as any)
+          .from('profiles')
             .select('organization_id')
             .eq('id', user.id)
             .single()
@@ -255,8 +255,8 @@ export class ScheduleStateManager {
           )
           // Create catch-up executions
           for (const date of catchUpDates) {
-            await this.supabase
-              .from('schedule_executions')
+            await (this.supabase as any)
+          .from('schedule_executions')
               .insert({
                 schedule_id: scheduleId,
                 organization_id: profile.organization_id,
@@ -269,8 +269,8 @@ export class ScheduleStateManager {
       }
 
       // 7. Update schedule with new status and next_due_date
-      const { error: updateError } = await this.supabase
-        .from('schedules')
+      const { error: updateError } = await (this.supabase as any)
+          .from('schedules')
         .update({
           status: 'active',
           next_due_date: format(newNextDueDate, 'yyyy-MM-dd'),
@@ -323,8 +323,8 @@ export class ScheduleStateManager {
    * @returns 상태 전환 이력
    */
   async getStateTransitionHistory(scheduleId: string): Promise<StateTransition[]> {
-    const { data, error } = await this.supabase
-      .from('schedule_logs')
+    const { data, error } = await (this.supabase as any)
+          .from('schedule_logs')
       .select('*')
       .eq('schedule_id', scheduleId)
       .order('changed_at', { ascending: false })
@@ -335,8 +335,8 @@ export class ScheduleStateManager {
     }
 
     return data
-      .filter(log => log.changed_at !== null)
-      .map(log => {
+      .filter((log: any) => log.changed_at !== null)
+      .map((log: any) => {
         const oldValues = log.old_values as Record<string, any> | null
         const newValues = log.new_values as Record<string, any> | null
 
@@ -363,8 +363,8 @@ export class ScheduleStateManager {
     try {
       const { data: { user } } = await this.supabase.auth.getUser()
 
-      await this.supabase
-        .from('schedule_logs')
+      await (this.supabase as any)
+          .from('schedule_logs')
         .insert({
           schedule_id: transition.scheduleId,
           action: `status_change_${transition.fromStatus}_to_${transition.toStatus}`,
@@ -396,8 +396,8 @@ export class ScheduleStateManager {
   ): Promise<void> {
     try {
       // Get organization_id from recipient profile
-      const { data: profile } = await this.supabase
-        .from('profiles')
+      const { data: profile } = await (this.supabase as any)
+          .from('profiles')
         .select('organization_id')
         .eq('id', recipientId)
         .single()
@@ -407,8 +407,8 @@ export class ScheduleStateManager {
         return
       }
 
-      await this.supabase
-        .from('notifications')
+      await (this.supabase as any)
+          .from('notifications')
         .insert({
           recipient_id: recipientId,
           organization_id: profile.organization_id,

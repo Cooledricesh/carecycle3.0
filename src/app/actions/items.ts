@@ -15,8 +15,8 @@ export async function deleteItemAction(id: string) {
     }
 
     // 관리자 권한 및 organization_id 확인
-    const { data: profile } = await userClient
-      .from('profiles')
+    const { data: profile } = await (userClient as any)
+          .from('profiles')
       .select('role, organization_id')
       .eq('id', user.id)
       .single()
@@ -35,8 +35,8 @@ export async function deleteItemAction(id: string) {
     const serviceClient = await createServiceClient()
 
     // 0. item이 해당 조직에 속하는지 확인
-    const { data: item, error: itemError } = await serviceClient
-      .from('items')
+    const { data: item, error: itemError } = await (serviceClient as any)
+          .from('items')
       .select('id, organization_id')
       .eq('id', id)
       .eq('organization_id', organizationId)
@@ -47,8 +47,8 @@ export async function deleteItemAction(id: string) {
     }
 
     // 1. 관련 스케줄 찾기
-    const { data: schedules, error: schedulesError } = await serviceClient
-      .from('schedules')
+    const { data: schedules, error: schedulesError } = await (serviceClient as any)
+          .from('schedules')
       .select('id')
       .eq('item_id', id)
       .eq('organization_id', organizationId)
@@ -60,10 +60,10 @@ export async function deleteItemAction(id: string) {
 
     // 2. 실행 기록 확인 (의료 기록 보호)
     if (schedules && schedules.length > 0) {
-      const scheduleIds = schedules.map(s => s.id)
+      const scheduleIds = schedules.map((s: { id: string }) => s.id)
 
-      const { data: executions, error: executionsError } = await serviceClient
-        .from('schedule_executions')
+      const { data: executions, error: executionsError } = await (serviceClient as any)
+          .from('schedule_executions')
         .select('id')
         .eq('status', 'completed')
         .in('schedule_id', scheduleIds)
@@ -80,8 +80,8 @@ export async function deleteItemAction(id: string) {
 
       // 3. 관련 데이터 삭제 (트리거 수정으로 단순화)
       // notifications 먼저 삭제 (schedule 참조)
-      const { error: notificationsError } = await serviceClient
-        .from('notifications')
+      const { error: notificationsError } = await (serviceClient as any)
+          .from('notifications')
         .delete()
         .in('schedule_id', scheduleIds)
 
@@ -92,8 +92,8 @@ export async function deleteItemAction(id: string) {
     }
 
     // schedules 삭제 (트리거가 DELETE를 로깅하지 않음)
-    const { error: schedulesDeleteError } = await serviceClient
-      .from('schedules')
+    const { error: schedulesDeleteError } = await (serviceClient as any)
+          .from('schedules')
       .delete()
       .eq('item_id', id)
 
@@ -103,8 +103,8 @@ export async function deleteItemAction(id: string) {
     }
 
     // 3. item 삭제 (organization_id 필터링 추가)
-    const { error: deleteError } = await serviceClient
-      .from('items')
+    const { error: deleteError } = await (serviceClient as any)
+          .from('items')
       .delete()
       .eq('id', id)
       .eq('organization_id', organizationId)

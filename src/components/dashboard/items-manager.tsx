@@ -69,7 +69,7 @@ export function ItemsManager() {
   }
 
   const handleDeleteClick = (id: string) => {
-    const item = items.find(i => i.id === id)
+    const item = items.find((i: Item) => i.id === id)
     if (item) {
       setItemToDelete(item)
       setDeleteDialogOpen(true)

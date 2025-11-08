@@ -1,6 +1,7 @@
 import { createServiceClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import type { Database } from "@/lib/database.types";
 
 /**
  * POST /api/organizations/search
@@ -30,10 +31,12 @@ export async function POST(request: NextRequest) {
     const supabase = await createServiceClient();
 
     // Call RPC function: search_organizations(p_search_term, p_limit)
-    const { data, error } = await supabase.rpc("search_organizations", {
+    const rpcArgs = {
       p_search_term: search_term,
       p_limit: limit,
-    });
+    };
+
+    const { data, error } = await (supabase as any).rpc("search_organizations", rpcArgs);
 
     if (error) {
       console.error("Error searching organizations:", error);

@@ -40,8 +40,8 @@ export async function GET(request: NextRequest) {
       return ApiResponseBuilder.error(401, 'UNAUTHORIZED', 'Authentication required')
     }
 
-    const { data: profile } = await supabase
-      .from('profiles')
+    const { data: profile } = await (supabase as any)
+          .from('profiles')
       .select('organization_id')
       .eq('id', user.id)
       .single()
@@ -114,8 +114,8 @@ export async function POST(request: NextRequest) {
       return ApiResponseBuilder.error(401, 'UNAUTHORIZED', 'Authentication required')
     }
 
-    const { data: profile } = await supabase
-      .from('profiles')
+    const { data: profile } = await (supabase as any)
+          .from('profiles')
       .select('organization_id')
       .eq('id', user.id)
       .single()
@@ -125,8 +125,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if patient exists and belongs to same organization
-    const { data: patient, error: patientError } = await supabase
-      .from('patients')
+    const { data: patient, error: patientError } = await (supabase as any)
+          .from('patients')
       .select('id')
       .eq('id', validated.patientId)
       .eq('organization_id', profile.organization_id)
@@ -137,8 +137,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if item exists and belongs to same organization
-    const { data: item, error: itemError } = await supabase
-      .from('items')
+    const { data: item, error: itemError } = await (supabase as any)
+          .from('items')
       .select('id')
       .eq('id', validated.itemId)
       .eq('organization_id', profile.organization_id)
@@ -152,8 +152,8 @@ export async function POST(request: NextRequest) {
     // Convert interval to weeks (assuming intervalValue is in weeks if intervalType is 'weeks')
     const intervalWeeks = validated.intervalType === 'weeks' ? validated.intervalValue : Math.ceil(validated.intervalValue / 7)
 
-    const { data, error } = await supabase
-      .from('schedules')
+    const { data, error } = await (supabase as any)
+          .from('schedules')
       .insert({
         patient_id: validated.patientId,
         item_id: validated.itemId,

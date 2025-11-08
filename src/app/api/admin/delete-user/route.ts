@@ -62,8 +62,8 @@ export async function POST(request: NextRequest) {
     }
 
     // 3. Fetch current user profile with proper error handling
-    const { data: currentProfile, error: profileError } = await userClient
-      .from("profiles")
+    const { data: currentProfile, error: profileError } = await (userClient as any)
+          .from("profiles")
       .select("role")
       .eq("id", user.id)
       .single();
@@ -118,8 +118,8 @@ export async function POST(request: NextRequest) {
     const serviceClient = await createServiceClient();
 
     // 5. Verify target user exists and check last admin protection
-    const { data: targetProfile, error: targetError } = await serviceClient
-      .from("profiles")
+    const { data: targetProfile, error: targetError } = await (serviceClient as any)
+          .from("profiles")
       .select("role")
       .eq("id", userId)
       .single();
@@ -135,8 +135,8 @@ export async function POST(request: NextRequest) {
     let adminCount: number | null = null;
 
     if (targetProfile.role === "admin") {
-      const { count, error: countError } = await serviceClient
-        .from("profiles")
+      const { count, error: countError } = await (serviceClient as any)
+          .from("profiles")
         .select("*", { count: "exact", head: true })
         .eq("role", "admin");
 
@@ -177,8 +177,8 @@ export async function POST(request: NextRequest) {
     }
 
     // 9. Clean up related data AFTER user deletion with pre-calculated params
-    const { error: cleanupError } = await serviceClient
-      .rpc("admin_delete_user", {
+    const { error: cleanupError } = await (serviceClient as any)
+          .rpc("admin_delete_user", {
         p_user_id: userId,
         p_target_role: targetProfile.role,
         p_remaining_admins: remainingAdmins,

@@ -71,8 +71,8 @@ export async function updateSession(request: NextRequest) {
 
   // If user is authenticated, check their approval status
   if (user && !isApprovalExempt) {
-    const { data: profile } = await supabase
-      .from("profiles")
+    const { data: profile } = await (supabase as any)
+          .from("profiles")
       .select("role, approval_status, is_active")
       .eq("id", user.id)
       .single();
@@ -87,8 +87,8 @@ export async function updateSession(request: NextRequest) {
   const authExceptions = ["/auth/callback", "/auth/update-password"];
   if (user && pathname.startsWith("/auth/") && !authExceptions.includes(pathname)) {
     // Get user profile to determine redirect destination
-    const { data: profile } = await supabase
-      .from("profiles")
+    const { data: profile } = await (supabase as any)
+          .from("profiles")
       .select("role, approval_status, is_active")
       .eq("id", user.id)
       .single();
@@ -104,8 +104,8 @@ export async function updateSession(request: NextRequest) {
 
   // Role-based route protection for approved users
   if (user && !isPublicRoute && !isApprovalExempt) {
-    const { data: profile } = await supabase
-      .from("profiles")
+    const { data: profile } = await (supabase as any)
+          .from("profiles")
       .select("role, approval_status, is_active")
       .eq("id", user.id)
       .single();

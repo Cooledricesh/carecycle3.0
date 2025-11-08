@@ -117,8 +117,8 @@ export function ScheduleCreateModal({
 
   const loadItems = async () => {
     try {
-      const { data, error } = await supabase
-        .from('items')
+      const { data, error } = await (supabase as any)
+          .from('items')
         .select('*')
         .eq('is_active', true)
         .order('sort_order')
@@ -126,7 +126,7 @@ export function ScheduleCreateModal({
       
       if (error) throw error
       
-      const formattedItems: ItemOption[] = (data || []).map(item => ({
+      const formattedItems: ItemOption[] = (data || []).map((item: any) => ({
         id: item.id,
         code: item.code,
         name: item.name,

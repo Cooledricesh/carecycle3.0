@@ -143,7 +143,7 @@ export const itemService = {
       const validated = ItemUpdateSchema.parse(input)
       const snakeData = toSnakeCase(validated)
 
-      const { data, error } = await client
+      const { data, error } = await (client as any)
         .from('items')
         .update(snakeData)
         .eq('id', id)
@@ -166,7 +166,7 @@ export const itemService = {
 
     try {
       const client = supabase || createClient()
-      const { error } = await client
+      const { error } = await (client as any)
         .from('items')
         .update({ is_active: false })
         .eq('id', id)

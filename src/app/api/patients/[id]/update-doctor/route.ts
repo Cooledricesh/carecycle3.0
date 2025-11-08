@@ -40,8 +40,8 @@ export async function POST(
     }
 
     // Check user role
-    const { data: profile, error: profileError } = await userClient
-      .from('profiles')
+    const { data: profile, error: profileError } = await (userClient as any)
+          .from('profiles')
       .select('role')
       .eq('id', user.id)
       .single()
@@ -66,8 +66,8 @@ export async function POST(
 
     // Validate doctor existence/role/state when assigning (not when removing)
     if (doctorId) {
-      const { data: doctor, error: doctorError } = await serviceClient
-        .from('profiles')
+      const { data: doctor, error: doctorError } = await (serviceClient as any)
+          .from('profiles')
         .select('id, role, is_active, approval_status')
         .eq('id', doctorId)
         .single()
@@ -102,8 +102,8 @@ export async function POST(
     }
 
     // Update the patient's doctor_id
-    const { data, error } = await serviceClient
-      .from('patients')
+    const { data, error } = await (serviceClient as any)
+          .from('patients')
       .update({
         doctor_id: doctorId,
         updated_at: new Date().toISOString()

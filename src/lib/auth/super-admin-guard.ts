@@ -1,4 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
+import type { Database } from '@/lib/database.types';
+
+type Profile = Database['public']['Tables']['profiles']['Row'];
 
 /**
  * Super Admin Guard - Server-side authentication middleware
@@ -29,7 +32,9 @@ export async function requireSuperAdmin() {
     .eq('id', user.id)
     .single();
 
-  if (!profile || profile.role !== 'super_admin') {
+  const userProfile = profile as Profile | null;
+
+  if (!userProfile || userProfile.role !== 'super_admin') {
     throw new Error('Forbidden: Super Admin only');
   }
 
