@@ -300,10 +300,10 @@ export const scheduleService = {
         // Apply client-side filters for nested patient data
         if (filters) {
           // Filter by care types
-          if (filters.careTypes && filters.careTypes.length > 0) {
+          if (filters.department_ids && filters.department_ids.length > 0) {
             schedules = schedules.filter((schedule: any) => {
               const careType = schedule.patient_care_type || (schedule as any).patient?.careType
-              return careType && filters.careTypes.includes(careType as any)
+              return careType && filters.department_ids.includes(careType as any)
             })
           }
 
@@ -392,10 +392,10 @@ export const scheduleService = {
         // Apply client-side filters for nested patient data
         if (filters) {
           // Filter by care types
-          if (filters.careTypes && filters.careTypes.length > 0) {
+          if (filters.department_ids && filters.department_ids.length > 0) {
             schedules = schedules.filter((schedule: any) => {
               const careType = schedule.patient_care_type || (schedule as any).patient?.careType
-              return careType && filters.careTypes.includes(careType as any)
+              return careType && filters.department_ids.includes(careType as any)
             })
           }
 
@@ -714,10 +714,10 @@ export const scheduleService = {
         // Apply client-side filters for nested patient data
         if (filters) {
           // Filter by care types
-          if (filters.careTypes && filters.careTypes.length > 0) {
+          if (filters.department_ids && filters.department_ids.length > 0) {
             schedules = schedules.filter((schedule: any) => {
               const careType = schedule.patient_care_type || (schedule as any).patient?.careType
-              return careType && filters.careTypes.includes(careType as any)
+              return careType && filters.department_ids.includes(careType as any)
             })
           }
 
@@ -1109,10 +1109,10 @@ export const scheduleService = {
       // Apply client-side filters if provided
       if (filters) {
         // Filter by care types
-        if (filters.careTypes && filters.careTypes.length > 0) {
+        if (filters.department_ids && filters.department_ids.length > 0) {
           schedules = schedules.filter((schedule: any) => {
             const careType = schedule.patient_care_type || (schedule as any).patient?.careType
-            return careType && filters.careTypes.includes(careType as any)
+            return careType && filters.department_ids.includes(careType as any)
           })
         }
 

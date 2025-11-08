@@ -14,7 +14,7 @@ export class DoctorFilterStrategy implements FilterStrategy {
       userId: userContext.userId,
       role: userContext.role,
       showAll: filters.showAll,
-      careTypes: filters.careTypes
+      departmentIds: filters.department_ids // Phase 1: care_type values
     })
 
     // For calendar views with date range, use the calendar-specific function
@@ -25,7 +25,8 @@ export class DoctorFilterStrategy implements FilterStrategy {
         p_end_date: filters.dateRange.end,
         p_user_id: userContext.userId,
         p_show_all: filters.showAll || false,
-        p_care_types: filters.careTypes?.length ? filters.careTypes : null
+        // Phase 1: department_ids contain care_type values
+        p_care_types: filters.department_ids?.length ? filters.department_ids : null
       })
 
       if (calendarError) {
@@ -77,7 +78,8 @@ export class DoctorFilterStrategy implements FilterStrategy {
     const { data, error } = await (supabase as any).rpc('get_filtered_schedules', {
       p_user_id: userContext.userId,
       p_show_all: filters.showAll || false,
-      p_care_types: filters.careTypes?.length ? filters.careTypes : null,
+      // Phase 1: department_ids contain care_type values
+      p_care_types: filters.department_ids?.length ? filters.department_ids : null,
       p_date_start: filters.dateRange?.start || null,
       p_date_end: filters.dateRange?.end || null
     })
@@ -136,9 +138,10 @@ export class DoctorFilterStrategy implements FilterStrategy {
       // We'll filter after fetching the data
     }
 
-    // Apply care type filter if specified
-    if (filters.careTypes?.length) {
-      query = query.in('patients.care_type', filters.careTypes)
+    // Apply department filter if specified (Phase 1: care types)
+    if (filters.department_ids?.length) {
+      // Phase 1: department_ids contain care_type values
+      query = query.in('patients.care_type', filters.department_ids)
     }
 
     // Apply date range filter if specified
@@ -221,8 +224,9 @@ export class DoctorFilterStrategy implements FilterStrategy {
       filterParts.push('my')
     }
 
-    if (filters.careTypes?.length) {
-      filterParts.push(`care:${filters.careTypes.sort().join(',')}`)
+    // Phase 1: department_ids contain care_type values
+    if (filters.department_ids?.length) {
+      filterParts.push(`dept:${filters.department_ids.sort().join(',')}`)
     }
 
     if (filters.dateRange) {

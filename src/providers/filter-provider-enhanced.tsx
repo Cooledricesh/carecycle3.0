@@ -77,9 +77,9 @@ export function FilterProviderEnhanced({
       if (careTypesParam || doctorIdParam || showAllParam) {
         return {
           ...defaultFilters,
-          careTypes: careTypesParam
-            ? (careTypesParam.split(',').filter(t =>
-                ['외래', '입원', '낮병원'].includes(t)) as CareType[])
+          department_ids: careTypesParam
+            ? careTypesParam.split(',').filter(t =>
+                ['외래', '입원', '낮병원'].includes(t))
             : [],
           doctorId: doctorIdParam || null,
           showAll: showAllParam === 'true',
@@ -162,8 +162,8 @@ export function FilterProviderEnhanced({
       const params = new URLSearchParams(searchParams)
 
       // Update URL params based on filters
-      if (filters.careTypes.length > 0) {
-        params.set('careTypes', filters.careTypes.join(','))
+      if (filters.department_ids.length > 0) {
+        params.set('careTypes', filters.department_ids.join(','))
       } else {
         params.delete('careTypes')
       }
@@ -274,7 +274,7 @@ export function FilterProviderEnhanced({
   // Toggle a care type
   const toggleCareType = useCallback((careType: CareType) => {
     setFilters((prev: ScheduleFilter) => {
-      const currentTypes = [...prev.careTypes]
+      const currentTypes = [...prev.department_ids]
       const index = currentTypes.indexOf(careType)
 
       if (index > -1) {
@@ -285,7 +285,26 @@ export function FilterProviderEnhanced({
 
       return {
         ...prev,
-        careTypes: currentTypes
+        department_ids: currentTypes
+      }
+    })
+  }, [setFilters])
+
+  // Toggle a department (multi-select support)
+  const toggleDepartment = useCallback((departmentId: string) => {
+    setFilters((prev: ScheduleFilter) => {
+      const currentDepartments = [...prev.department_ids]
+      const index = currentDepartments.indexOf(departmentId)
+
+      if (index > -1) {
+        currentDepartments.splice(index, 1)
+      } else {
+        currentDepartments.push(departmentId)
+      }
+
+      return {
+        ...prev,
+        department_ids: currentDepartments
       }
     })
   }, [setFilters])
@@ -346,6 +365,7 @@ export function FilterProviderEnhanced({
     updateFilters,
     resetFilters,
     toggleCareType,
+    toggleDepartment,
     toggleViewMode,
     rollbackFilters,
 
@@ -367,6 +387,7 @@ export function FilterProviderEnhanced({
     updateFilters,
     resetFilters,
     toggleCareType,
+    toggleDepartment,
     toggleViewMode,
     rollbackFilters,
     applyPreset,

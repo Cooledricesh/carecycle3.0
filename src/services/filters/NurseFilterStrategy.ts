@@ -11,9 +11,10 @@ export class NurseFilterStrategy implements FilterStrategy {
     userContext: UserContext
   ): Promise<{ data: ScheduleWithDetails[] | null; error: Error | null }> {
     // Nurse defaults to their care_type unless showing all
+    // Phase 1: department_ids contain care_type values
     const effectiveCareTypes = filters.showAll
-      ? filters.careTypes
-      : (filters.careTypes?.length ? filters.careTypes : (userContext.careType ? [userContext.careType] : null))
+      ? filters.department_ids
+      : (filters.department_ids?.length ? filters.department_ids : (userContext.careType ? [userContext.careType] : null))
 
     // For calendar views with date range, use the calendar-specific function
     if (filters.dateRange?.start && filters.dateRange?.end) {
@@ -193,8 +194,9 @@ export class NurseFilterStrategy implements FilterStrategy {
       filterParts.push(`dept:${userContext.careType || 'none'}`)
     }
 
-    if (filters.careTypes?.length) {
-      filterParts.push(`care:${filters.careTypes.sort().join(',')}`)
+    // Phase 1: department_ids contain care_type values
+    if (filters.department_ids?.length) {
+      filterParts.push(`deptIds:${filters.department_ids.sort().join(',')}`)
     }
 
     if (filters.dateRange) {

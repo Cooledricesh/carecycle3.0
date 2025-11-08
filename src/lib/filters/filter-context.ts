@@ -13,8 +13,11 @@ export interface FilterContextValue {
   // Reset all filters to default
   resetFilters: () => void
 
-  // Toggle a care type
-  toggleCareType: (careType: '외래' | '입원' | '낮병원') => void
+  // Toggle a department (multi-select support)
+  toggleDepartment: (departmentId: string) => void
+
+  // DEPRECATED: Legacy care type toggle (for backward compatibility)
+  toggleCareType?: (careType: '외래' | '입원' | '낮병원') => void
 
   // Check if any filters are active
   hasActiveFilters: boolean

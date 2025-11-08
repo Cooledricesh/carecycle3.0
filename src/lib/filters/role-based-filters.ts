@@ -27,7 +27,7 @@ export class RoleBasedFilterManager {
     switch (user.role) {
       case 'doctor':
         return {
-          careTypes: [],
+          department_ids: [],
           doctorId: user.id, // Filter to own patients by default
           department: null,
           dateRange: null,
@@ -39,7 +39,7 @@ export class RoleBasedFilterManager {
       case 'nurse':
         // Nurses see their department patients by default
         const nurseFilters: ScheduleFilter = {
-          careTypes: user.careType ? [user.careType as any] : [],
+          department_ids: user.careType ? [user.careType] : [], // Phase 1: careType as department_id
           doctorId: null,
           department: user.careType,
           dateRange: null,
@@ -52,7 +52,7 @@ export class RoleBasedFilterManager {
       case 'admin':
         // Admins see everything by default
         return {
-          careTypes: [], // Empty = all types
+          department_ids: [], // Empty = all types
           doctorId: null,
           department: null,
           dateRange: null,
@@ -64,7 +64,7 @@ export class RoleBasedFilterManager {
       default:
         // Fallback to most restrictive
         return {
-          careTypes: [],
+          department_ids: [],
           doctorId: null,
           department: null,
           dateRange: null,
@@ -104,7 +104,7 @@ export class RoleBasedFilterManager {
           // When toggling to "all", clear department filter
           // When toggling to "my", restore department filter
           department: newShowAll ? null : user.careType,
-          careTypes: newShowAll ? [] : (user.careType ? [user.careType as any] : [])
+          department_ids: newShowAll ? [] : (user.careType ? [user.careType] : []) // Phase 1: careType as department_id
         }
 
       case 'admin':
@@ -145,8 +145,8 @@ export class RoleBasedFilterManager {
         break
 
       case 'admin':
-        if (filters.careTypes.length > 0) {
-          parts.push(filters.careTypes.join(', '))
+        if (filters.department_ids.length > 0) {
+          parts.push(filters.department_ids.join(', '))
         } else {
           parts.push('전체')
         }
@@ -228,10 +228,10 @@ export class RoleBasedFilterManager {
     const options = this.getAvailableFilterOptions(user)
 
     // Check if user is trying to use disabled filters
-    if (!options.canFilterByCareType && newFilters.careTypes.length > 0) {
+    if (!options.canFilterByCareType && newFilters.department_ids.length > 0) {
       return {
         valid: false,
-        reason: '진료 구분 필터를 사용할 수 없습니다'
+        reason: '소속 필터를 사용할 수 없습니다'
       }
     }
 
@@ -317,7 +317,7 @@ export class RoleBasedFilterManager {
             icon: 'building',
             filters: {
               department: user.careType,
-              careTypes: user.careType ? [user.careType as any] : [],
+              department_ids: user.careType ? [user.careType] : [], // Phase 1: careType as department_id
               showAll: false,
               viewMode: 'my'
             }
@@ -332,7 +332,7 @@ export class RoleBasedFilterManager {
             name: '전체',
             icon: 'eye',
             filters: {
-              careTypes: [],
+              department_ids: [],
               doctorId: null,
               department: null
             }
@@ -342,7 +342,7 @@ export class RoleBasedFilterManager {
             name: '외래만',
             icon: 'hospital',
             filters: {
-              careTypes: ['외래']
+              department_ids: ['외래'] // Phase 1: care_type values
             }
           },
           {
@@ -350,7 +350,7 @@ export class RoleBasedFilterManager {
             name: '입원만',
             icon: 'bed',
             filters: {
-              careTypes: ['입원']
+              department_ids: ['입원'] // Phase 1: care_type values
             }
           },
           ...basePresets

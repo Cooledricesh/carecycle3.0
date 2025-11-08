@@ -43,13 +43,18 @@ export class FilterRecoveryManager {
       // Attempt to salvage valid fields
       const recovered: Partial<ScheduleFilter> = {}
 
-      // Safely extract arrays
-      if (Array.isArray(corruptedData?.careTypes)) {
-        recovered.careTypes = corruptedData.careTypes.filter(
+      // Safely extract arrays (Phase 1: department_ids contain care_type values)
+      if (Array.isArray(corruptedData?.department_ids)) {
+        recovered.department_ids = corruptedData.department_ids.filter(
+          (t: any) => typeof t === 'string' && t.length > 0
+        )
+      } else if (Array.isArray(corruptedData?.careTypes)) {
+        // Backward compatibility: migrate careTypes to department_ids
+        recovered.department_ids = corruptedData.careTypes.filter(
           (t: any) => ['외래', '입원', '낮병원'].includes(t)
         )
       } else {
-        recovered.careTypes = []
+        recovered.department_ids = []
       }
 
       // Safely extract strings
@@ -127,10 +132,10 @@ export class FilterRecoveryManager {
         department: remoteFilters.department,
 
         // Merge arrays (union of both)
-        careTypes: Array.from(new Set([
-          ...localFilters.careTypes,
-          ...remoteFilters.careTypes
-        ])) as any,
+        department_ids: Array.from(new Set([
+          ...localFilters.department_ids,
+          ...remoteFilters.department_ids
+        ])),
 
         // Keep local values for user-specific settings
         includeInactive: localFilters.includeInactive,
@@ -172,7 +177,7 @@ export class FilterRecoveryManager {
       showAll: false,
       viewMode: 'my',
       // Keep general filters
-      careTypes: [],
+      department_ids: [],
       dateRange: currentFilters.dateRange,
       includeInactive: false
     }
@@ -226,7 +231,7 @@ export class FilterRecoveryManager {
     if (!filters || typeof filters !== 'object') return false
 
     // Check required fields
-    if (!Array.isArray(filters.careTypes)) return false
+    if (!Array.isArray(filters.department_ids)) return false
 
     // Check field types
     if (filters.doctorId !== null && typeof filters.doctorId !== 'string') return false
@@ -245,7 +250,7 @@ export class FilterRecoveryManager {
     return {
       success: true,
       filters: {
-        careTypes: [],
+        department_ids: [],
         doctorId: null,
         department: null,
         dateRange: null,
@@ -297,7 +302,7 @@ export class FilterRecoveryManager {
    */
   private static compactFilterState(): ScheduleFilter {
     return {
-      careTypes: [],
+      department_ids: [],
       doctorId: null,
       department: null,
       dateRange: null,

@@ -64,7 +64,9 @@ export function CreateOrganizationDialog({
       }
 
       // Success - notify parent component
-      onSuccess(data.organization_id, validation.data)
+      // API returns { data: { organization_id, profile } }
+      const organizationId = data.data?.organization_id || data.organization_id
+      onSuccess(organizationId, validation.data)
       onOpenChange(false)
       setOrganizationName('')
     } catch (err) {

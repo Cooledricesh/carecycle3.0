@@ -58,8 +58,8 @@ export async function updateSession(request: NextRequest) {
   const publicRoutes = ["/", "/auth/signin", "/auth/signup", "/auth/forgot-password", "/auth/callback", "/auth/update-password"];
   const isPublicRoute = publicRoutes.includes(pathname) || pathname.startsWith("/auth/callback") || pathname.startsWith("/auth/accept-invitation");
 
-  // Routes that should be accessible regardless of approval status
-  const approvalExemptRoutes = ["/approval-pending", ...publicRoutes];
+  // Routes that should be accessible regardless of approval status or organization
+  const approvalExemptRoutes = ["/approval-pending", "/complete-signup", ...publicRoutes];
   const isApprovalExempt = approvalExemptRoutes.includes(pathname) || pathname.startsWith("/auth/callback");
 
   // If user is not authenticated and trying to access protected route
@@ -69,13 +69,18 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(redirectUrl);
   }
 
-  // If user is authenticated, check their approval status
+  // If user is authenticated, check their profile status
   if (user && !isApprovalExempt) {
     const { data: profile } = await (supabase as any)
           .from("profiles")
-      .select("role, approval_status, is_active")
+      .select("role, approval_status, is_active, organization_id")
       .eq("id", user.id)
       .single();
+
+    // Redirect to complete signup if user doesn't have organization
+    if (profile && !profile.organization_id) {
+      return NextResponse.redirect(new URL("/complete-signup", request.url));
+    }
 
     // Redirect to approval pending if user is not approved or not active
     if (!profile || profile.approval_status !== 'approved' || !profile.is_active) {

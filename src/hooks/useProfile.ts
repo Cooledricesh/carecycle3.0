@@ -11,6 +11,7 @@ export interface Profile {
   role: 'admin' | 'nurse' | 'doctor' | 'super_admin';
   care_type: string | null;
   organization_id: string | null; // Allow null for super_admin
+  organization_name: string | null; // Joined from organizations table
   phone?: string | null;
   is_active?: boolean;
   created_at: string | null;
@@ -41,7 +42,10 @@ export function useProfile() {
 
       const queryPromise = supabase
         .from('profiles')
-        .select('*')
+        .select(`
+          *,
+          organization_name:organizations(name)
+        `)
         .eq('id', user.id)
         .single();
 
@@ -53,7 +57,21 @@ export function useProfile() {
           return null;
         }
 
-        return data;
+        // Transform nested organization data to flat structure
+        if (data) {
+          const rawData = data as any;
+          const organizationData = rawData.organization_name;
+
+          // Extract all profile fields
+          const { organization_name: orgNameNested, ...profileFields } = rawData;
+
+          return {
+            ...profileFields,
+            organization_name: organizationData?.name || null
+          } as Profile;
+        }
+
+        return null;
       } catch (timeoutError: any) {
         console.error('[useProfile] Query timeout:', timeoutError.message);
         return null;

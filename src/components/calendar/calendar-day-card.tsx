@@ -123,7 +123,22 @@ export function CalendarDayCard({
               <span>주기: {schedule.interval_weeks}주마다</span>
             </div>
           )}
-          {/* Note: assignedNurse data not available in current RPC response */}
+
+          {/* 주치의 정보 */}
+          <div className="flex items-center gap-2 text-gray-500">
+            <span className="text-xs text-gray-600">
+              주치의: {(schedule as any).doctor_name || (schedule as any).doctor_id ? '지정됨' : '미지정'}
+            </span>
+          </div>
+
+          {/* 소속 정보 */}
+          {((schedule as any).care_type || (schedule as any).patient_care_type) && (
+            <div className="flex items-center gap-2 text-gray-500">
+              <span className="text-xs text-gray-600">
+                소속: {(schedule as any).care_type || (schedule as any).patient_care_type || '미지정'}
+              </span>
+            </div>
+          )}
         </div>
         
         {/* 메모 */}

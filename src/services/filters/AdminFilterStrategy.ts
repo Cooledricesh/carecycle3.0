@@ -21,7 +21,8 @@ export class AdminFilterStrategy implements FilterStrategy {
         p_end_date: filters.dateRange.end,
         p_user_id: userContext.userId,
         p_show_all: true, // Admin always has full access
-        p_care_types: filters.careTypes?.length ? filters.careTypes : null
+        // Phase 1: department_ids contain care_type values (외래/입원/낮병원)
+        p_care_types: filters.department_ids?.length ? filters.department_ids : null
       })
 
       if (calendarError) {
@@ -71,7 +72,8 @@ export class AdminFilterStrategy implements FilterStrategy {
     const { data, error } = await (supabase as any).rpc('get_filtered_schedules', {
       p_user_id: userContext.userId,
       p_show_all: true, // Admin always has full access
-      p_care_types: filters.careTypes?.length ? filters.careTypes : null,
+      // Phase 1: department_ids contain care_type values (외래/입원/낮병원)
+      p_care_types: filters.department_ids?.length ? filters.department_ids : null,
       p_date_start: filters.dateRange?.start || null,
       p_date_end: filters.dateRange?.end || null
     })
@@ -117,9 +119,10 @@ export class AdminFilterStrategy implements FilterStrategy {
       query = query.eq('organization_id', userContext.organizationId)
     }
 
-    // Admin can filter by care types if specified
-    if (filters.careTypes?.length) {
-      query = query.in('patients.care_type', filters.careTypes)
+    // Admin can filter by departments (Phase 1: care types) if specified
+    if (filters.department_ids?.length) {
+      // Phase 1: department_ids contain care_type values
+      query = query.in('patients.care_type', filters.department_ids)
     }
 
     // Apply date range
@@ -180,8 +183,9 @@ export class AdminFilterStrategy implements FilterStrategy {
     const baseKey = `admin:${userContext.userId}`
     const filterParts = ['all'] // Admin always sees all
 
-    if (filters.careTypes?.length) {
-      filterParts.push(`care:${filters.careTypes.sort().join(',')}`)
+    // Phase 1: department_ids contain care_type values
+    if (filters.department_ids?.length) {
+      filterParts.push(`dept:${filters.department_ids.sort().join(',')}`)
     }
 
     if (filters.dateRange) {

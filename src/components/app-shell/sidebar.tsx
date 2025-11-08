@@ -189,21 +189,26 @@ export function Sidebar({ onNavigate }: SidebarProps = {}) {
               <p className="text-sm font-medium text-gray-900 truncate">
                 {typedProfile?.name || user?.email?.split('@')[0] || '사용자'}
               </p>
-              <p className="text-xs text-gray-500 truncate">
+              <div className="space-y-0.5">
                 {typedProfile ? (
                   <>
-                    {typedProfile.role === 'nurse' ? '스텝' :
-                     typedProfile.role === 'doctor' ? '의사' :
-                     typedProfile.role === 'admin' ? '관리자' :
-                     typedProfile.role === 'super_admin' ? 'Super Admin' : '사용자'}
-                    {typedProfile.care_type && ` • ${typedProfile.care_type}`}
+                    <p className="text-xs text-gray-500 truncate">
+                      {typedProfile.organization_name || '미지정'}
+                    </p>
+                    <p className="text-xs text-gray-500 truncate">
+                      {typedProfile.role === 'nurse' ? '스텝' :
+                       typedProfile.role === 'doctor' ? '의사' :
+                       typedProfile.role === 'admin' ? '관리자' :
+                       typedProfile.role === 'super_admin' ? 'Super Admin' : '사용자'}
+                      {typedProfile.care_type && ` • ${typedProfile.care_type}`}
+                    </p>
                   </>
                 ) : user ? (
-                  <span className="text-amber-600">프로필 설정 필요</span>
+                  <p className="text-xs text-amber-600">프로필 설정 필요</p>
                 ) : (
-                  '로그인 필요'
+                  <p className="text-xs text-gray-500">로그인 필요</p>
                 )}
-              </p>
+              </div>
             </div>
           )}
         </div>

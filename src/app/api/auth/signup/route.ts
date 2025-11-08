@@ -9,7 +9,7 @@ const signupSchema = z.object({
   role: z.enum(["nurse", "admin", "doctor"]).default("nurse"),
   care_type: z.string().optional(),
   phone: z.string().optional(),
-  organization_id: z.string().min(1, "Organization ID is required"),
+  organization_id: z.string().optional(), // Optional for 2-step signup flow
 });
 
 export async function POST(request: NextRequest) {
@@ -51,23 +51,30 @@ export async function POST(request: NextRequest) {
     // Set care_type based on role
     // Admin and doctor roles should always have NULL care_type
     // Nurse role defaults to '낮병원' if not specified
+    const DEFAULT_NURSE_DEPARTMENT = '낮병원' as const;
     let finalCareType: string | null = null;
     if (role === 'nurse') {
-      finalCareType = care_type || '낮병원';
+      finalCareType = care_type || DEFAULT_NURSE_DEPARTMENT;
     }
     // Admin and doctor remain null (already initialized as null)
 
+    // Only insert organization_id if provided (for 2-step signup, it's added later)
+    const profileData: any = {
+      id: data.user.id,
+      email,
+      name,
+      role,
+      care_type: finalCareType,
+      phone: phone || null,
+    };
+
+    if (organization_id) {
+      profileData.organization_id = organization_id;
+    }
+
     const { error: profileError } = await (serviceSupabase as any)
           .from("profiles")
-      .insert({
-        id: data.user.id,
-        email,
-        name,
-        role,
-        care_type: finalCareType,
-        phone: phone || null,
-        organization_id,
-      });
+      .insert(profileData);
 
     if (profileError) {
       console.error("Error creating profile:", profileError);

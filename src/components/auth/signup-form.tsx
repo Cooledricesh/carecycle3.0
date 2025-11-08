@@ -109,9 +109,7 @@ export function SignUpForm({
         },
         body: JSON.stringify({
           organization_id: organizationId,
-          email,
-          name,
-          role,
+          requested_role: role, // API expects requested_role, not role
         }),
       });
 

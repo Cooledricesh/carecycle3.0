@@ -27,7 +27,7 @@ export function FilterReset({
   }
 
   const activeFilterCount =
-    filters.careTypes.length +
+    filters.department_ids.length +
     (filters.doctorId ? 1 : 0) +
     (filters.dateRange ? 1 : 0)
 

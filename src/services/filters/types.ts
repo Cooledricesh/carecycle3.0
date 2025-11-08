@@ -11,6 +11,10 @@ export interface UserContext {
 
 export interface FilterOptions {
   showAll?: boolean
+  // Phase 1: department_ids contain care_type values (외래/입원/낮병원)
+  // Phase 2: will contain UUID references to departments table
+  department_ids?: string[]
+  // DEPRECATED: Legacy careTypes field (kept for backward compatibility)
   careTypes?: string[]
   doctorId?: string | null
   department?: string | null
