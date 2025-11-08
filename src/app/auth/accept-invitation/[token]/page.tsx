@@ -6,7 +6,7 @@
  * Public page for accepting invitations and creating accounts
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { z } from 'zod';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -17,7 +17,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle, CheckCircle } from 'lucide-react';
 
 interface PageProps {
-  params: { token: string };
+  params: Promise<{ token: string }>;
 }
 
 const signupSchema = z.object({
@@ -35,7 +35,7 @@ interface VerificationResponse {
 }
 
 export default function AcceptInvitationPage({ params }: PageProps) {
-  const { token } = params;
+  const { token } = use(params);
   const router = useRouter();
 
   const [isVerifying, setIsVerifying] = useState(true);

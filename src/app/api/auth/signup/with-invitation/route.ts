@@ -93,18 +93,40 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if email is already registered
-    const { data: existingUser } = await supabase
+    // Check if email is already registered in profiles
+    const { data: existingProfile } = await supabase
       .from('profiles')
       .select('id')
       .eq('email', invitationData.email)
       .single();
 
-    if (existingUser) {
+    if (existingProfile) {
       return NextResponse.json(
         { error: 'Email is already registered. Please login instead.' },
         { status: 409 }
       );
+    }
+
+    // Check if user already exists in auth.users
+    const { data: existingAuthUsers, error: listUsersError } = await supabase.auth.admin.listUsers();
+
+    if (listUsersError) {
+      console.error('[Signup] Failed to check existing auth users:', listUsersError);
+    } else {
+      const authUserExists = existingAuthUsers.users.some(
+        (user) => user.email === invitationData.email
+      );
+
+      if (authUserExists) {
+        console.error('[Signup] User exists in auth.users but not in profiles - orphaned user detected');
+        return NextResponse.json(
+          {
+            error: 'This email was previously registered but account setup was incomplete. Please contact support to resolve this issue.',
+            code: 'orphaned_auth_user'
+          },
+          { status: 409 }
+        );
+      }
     }
 
     // Validate nurse role has care_type
@@ -125,6 +147,15 @@ export async function POST(request: NextRequest) {
 
     if (authError || !authData.user) {
       console.error('Failed to create auth user:', authError);
+
+      // Provide more specific error message for email_exists
+      if (authError?.message?.includes('already been registered') || authError?.status === 422) {
+        return NextResponse.json({
+          error: 'This email address is already registered. Please try logging in instead.',
+          code: 'email_exists'
+        }, { status: 422 });
+      }
+
       return NextResponse.json({ error: 'Failed to create user account' }, { status: 500 });
     }
 
