@@ -192,9 +192,10 @@ export const patientService = {
         const patients = (data || []).map(item => {
           const camelCaseItem = toCamelCase(item) as any
           // Extract doctor information from the joined data
+          // Use registered doctor name first, then fall back to assigned_doctor_name for pending doctors
           const patient: Patient = {
             ...camelCaseItem,
-            doctorName: camelCaseItem.doctor?.name || null,
+            doctorName: camelCaseItem.doctor?.name || camelCaseItem.assignedDoctorName || null,
             // Remove the nested doctor object to keep the interface clean
             doctor: undefined
           }
@@ -231,9 +232,10 @@ export const patientService = {
       }
 
       const camelCaseItem = toCamelCase(data) as any
+      // Use registered doctor name first, then fall back to assigned_doctor_name for pending doctors
       const patient: Patient = {
         ...camelCaseItem,
-        doctorName: camelCaseItem.doctor?.name || null,
+        doctorName: camelCaseItem.doctor?.name || camelCaseItem.assignedDoctorName || null,
         doctor: undefined
       }
       return patient

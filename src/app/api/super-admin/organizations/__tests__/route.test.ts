@@ -65,8 +65,13 @@ describe('Organizations API', () => {
           if (table === 'profiles') {
             return {
               select: vi.fn().mockReturnValue({
-                eq: vi.fn().mockResolvedValue({
-                  count: 5,
+                not: vi.fn().mockResolvedValue({
+                  data: [
+                    { organization_id: 'org-1' },
+                    { organization_id: 'org-1' },
+                    { organization_id: 'org-2' },
+                  ],
+                  error: null,
                 }),
               }),
             };
@@ -117,8 +122,9 @@ describe('Organizations API', () => {
           if (table === 'profiles') {
             return {
               select: vi.fn().mockReturnValue({
-                eq: vi.fn().mockResolvedValue({
-                  count: 5,
+                not: vi.fn().mockResolvedValue({
+                  data: [{ organization_id: 'org-1' }],
+                  error: null,
                 }),
               }),
             };

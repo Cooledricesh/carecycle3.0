@@ -19,6 +19,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
@@ -26,7 +36,7 @@ import { useToast } from '@/hooks/use-toast'
 import { patientService } from '@/services/patientService'
 import { useDoctors } from '@/hooks/useDoctors'
 import type { Patient } from '@/types/patient'
-import { Loader2, UserCheck, Clock, UserPlus } from 'lucide-react'
+import { Loader2, UserCheck, Clock, UserPlus, Settings, Trash2 } from 'lucide-react'
 import { useQueryClient, useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { useProfile, Profile } from '@/hooks/useProfile'
@@ -47,7 +57,10 @@ export function PatientDoctorSelect({
     patient.doctorId || patient.assignedDoctorName || null
   )
   const [showAddDialog, setShowAddDialog] = useState(false)
+  const [showManageDialog, setShowManageDialog] = useState(false)
   const [newDoctorName, setNewDoctorName] = useState('')
+  const [doctorToDelete, setDoctorToDelete] = useState<string | null>(null)
+  const [isDeletingDoctor, setIsDeletingDoctor] = useState(false)
   const { toast } = useToast()
   const queryClient = useQueryClient()
   const { data: doctors, isLoading: isLoadingDoctors } = useDoctors()
@@ -103,6 +116,12 @@ export function PatientDoctorSelect({
     // Special handling for "add new doctor" option
     if (value === 'add-new') {
       setShowAddDialog(true)
+      return
+    }
+
+    // Special handling for "manage doctors" option
+    if (value === 'manage-doctors') {
+      setShowManageDialog(true)
       return
     }
 
@@ -224,6 +243,51 @@ export function PatientDoctorSelect({
     await handleChange(`pending:${trimmedName}`)
   }
 
+  const handleDeletePendingDoctor = async () => {
+    if (!doctorToDelete || !typedProfile?.organization_id) {
+      return
+    }
+
+    setIsDeletingDoctor(true)
+
+    try {
+      // Update all patients with this assigned_doctor_name to null
+      const { error } = await (supabase as any)
+        .from('patients')
+        .update({
+          assigned_doctor_name: null,
+          updated_at: new Date().toISOString()
+        })
+        .eq('organization_id', typedProfile.organization_id)
+        .eq('assigned_doctor_name', doctorToDelete)
+
+      if (error) {
+        throw error
+      }
+
+      toast({
+        title: '의사 삭제 완료',
+        description: `${doctorToDelete} 의사가 삭제되었습니다.`,
+      })
+
+      // Invalidate related queries
+      queryClient.invalidateQueries({ queryKey: ['patients'] })
+      queryClient.invalidateQueries({ queryKey: ['pending-doctors'] })
+
+      setDoctorToDelete(null)
+      onSuccess?.()
+    } catch (error) {
+      console.error('의사 삭제 실패:', error)
+      toast({
+        title: '의사 삭제 실패',
+        description: error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다',
+        variant: 'destructive',
+      })
+    } finally {
+      setIsDeletingDoctor(false)
+    }
+  }
+
   // Get display value and determine current selection type based on currentValue
   let displayValue = '미지정'
   let selectValue = 'none'
@@ -329,6 +393,14 @@ export function PatientDoctorSelect({
                 <span>새 의사 추가...</span>
               </div>
             </SelectItem>
+            {pendingDoctors && pendingDoctors.length > 0 && (
+              <SelectItem value="manage-doctors">
+                <div className="flex items-center gap-2">
+                  <Settings className="h-3 w-3" />
+                  <span>대기 중 의사 관리...</span>
+                </div>
+              </SelectItem>
+            )}
           </SelectContent>
         </Select>
       </div>
@@ -372,6 +444,99 @@ export function PatientDoctorSelect({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Manage Pending Doctors Dialog */}
+      <Dialog open={showManageDialog} onOpenChange={setShowManageDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>대기 중 의사 관리</DialogTitle>
+            <DialogDescription>
+              아직 등록되지 않은 의사 목록입니다. 삭제하면 해당 의사가 배정된 모든 환자의 주치의가 해제됩니다.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            {pendingDoctors && pendingDoctors.length > 0 ? (
+              <div className="space-y-2">
+                {pendingDoctors.map((doctor: any) => (
+                  <div
+                    key={doctor.name}
+                    className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Clock className="h-4 w-4 text-amber-600" />
+                      <div>
+                        <div className="font-medium">{doctor.name}</div>
+                        <div className="text-xs text-gray-500">
+                          배정 환자: {doctor.patient_count}명
+                        </div>
+                      </div>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setDoctorToDelete(doctor.name)}
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center text-gray-500 py-8">
+                대기 중인 의사가 없습니다.
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowManageDialog(false)}>
+              닫기
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!doctorToDelete} onOpenChange={(open) => !open && setDoctorToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>의사 삭제 확인</AlertDialogTitle>
+            <AlertDialogDescription>
+              {doctorToDelete && (
+                <>
+                  <strong className="text-gray-900">{doctorToDelete}</strong> 의사를 삭제하시겠습니까?
+                  <br />
+                  이 의사가 배정된 모든 환자의 주치의가 해제됩니다.
+                  <br />
+                  <br />
+                  <span className="text-sm text-gray-600">
+                    * 이 작업은 되돌릴 수 없습니다.
+                  </span>
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeletingDoctor}>
+              취소
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeletePendingDoctor}
+              disabled={isDeletingDoctor}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {isDeletingDoctor ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  삭제 중...
+                </>
+              ) : (
+                '삭제'
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   )
 }

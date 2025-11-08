@@ -13,51 +13,33 @@ export async function GET(request: NextRequest) {
 
     const supabase = await createServiceClient();
 
-    // Get organization counts
-    const { count: totalOrganizations } = await supabase
-      .from('organizations')
-      .select('*', { count: 'exact', head: true });
+    // Execute all count queries in parallel for better performance
+    const [
+      { count: totalOrganizations },
+      { count: activeOrganizations },
+      { count: totalUsers },
+      { count: adminUsers },
+      { count: doctorUsers },
+      { count: nurseUsers },
+      { count: pendingJoinRequests },
+      { count: approvedJoinRequests },
+      { count: rejectedJoinRequests },
+    ] = await Promise.all([
+      // Organization counts
+      supabase.from('organizations').select('*', { count: 'exact', head: true }),
+      supabase.from('organizations').select('*', { count: 'exact', head: true }).eq('is_active', true),
 
-    const { count: activeOrganizations } = await supabase
-      .from('organizations')
-      .select('*', { count: 'exact', head: true })
-      .eq('is_active', true);
+      // User counts by role
+      supabase.from('profiles').select('*', { count: 'exact', head: true }),
+      supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'admin'),
+      supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'doctor'),
+      supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'nurse'),
 
-    // Get user counts by role
-    const { count: totalUsers } = await supabase
-      .from('profiles')
-      .select('*', { count: 'exact', head: true });
-
-    const { count: adminUsers } = await supabase
-      .from('profiles')
-      .select('*', { count: 'exact', head: true })
-      .eq('role', 'admin');
-
-    const { count: doctorUsers } = await supabase
-      .from('profiles')
-      .select('*', { count: 'exact', head: true })
-      .eq('role', 'doctor');
-
-    const { count: nurseUsers } = await supabase
-      .from('profiles')
-      .select('*', { count: 'exact', head: true })
-      .eq('role', 'nurse');
-
-    // Get join request counts
-    const { count: pendingJoinRequests } = await supabase
-      .from('join_requests')
-      .select('*', { count: 'exact', head: true })
-      .eq('status', 'pending');
-
-    const { count: approvedJoinRequests } = await supabase
-      .from('join_requests')
-      .select('*', { count: 'exact', head: true })
-      .eq('status', 'approved');
-
-    const { count: rejectedJoinRequests } = await supabase
-      .from('join_requests')
-      .select('*', { count: 'exact', head: true })
-      .eq('status', 'rejected');
+      // Join request counts
+      supabase.from('join_requests').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
+      supabase.from('join_requests').select('*', { count: 'exact', head: true }).eq('status', 'approved'),
+      supabase.from('join_requests').select('*', { count: 'exact', head: true }).eq('status', 'rejected'),
+    ]);
 
     return NextResponse.json({
       stats: {

@@ -56,7 +56,7 @@ export async function updateSession(request: NextRequest) {
 
   // Public routes that don't require authentication
   const publicRoutes = ["/", "/auth/signin", "/auth/signup", "/auth/forgot-password", "/auth/callback", "/auth/update-password"];
-  const isPublicRoute = publicRoutes.includes(pathname) || pathname.startsWith("/auth/callback");
+  const isPublicRoute = publicRoutes.includes(pathname) || pathname.startsWith("/auth/callback") || pathname.startsWith("/auth/accept-invitation");
 
   // Routes that should be accessible regardless of approval status
   const approvalExemptRoutes = ["/approval-pending", ...publicRoutes];

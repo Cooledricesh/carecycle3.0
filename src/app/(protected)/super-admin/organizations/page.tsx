@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -33,6 +33,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
+import { useSuperAdminOrganizations } from '@/hooks/useSuperAdminOrganizations';
 import { Plus, Edit2, Trash2, Building2 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -50,49 +51,28 @@ type OrganizationAction = {
 };
 
 export default function OrganizationsPage() {
-  const [organizations, setOrganizations] = useState<Organization[]>([]);
-  const [loading, setLoading] = useState(true);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [actionDialog, setActionDialog] = useState<OrganizationAction | null>(null);
-  const [processing, setProcessing] = useState(false);
   const [newOrgName, setNewOrgName] = useState('');
   const [editOrgName, setEditOrgName] = useState('');
   const [selectedOrg, setSelectedOrg] = useState<Organization | null>(null);
   const [filter, setFilter] = useState<'all' | 'active' | 'inactive'>('all');
   const { toast } = useToast();
 
-  const fetchOrganizations = useCallback(async () => {
-    try {
-      setLoading(true);
-      const params = new URLSearchParams();
-      if (filter !== 'all') {
-        params.set('is_active', filter === 'active' ? 'true' : 'false');
-      }
+  const {
+    data,
+    isLoading: loading,
+    createOrganization,
+    updateOrganization,
+    isCreating,
+    isUpdating,
+  } = useSuperAdminOrganizations({
+    isActive: filter === 'all' ? null : filter === 'active',
+  });
 
-      const response = await fetch(`/api/super-admin/organizations?${params.toString()}`);
-
-      if (!response.ok) {
-        throw new Error('조직 목록을 불러오는데 실패했습니다');
-      }
-
-      const data = await response.json();
-      setOrganizations(data.organizations || []);
-    } catch (error) {
-      console.error('Error fetching organizations:', error);
-      toast({
-        title: '오류',
-        description: error instanceof Error ? error.message : '조직 목록을 불러오는데 실패했습니다.',
-        variant: 'destructive',
-      });
-    } finally {
-      setLoading(false);
-    }
-  }, [filter, toast]);
-
-  useEffect(() => {
-    fetchOrganizations();
-  }, [fetchOrganizations]);
+  const organizations = data?.organizations || [];
+  const processing = isCreating || isUpdating;
 
   const handleCreateOrganization = async () => {
     if (!newOrgName.trim()) {
@@ -113,18 +93,8 @@ export default function OrganizationsPage() {
       return;
     }
 
-    setProcessing(true);
     try {
-      const response = await fetch('/api/super-admin/organizations', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: newOrgName.trim() }),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || '조직 생성에 실패했습니다');
-      }
+      await createOrganization({ name: newOrgName.trim() });
 
       toast({
         title: '성공',
@@ -133,7 +103,6 @@ export default function OrganizationsPage() {
 
       setNewOrgName('');
       setCreateDialogOpen(false);
-      await fetchOrganizations();
     } catch (error) {
       console.error('Error creating organization:', error);
       toast({
@@ -141,8 +110,6 @@ export default function OrganizationsPage() {
         description: error instanceof Error ? error.message : '조직 생성에 실패했습니다.',
         variant: 'destructive',
       });
-    } finally {
-      setProcessing(false);
     }
   };
 
@@ -165,18 +132,8 @@ export default function OrganizationsPage() {
       return;
     }
 
-    setProcessing(true);
     try {
-      const response = await fetch(`/api/super-admin/organizations/${selectedOrg.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: editOrgName.trim() }),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || '조직 수정에 실패했습니다');
-      }
+      await updateOrganization({ id: selectedOrg.id, name: editOrgName.trim() });
 
       toast({
         title: '성공',
@@ -186,7 +143,6 @@ export default function OrganizationsPage() {
       setEditDialogOpen(false);
       setSelectedOrg(null);
       setEditOrgName('');
-      await fetchOrganizations();
     } catch (error) {
       console.error('Error updating organization:', error);
       toast({
@@ -194,8 +150,6 @@ export default function OrganizationsPage() {
         description: error instanceof Error ? error.message : '조직 수정에 실패했습니다.',
         variant: 'destructive',
       });
-    } finally {
-      setProcessing(false);
     }
   };
 
@@ -203,27 +157,17 @@ export default function OrganizationsPage() {
     if (!actionDialog) return;
 
     const { organization, action } = actionDialog;
-    setProcessing(true);
 
     try {
       const isActivate = action === 'activate';
-      const response = await fetch(`/api/super-admin/organizations/${organization.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ is_active: isActivate }),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || `조직 ${isActivate ? '활성화' : '비활성화'}에 실패했습니다`);
-      }
+      await updateOrganization({ id: organization.id, is_active: isActivate });
 
       toast({
         title: '성공',
         description: `${organization.name} 조직이 ${isActivate ? '활성화' : '비활성화'}되었습니다.`,
       });
 
-      await fetchOrganizations();
+      setActionDialog(null);
     } catch (error) {
       console.error('Error toggling organization:', error);
       toast({
@@ -231,9 +175,6 @@ export default function OrganizationsPage() {
         description: error instanceof Error ? error.message : '조직 상태 변경에 실패했습니다.',
         variant: 'destructive',
       });
-    } finally {
-      setProcessing(false);
-      setActionDialog(null);
     }
   };
 

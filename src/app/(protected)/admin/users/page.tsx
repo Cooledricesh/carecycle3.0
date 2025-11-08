@@ -33,7 +33,9 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { Check, X, UserCheck, UserX, Shield, User, Stethoscope, Edit2, Save, XCircle, Trash2 } from 'lucide-react';
+import { Check, X, UserCheck, UserX, Shield, User, Stethoscope, Edit2, Save, XCircle, Trash2, Mail, List } from 'lucide-react';
+import { InviteUserModal } from '@/components/admin/InviteUserModal';
+import Link from 'next/link';
 
 type UserAction = {
   userId: string;
@@ -122,6 +124,7 @@ export default function AdminUsersPage() {
   const [editForm, setEditForm] = useState<{ role?: string; care_type?: string }>({});
   const [saving, setSaving] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const supabase = createClient();
   const { toast } = useToast();
 
@@ -393,9 +396,23 @@ export default function AdminUsersPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">사용자 관리</h1>
-        <p className="text-gray-600">가입 신청을 관리하고 사용자 계정을 관리합니다.</p>
+      <div className="flex justify-between items-start">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">사용자 관리</h1>
+          <p className="text-gray-600">가입 신청을 관리하고 사용자 계정을 관리합니다.</p>
+        </div>
+        <div className="flex gap-2">
+          <Link href="/admin/invitations">
+            <Button variant="outline" size="sm">
+              <List className="w-4 h-4 mr-2" />
+              초대 관리
+            </Button>
+          </Link>
+          <Button onClick={() => setIsInviteModalOpen(true)} size="sm">
+            <Mail className="w-4 h-4 mr-2" />
+            사용자 초대
+          </Button>
+        </div>
       </div>
 
       {/* Stats Cards */}
@@ -706,6 +723,12 @@ export default function AdminUsersPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Invite User Modal */}
+      <InviteUserModal
+        open={isInviteModalOpen}
+        onOpenChange={setIsInviteModalOpen}
+      />
     </div>
   );
 }

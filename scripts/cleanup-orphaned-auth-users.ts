@@ -1,0 +1,153 @@
+/**
+ * Cleanup Orphaned Auth Users Script
+ *
+ * This script identifies and optionally deletes auth.users entries that don't have
+ * corresponding profiles. These "orphaned" users can occur when signup fails after
+ * creating the auth user but before creating the profile.
+ *
+ * Usage:
+ *   npx tsx scripts/cleanup-orphaned-auth-users.ts [--delete]
+ *
+ * Options:
+ *   (default): Show orphaned users without deleting (dry-run mode)
+ *   --delete: Actually delete orphaned users (use with caution!)
+ */
+
+import { createServiceClient } from '../src/lib/supabase/server';
+
+async function findOrphanedAuthUsers() {
+  const supabase = await createServiceClient();
+
+  console.log('🔍 Checking for orphaned auth users...\n');
+
+  // Get all auth users with pagination
+  let allAuthUsers: any[] = [];
+  let page = 1;
+  const perPage = 1000;
+
+  while (true) {
+    const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers({
+      page,
+      perPage,
+    });
+
+    if (authError) {
+      console.error('❌ Failed to list auth users:', authError);
+      process.exit(1);
+    }
+
+    allAuthUsers = allAuthUsers.concat(authUsers.users);
+
+    // Break if we got less than perPage (last page)
+    if (authUsers.users.length < perPage) {
+      break;
+    }
+
+    page++;
+    console.log(`📄 Fetched page ${page - 1} (${authUsers.users.length} users)...`);
+  }
+
+  console.log(`📊 Found ${allAuthUsers.length} total auth users`);
+
+  // Get all profiles with pagination
+  let allProfiles: any[] = [];
+  let from = 0;
+  const limit = 1000;
+
+  while (true) {
+    const { data: profiles, error: profilesError } = await supabase
+      .from('profiles')
+      .select('id, email')
+      .range(from, from + limit - 1);
+
+    if (profilesError) {
+      console.error('❌ Failed to list profiles:', profilesError);
+      process.exit(1);
+    }
+
+    if (!profiles || profiles.length === 0) {
+      break;
+    }
+
+    allProfiles = allProfiles.concat(profiles);
+
+    // Break if we got less than limit (last page)
+    if (profiles.length < limit) {
+      break;
+    }
+
+    from += limit;
+    console.log(`📄 Fetched profiles batch (${profiles.length} profiles)...`);
+  }
+
+  console.log(`📊 Found ${allProfiles.length} profiles\n`);
+
+  // Create a Set of profile emails (normalized to lowercase) for faster lookup
+  const profileEmails = new Set(
+    allProfiles.map((p: { id: string; email: string }) => p.email.toLowerCase())
+  );
+
+  // Find orphaned users (normalize emails for comparison)
+  const orphanedUsers = allAuthUsers.filter(user => {
+    return user.email && !profileEmails.has(user.email.toLowerCase());
+  });
+
+  return { orphanedUsers, supabase };
+}
+
+async function main() {
+  const args = process.argv.slice(2);
+  const isDryRun = !args.includes('--delete');
+
+  const { orphanedUsers, supabase } = await findOrphanedAuthUsers();
+
+  if (orphanedUsers.length === 0) {
+    console.log('✅ No orphaned auth users found!');
+    process.exit(0);
+  }
+
+  console.log(`⚠️  Found ${orphanedUsers.length} orphaned auth users:\n`);
+
+  orphanedUsers.forEach((user, index) => {
+    console.log(`${index + 1}. Email: ${user.email}`);
+    console.log(`   ID: ${user.id}`);
+    console.log(`   Created: ${user.created_at}`);
+    console.log('');
+  });
+
+  if (isDryRun) {
+    console.log('ℹ️  DRY RUN MODE: No users were deleted.');
+    console.log('💡 To delete these orphaned users, run with --delete flag:');
+    console.log('   npx tsx scripts/cleanup-orphaned-auth-users.ts --delete\n');
+    process.exit(0);
+  }
+
+  // Delete orphaned users
+  console.log('🗑️  Deleting orphaned users...\n');
+
+  let successCount = 0;
+  let failureCount = 0;
+
+  for (const user of orphanedUsers) {
+    try {
+      const { error } = await supabase.auth.admin.deleteUser(user.id);
+
+      if (error) {
+        console.error(`❌ Failed to delete ${user.email}:`, error.message);
+        failureCount++;
+      } else {
+        console.log(`✅ Deleted ${user.email}`);
+        successCount++;
+      }
+    } catch (error) {
+      console.error(`❌ Error deleting ${user.email}:`, error);
+      failureCount++;
+    }
+  }
+
+  console.log('\n📊 Cleanup Summary:');
+  console.log(`   ✅ Successfully deleted: ${successCount}`);
+  console.log(`   ❌ Failed to delete: ${failureCount}`);
+}
+
+main().catch(console.error);
