@@ -39,34 +39,14 @@ export default function SuperAdminJoinRequestsPage() {
       try {
         setLoading(true);
 
-        // Fetch all organizations
-        const orgsResponse = await fetch('/api/super-admin/organizations');
-        if (!orgsResponse.ok) {
+        // Fetch all join requests using Super Admin API
+        const response = await fetch('/api/super-admin/join-requests');
+        if (!response.ok) {
           throw new Error('가입 요청을 불러오는데 실패했습니다');
         }
 
-        const orgsData = await orgsResponse.json();
-        const allRequests: JoinRequest[] = [];
-
-        // For each organization, fetch join requests
-        for (const org of orgsData.organizations || []) {
-          try {
-            const requestsResponse = await fetch(`/api/admin/join-requests?organization_id=${org.id}`);
-            if (requestsResponse.ok) {
-              const requestsData = await requestsResponse.json();
-              const requestsWithOrg = (requestsData.requests || []).map((req: JoinRequest) => ({
-                ...req,
-                organization_id: org.id,
-                organization_name: org.name,
-              }));
-              allRequests.push(...requestsWithOrg);
-            }
-          } catch (error) {
-            console.error(`Error fetching requests for org ${org.id}:`, error);
-          }
-        }
-
-        setRequests(allRequests);
+        const data = await response.json();
+        setRequests(data.requests || []);
       } catch (error) {
         console.error('Error fetching join requests:', error);
         toast({
