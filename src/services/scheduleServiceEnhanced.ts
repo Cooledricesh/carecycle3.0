@@ -89,7 +89,7 @@ export class ScheduleServiceEnhanced {
         strategyName: strategy.getQueryName()
       })
 
-      const { data, error } = await strategy.buildQuery(client, filters, userContext)
+      const { data, error } = await strategy.buildQuery(client as any, filters, userContext)
 
       console.log('[scheduleServiceEnhanced] buildQuery result:', {
         hasData: !!data,
@@ -202,7 +202,7 @@ export class ScheduleServiceEnhanced {
       console.log(`[DB Query] ${cacheKey}: ${schedules.length} records in ${metrics.queryTime.toFixed(2)}ms`)
 
       // Optionally fetch statistics
-      const statistics = await this.getFilterStatistics(userContext, client) ?? undefined
+      const statistics = await this.getFilterStatistics(userContext, client as any) ?? undefined
 
       console.log('[scheduleServiceEnhanced] Returning:', {
         schedulesCount: schedules.length,
@@ -250,7 +250,7 @@ export class ScheduleServiceEnhanced {
 
       console.log('[getTodayChecklist] Querying for today and overdue schedules up to:', today)
 
-      let query = client
+      let query = (client as any)
         .from('schedules')
         .select(`
           id,
@@ -399,7 +399,7 @@ export class ScheduleServiceEnhanced {
       return cached
     }
 
-    const { data, error } = await client.rpc('get_filter_statistics', {
+    const { data, error } = await (client as any).rpc('get_filter_statistics', {
       p_user_id: userContext.userId,
       p_organization_id: userContext.organizationId
     })
@@ -435,7 +435,7 @@ export class ScheduleServiceEnhanced {
   ): Promise<boolean> {
     const client = supabase || createClient()
 
-    const { error } = await client.rpc('refresh_dashboard_summary')
+    const { error } = await (client as any).rpc('refresh_dashboard_summary')
 
     if (error) {
       console.error('Error refreshing dashboard summary:', error)

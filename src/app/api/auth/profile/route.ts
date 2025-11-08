@@ -1,6 +1,7 @@
 import { getCurrentUser, createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import type { Database } from "@/lib/database.types";
 
 const updateProfileSchema = z.object({
   name: z.string().min(1, "Name is required").optional(),
@@ -58,7 +59,7 @@ export async function PATCH(request: NextRequest) {
     const updates = updateProfileSchema.parse(body);
 
     const supabase = await createClient();
-    const { data: profile, error } = await supabase
+    const { data: profile, error } = await (supabase as any)
       .from("profiles")
       .update({
         ...updates,

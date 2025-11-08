@@ -24,8 +24,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if the current user is an admin
-    const { data: currentProfile } = await userClient
-      .from('profiles')
+    const { data: currentProfile } = await (userClient as any)
+          .from('profiles')
       .select('role')
       .eq('id', user.id)
       .single();
@@ -71,8 +71,8 @@ export async function POST(request: NextRequest) {
     // Use service client to bypass RLS for admin operations
     const serviceClient = await createServiceClient();
 
-    const { data, error } = await serviceClient
-      .from('profiles')
+    const { data, error } = await (serviceClient as any)
+          .from('profiles')
       .update(updateData)
       .eq('id', userId)
       .select()

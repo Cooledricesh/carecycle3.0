@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
     const {
       data: { user },
       error: authError,
-    } = await supabase.auth.getUser();
+    } = await (supabase as any).auth.getUser();
 
     if (authError || !user) {
       return NextResponse.json(
@@ -45,8 +45,8 @@ export async function POST(request: NextRequest) {
       createJoinRequestSchema.parse(body);
 
     // 3. Get user profile
-    const { data: profile, error: profileError } = await supabase
-      .from("profiles")
+    const { data: profile, error: profileError } = await (supabase as any)
+          .from("profiles")
       .select("id, name, email, organization_id")
       .eq("id", user.id)
       .single();
@@ -81,8 +81,8 @@ export async function POST(request: NextRequest) {
     }
 
     // 6. Verify organization exists
-    const { data: organization, error: orgError } = await supabase
-      .from("organizations")
+    const { data: organization, error: orgError } = await (supabase as any)
+          .from("organizations")
       .select("id, name")
       .eq("id", organization_id)
       .single();
@@ -95,8 +95,8 @@ export async function POST(request: NextRequest) {
     }
 
     // 7. Check for existing pending request
-    const { data: existingRequest } = await supabase
-      .from("join_requests")
+    const { data: existingRequest } = await (supabase as any)
+          .from("join_requests")
       .select("id, status")
       .eq("user_id", user.id)
       .eq("organization_id", organization_id)
@@ -115,8 +115,8 @@ export async function POST(request: NextRequest) {
     }
 
     // 8. Create join request
-    const { data: newRequest, error: createError } = await supabase
-      .from("join_requests")
+    const { data: newRequest, error: createError } = await (supabase as any)
+          .from("join_requests")
       .insert({
         user_id: user.id,
         email: profile.email,

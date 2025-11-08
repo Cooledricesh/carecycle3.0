@@ -44,7 +44,7 @@ export function convertRPCToScheduleWithDetails(rpc: ScheduleRPCResponse): Sched
     doctor_name: rpc.doctor_name ?? '',
     item_id: rpc.item_id,
     item_name: rpc.item_name,
-    item_category: rpc.item_category,
+    item_category: rpc.item_category as any,
     next_due_date: rpc.next_due_date,
     status: rpc.status,
     interval_weeks: rpc.interval_weeks,

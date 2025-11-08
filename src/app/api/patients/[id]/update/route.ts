@@ -151,8 +151,8 @@ export async function PUT(
     }
 
     // Check user role, care_type for nurses, and organization_id
-    const { data: profile, error: profileError } = await userClient
-      .from('profiles')
+    const { data: profile, error: profileError } = await (userClient as any)
+          .from('profiles')
       .select('role, care_type, organization_id')
       .eq('id', user.id)
       .single()
@@ -215,8 +215,8 @@ export async function PUT(
     // Role-specific validation with organization check
     if (profile.role === 'doctor') {
       // Doctors can only update their assigned patients in same organization
-      const { data: patient, error: patientError } = await userClient
-        .from('patients')
+      const { data: patient, error: patientError } = await (userClient as any)
+          .from('patients')
         .select('doctor_id, organization_id')
         .eq('id', id)
         .single()
@@ -247,8 +247,8 @@ export async function PUT(
       // Nurses can only update patients in their care_type and organization
       // Using service client here to ensure we can read the patient even if RLS would block it
       const serviceClient = await createServiceClient()
-      const { data: patient, error: patientError } = await serviceClient
-        .from('patients')
+      const { data: patient, error: patientError } = await (serviceClient as any)
+          .from('patients')
         .select('care_type, organization_id')
         .eq('id', id)
         .single()
@@ -278,8 +278,8 @@ export async function PUT(
     } else if (profile.role === 'admin') {
       // Admins can update any patient in their organization
       const serviceClient = await createServiceClient()
-      const { data: patient, error: patientError } = await serviceClient
-        .from('patients')
+      const { data: patient, error: patientError } = await (serviceClient as any)
+          .from('patients')
         .select('organization_id')
         .eq('id', id)
         .single()
@@ -309,8 +309,8 @@ export async function PUT(
     if (Object.keys(actualChanges).length === 0) {
       // No actual changes, return early with success
       // Fetch current data to return
-      const { data: currentPatient } = await userClient
-        .from('patients')
+      const { data: currentPatient } = await (userClient as any)
+          .from('patients')
         .select()
         .eq('id', id)
         .single()
@@ -322,8 +322,8 @@ export async function PUT(
     }
 
     // First, try to update using the user's authenticated client (respects RLS)
-    const { data, error } = await userClient
-      .from('patients')
+    const { data, error } = await (userClient as any)
+          .from('patients')
       .update(updateData)
       .eq('id', id)
       .select()
@@ -339,8 +339,8 @@ export async function PUT(
         try {
           // Use service client (bypasses RLS)
           const serviceClient = await createServiceClient()
-          const { data: serviceData, error: serviceError } = await serviceClient
-            .from('patients')
+          const { data: serviceData, error: serviceError } = await (serviceClient as any)
+          .from('patients')
             .update(updateData)
             .eq('id', id)
             .select()
@@ -364,8 +364,8 @@ export async function PUT(
 
           // Last attempt with service client
           const serviceClient = await createServiceClient()
-          const { data: serviceData, error: serviceError } = await serviceClient
-            .from('patients')
+          const { data: serviceData, error: serviceError } = await (serviceClient as any)
+          .from('patients')
             .update(updateData)
             .eq('id', id)
             .select()

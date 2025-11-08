@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
     const {
       data: { user },
       error: authError,
-    } = await supabase.auth.getUser();
+    } = await (supabase as any).auth.getUser();
 
     if (authError || !user) {
       return NextResponse.json(
@@ -28,8 +28,8 @@ export async function GET(request: NextRequest) {
     }
 
     // 2. Get user profile and verify admin role
-    const { data: profile, error: profileError } = await supabase
-      .from("profiles")
+    const { data: profile, error: profileError } = await (supabase as any)
+          .from("profiles")
       .select("id, role, organization_id")
       .eq("id", user.id)
       .single();
@@ -56,8 +56,8 @@ export async function GET(request: NextRequest) {
     }
 
     // 3. Fetch pending join requests for admin's organization
-    const { data: joinRequests, error: fetchError } = await supabase
-      .from("join_requests")
+    const { data: joinRequests, error: fetchError } = await (supabase as any)
+          .from("join_requests")
       .select(`
         id,
         email,
@@ -86,7 +86,7 @@ export async function GET(request: NextRequest) {
     }
 
     // 4. Transform data to include organization_name
-    const transformedRequests = joinRequests?.map((request) => {
+    const transformedRequests = joinRequests?.map((request: any) => {
       const org = Array.isArray(request.organizations) ? request.organizations[0] : request.organizations;
       return {
         ...request,

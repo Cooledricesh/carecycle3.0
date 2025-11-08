@@ -129,6 +129,9 @@ create-admin*.js
 create-admin*.ts
 *-admin.js
 *-admin.ts
+# But allow validation and library files in src
+!src/lib/**/*-admin.ts
+!src/lib/**/*-admin.js
 
 # Package manager specific
 .npm/

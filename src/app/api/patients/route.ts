@@ -3,6 +3,7 @@ import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { PatientCreateSchema } from '@/schemas/patient'
 import { toCamelCase } from '@/lib/database-utils'
 import { ZodError } from 'zod'
+import type { Database } from '@/lib/database.types'
 
 export async function POST(request: NextRequest) {
   try {
@@ -18,8 +19,8 @@ export async function POST(request: NextRequest) {
     }
     
     // Check user's approval status and organization_id
-    const { data: profile, error: profileError } = await supabaseClient
-      .from('profiles')
+    const { data: profile, error: profileError } = await (supabaseClient as any)
+          .from('profiles')
       .select('approval_status, role, is_active, organization_id')
       .eq('id', user.id)
       .single()
@@ -94,7 +95,7 @@ export async function POST(request: NextRequest) {
     // Insert the patient
     const { data, error } = await supabaseServiceRole
       .from('patients')
-      .insert(insertData)
+      .insert(insertData as any)
       .select()
       .single()
     
@@ -111,7 +112,7 @@ export async function POST(request: NextRequest) {
       )
     }
     
-    console.log('[API /patients] Patient created successfully:', data.id)
+    console.log('[API /patients] Patient created successfully:', (data as any).id)
     
     // Return the created patient in camelCase format
     return NextResponse.json(toCamelCase(data))

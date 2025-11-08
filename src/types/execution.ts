@@ -1,9 +1,12 @@
 'use client'
 
-import { Database, ExecutionStatus } from '@/lib/database.types'
+import { Database } from '@/lib/database.types'
 import { Schedule } from './schedule'
 import { Patient } from './patient'
 import { Item } from './item'
+
+// Export execution status type from database enums
+export type ExecutionStatus = Database['public']['Enums']['execution_status']
 
 // Base types from database
 export type ExecutionRow = Database['public']['Tables']['schedule_executions']['Row']

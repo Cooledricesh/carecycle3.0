@@ -1,6 +1,7 @@
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import type { Database } from "@/lib/database.types";
 
 /**
  * POST /api/admin/join-requests/[id]/approve
@@ -32,7 +33,7 @@ export async function POST(
     const {
       data: { user },
       error: authError,
-    } = await supabase.auth.getUser();
+    } = await (supabase as any).auth.getUser();
 
     if (authError || !user) {
       return NextResponse.json(
@@ -42,8 +43,8 @@ export async function POST(
     }
 
     // 2. Get admin profile
-    const { data: adminProfile, error: profileError } = await supabase
-      .from("profiles")
+    const { data: adminProfile, error: profileError } = await (supabase as any)
+          .from("profiles")
       .select("id, role, organization_id")
       .eq("id", user.id)
       .single();
@@ -74,8 +75,8 @@ export async function POST(
     }
 
     // 4. Fetch join request
-    const { data: joinRequest, error: fetchError } = await supabase
-      .from("join_requests")
+    const { data: joinRequest, error: fetchError } = await (supabase as any)
+          .from("join_requests")
       .select("*")
       .eq("id", requestId)
       .single();
@@ -111,13 +112,15 @@ export async function POST(
 
     const finalRole = assignedRole || joinRequest.role;
 
-    const { error: rpcError } = await serviceSupabase.rpc(
+    const rpcArgs = {
+      p_join_request_id: requestId,
+      p_admin_id: user.id,
+      p_assigned_role: finalRole,
+    };
+
+    const { error: rpcError } = await (serviceSupabase as any).rpc(
       "approve_join_request",
-      {
-        p_join_request_id: requestId,
-        p_admin_id: user.id,
-        p_assigned_role: finalRole,
-      }
+      rpcArgs
     );
 
     if (rpcError) {
@@ -129,8 +132,8 @@ export async function POST(
     }
 
     // 8. Fetch updated request
-    const { data: updatedRequest, error: updateFetchError } = await supabase
-      .from("join_requests")
+    const { data: updatedRequest, error: updateFetchError } = await (supabase as any)
+          .from("join_requests")
       .select("*")
       .eq("id", requestId)
       .single();

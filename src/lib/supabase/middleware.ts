@@ -5,10 +5,10 @@ import { Database } from "../database.types";
 export async function updateSession(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Skip middleware for static assets and API health checks
+  // Skip middleware for static assets and all API routes
   if (
     pathname.startsWith('/_next') ||
-    pathname.startsWith('/api/health') ||
+    pathname.startsWith('/api/') ||
     pathname.includes('.')
   ) {
     return NextResponse.next();
@@ -71,8 +71,8 @@ export async function updateSession(request: NextRequest) {
 
   // If user is authenticated, check their approval status
   if (user && !isApprovalExempt) {
-    const { data: profile } = await supabase
-      .from("profiles")
+    const { data: profile } = await (supabase as any)
+          .from("profiles")
       .select("role, approval_status, is_active")
       .eq("id", user.id)
       .single();
@@ -87,8 +87,8 @@ export async function updateSession(request: NextRequest) {
   const authExceptions = ["/auth/callback", "/auth/update-password"];
   if (user && pathname.startsWith("/auth/") && !authExceptions.includes(pathname)) {
     // Get user profile to determine redirect destination
-    const { data: profile } = await supabase
-      .from("profiles")
+    const { data: profile } = await (supabase as any)
+          .from("profiles")
       .select("role, approval_status, is_active")
       .eq("id", user.id)
       .single();
@@ -98,14 +98,20 @@ export async function updateSession(request: NextRequest) {
       return NextResponse.redirect(new URL("/approval-pending", request.url));
     }
 
-    const redirectPath = profile?.role === "admin" ? "/admin" : "/dashboard";
+    // Redirect based on role
+    let redirectPath = "/dashboard";
+    if (profile?.role === "super_admin") {
+      redirectPath = "/super-admin";
+    } else if (profile?.role === "admin") {
+      redirectPath = "/admin";
+    }
     return NextResponse.redirect(new URL(redirectPath, request.url));
   }
 
   // Role-based route protection for approved users
   if (user && !isPublicRoute && !isApprovalExempt) {
-    const { data: profile } = await supabase
-      .from("profiles")
+    const { data: profile } = await (supabase as any)
+          .from("profiles")
       .select("role, approval_status, is_active")
       .eq("id", user.id)
       .single();
@@ -115,9 +121,24 @@ export async function updateSession(request: NextRequest) {
       return NextResponse.redirect(new URL("/approval-pending", request.url));
     }
 
-    // Admin route protection
-    if (pathname.startsWith("/admin/") && profile?.role !== "admin") {
-      return NextResponse.redirect(new URL("/dashboard", request.url));
+    // Role-based route protection
+    // Super Admin: only allow /super-admin/* routes
+    if (profile?.role === "super_admin") {
+      if (!pathname.startsWith("/super-admin")) {
+        return NextResponse.redirect(new URL("/super-admin", request.url));
+      }
+    }
+    // Admin: allow /admin/* and /dashboard/* routes, but not /super-admin/*
+    else if (profile?.role === "admin") {
+      if (pathname.startsWith("/super-admin")) {
+        return NextResponse.redirect(new URL("/admin", request.url));
+      }
+    }
+    // Regular users: allow /dashboard/* routes, but not /admin/* or /super-admin/*
+    else {
+      if (pathname.startsWith("/admin") || pathname.startsWith("/super-admin")) {
+        return NextResponse.redirect(new URL("/dashboard", request.url));
+      }
     }
   }
 

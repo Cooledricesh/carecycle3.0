@@ -111,7 +111,11 @@ export class AdminFilterStrategy implements FilterStrategy {
         )
       `)
       .in('status', ['active', 'paused'])
-      .eq('organization_id', userContext.organizationId)
+
+    // Apply organization filter (skip for super_admin who has null organization_id)
+    if (userContext.organizationId) {
+      query = query.eq('organization_id', userContext.organizationId)
+    }
 
     // Admin can filter by care types if specified
     if (filters.careTypes?.length) {

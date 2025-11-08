@@ -1,6 +1,7 @@
 'use client'
 
 import { createClient, type SupabaseClient } from '@/lib/supabase/client'
+import type { Database } from '@/lib/database.types'
 import type { Patient } from '@/types/patient'
 import { toCamelCase } from '@/lib/database-utils'
 
@@ -114,12 +115,14 @@ export class PatientRestoreManager {
       const updateCareType = options.updateInfo?.careType || null
 
       // Call atomic restore function that handles both restoration and updates
-      const { data: restoredPatient, error: restoreError } = await this.supabase
-        .rpc('restore_patient_atomic', {
-          patient_id: patientId,
-          update_name: updateName || undefined,
-          update_care_type: updateCareType || undefined
-        })
+      const rpcArgs = {
+        patient_id: patientId,
+        update_name: updateName || undefined,
+        update_care_type: updateCareType || undefined
+      };
+
+      const { data: restoredPatient, error: restoreError } = await (this.supabase as any)
+        .rpc('restore_patient_atomic', rpcArgs)
 
       if (restoreError) {
         console.error('[PatientRestoreManager.restorePatient] Error in atomic restore:', restoreError)
@@ -161,8 +164,12 @@ export class PatientRestoreManager {
       
       if (inactivePatient && !inactivePatient.archived) {
         // Archive the existing inactive patient
-        const { error: archiveError } = await this.supabase
-          .rpc('archive_patient_with_timestamp', { patient_id: inactivePatient.id })
+        const archiveArgs = {
+          patient_id: inactivePatient.id
+        };
+
+        const { error: archiveError } = await (this.supabase as any)
+          .rpc('archive_patient_with_timestamp', archiveArgs)
 
         if (archiveError) {
           console.error('[PatientRestoreManager.createWithArchive] Error archiving existing patient:', archiveError)
@@ -185,7 +192,7 @@ export class PatientRestoreManager {
 
       const { data: newPatient, error: insertError } = await this.supabase
         .from('patients')
-        .insert(insertData)
+        .insert(insertData as any)
         .select()
         .single()
 

@@ -1,6 +1,9 @@
 // Vitest setup file
 // Learn more: https://vitest.dev/config/#setupfiles
 
+// Import testing-library/jest-dom for custom matchers
+import '@testing-library/jest-dom';
+
 // Mock environment variables for tests with new Supabase API key system
 // These are MOCK values for testing only, not real credentials
 process.env.NEXT_PUBLIC_SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://mock-test-project.supabase.co'

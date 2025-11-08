@@ -54,13 +54,15 @@ function ApprovalPendingPageContent() {
 
         if (error) {
           console.error('Error fetching profile:', error)
+          setLoading(false)
           return
         }
 
-        setProfile(profileData)
+        const typedProfile = profileData as UserProfile
+        setProfile(typedProfile)
 
         // If user is approved and active, redirect to dashboard
-        if (profileData?.approval_status === 'approved' && profileData?.is_active) {
+        if (typedProfile?.approval_status === 'approved' && typedProfile?.is_active) {
           router.push('/dashboard')
           return
         }

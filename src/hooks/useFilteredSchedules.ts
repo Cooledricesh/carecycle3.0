@@ -52,7 +52,7 @@ export function useFilteredSchedules() {
               showAll: filters.showAll || false
             },
             userContext,
-            supabase
+            supabase as any
           )
 
           return result.schedules
@@ -124,7 +124,7 @@ export function useFilteredTodayChecklist() {
           const result = await scheduleServiceEnhanced.getTodayChecklist(
             filters.showAll || false,
             userContext,
-            supabase
+            supabase as any
           )
 
           return result

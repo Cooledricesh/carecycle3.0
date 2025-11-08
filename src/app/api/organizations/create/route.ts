@@ -1,6 +1,7 @@
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import type { Database } from "@/lib/database.types";
 
 /**
  * POST /api/organizations/create
@@ -50,7 +51,7 @@ export async function POST(request: NextRequest) {
       .from("profiles")
       .select("id, name, organization_id")
       .eq("id", user.id)
-      .single();
+      .single<{ id: string; name: string; organization_id: string | null }>();
 
     if (profileError) {
       return NextResponse.json(
@@ -72,13 +73,15 @@ export async function POST(request: NextRequest) {
     // 4. Create organization and register user using RPC function
     const serviceSupabase = await createServiceClient();
 
+    const rpcArgs = {
+      p_organization_name: organization_name,
+      p_user_id: user.id,
+      p_user_name: profile.name,
+      p_user_role: user_role,
+    };
+
     const { data: organizationId, error: rpcError } =
-      await serviceSupabase.rpc("create_organization_and_register_user", {
-        p_organization_name: organization_name,
-        p_user_id: user.id,
-        p_user_name: profile.name,
-        p_user_role: user_role,
-      });
+      await (serviceSupabase as any).rpc("create_organization_and_register_user", rpcArgs);
 
     if (rpcError) {
       console.error("Error creating organization:", rpcError);
@@ -101,8 +104,8 @@ export async function POST(request: NextRequest) {
     }
 
     // 5. Fetch updated profile
-    const { data: updatedProfile, error: fetchError } = await serviceSupabase
-      .from("profiles")
+    const { data: updatedProfile, error: fetchError } = await (serviceSupabase as any)
+          .from("profiles")
       .select("id, name, email, role, organization_id")
       .eq("id", user.id)
       .single();

@@ -1,6 +1,7 @@
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import type { Database } from "@/lib/database.types";
 
 /**
  * POST /api/admin/join-requests/[id]/reject
@@ -31,7 +32,7 @@ export async function POST(
     const {
       data: { user },
       error: authError,
-    } = await supabase.auth.getUser();
+    } = await (supabase as any).auth.getUser();
 
     if (authError || !user) {
       return NextResponse.json(
@@ -45,7 +46,7 @@ export async function POST(
       .from("profiles")
       .select("id, role, organization_id")
       .eq("id", user.id)
-      .single();
+      .single<{ id: string; role: string; organization_id: string | null }>();
 
     if (profileError || !adminProfile) {
       return NextResponse.json(
@@ -77,7 +78,7 @@ export async function POST(
       .from("join_requests")
       .select("*")
       .eq("id", requestId)
-      .single();
+      .single<Database['public']['Tables']['join_requests']['Row']>();
 
     if (fetchError || !joinRequest) {
       return NextResponse.json(
@@ -108,13 +109,15 @@ export async function POST(
     // 7. Use RPC function to reject
     const serviceSupabase = await createServiceClient();
 
-    const { error: rpcError } = await serviceSupabase.rpc(
+    const rpcArgs = {
+      p_join_request_id: requestId,
+      p_admin_id: user.id,
+      p_rejection_reason: reason || undefined,
+    };
+
+    const { error: rpcError } = await (serviceSupabase as any).rpc(
       "reject_join_request",
-      {
-        p_join_request_id: requestId,
-        p_admin_id: user.id,
-        p_rejection_reason: reason || undefined,
-      }
+      rpcArgs
     );
 
     if (rpcError) {

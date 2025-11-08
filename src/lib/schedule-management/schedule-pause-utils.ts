@@ -11,8 +11,8 @@ export async function getSchedulePausedDate(scheduleId: string): Promise<Date | 
 
   try {
     // Query schedule_logs for the most recent active->paused transition
-    const { data, error } = await supabase
-      .from('schedule_logs')
+    const { data, error } = await (supabase as any)
+          .from('schedule_logs')
       .select('changed_at, old_values, new_values')
       .eq('schedule_id', scheduleId)
       .or('action.eq.status_change_active_to_paused,action.eq.status_change')

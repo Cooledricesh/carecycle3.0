@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { ApiResponseBuilder, handleApiError } from '@/lib/api/response'
 import { rateLimitMiddleware, rateLimitPresets } from '@/lib/api/rate-limit'
 import { z } from 'zod'
+import type { Database } from '@/lib/database.types'
 
 const updateScheduleSchema = z.object({
   intervalType: z.enum(['days', 'weeks', 'months']).optional(),
@@ -79,7 +80,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     }
     
     // Update schedule
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('schedules')
       .update({
         interval_type: validated.intervalType,
@@ -117,9 +118,9 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     const supabase = await createClient()
     
     // Soft delete by updating status
-    const { error } = await supabase
+    const { error } = await (supabase as any)
       .from('schedules')
-      .update({ 
+      .update({
         status: 'completed',
         updated_at: new Date().toISOString(),
       })

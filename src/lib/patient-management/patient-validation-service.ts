@@ -147,8 +147,8 @@ export class PatientValidationService {
       console.log('[PatientValidationService.checkForDuplicates] Checking duplicates for:', patientNumber)
 
       // Check for active patient
-      const { data: activePatient, error: activeError } = await this.supabase
-        .from('patients')
+      const { data: activePatient, error: activeError } = await (this.supabase as any)
+          .from('patients')
         .select('id, name, patient_number, care_type')
         .eq('patient_number', patientNumber)
         .eq('is_active', true)
@@ -260,8 +260,8 @@ export class PatientValidationService {
 
   private async isPatientNumberAvailable(patientNumber: string): Promise<boolean> {
     try {
-      const { data, error } = await this.supabase
-        .from('patients')
+      const { data, error } = await (this.supabase as any)
+          .from('patients')
         .select('id')
         .eq('patient_number', patientNumber)
         .eq('is_active', true)
@@ -288,8 +288,8 @@ export class PatientValidationService {
     try {
       console.log('[PatientValidationService.validateRestorationEligibility] Checking eligibility for:', patientId)
 
-      const { data: patient, error } = await this.supabase
-        .from('patients')
+      const { data: patient, error } = await (this.supabase as any)
+          .from('patients')
         .select(`
           id,
           patient_number,
@@ -322,7 +322,7 @@ export class PatientValidationService {
 
       // Check if original patient number is now taken by someone else
       if (patient.archived && patient.original_patient_number) {
-        const { data: conflictingPatient, error: conflictError } = await this.supabase
+        const { data: conflictingPatient, error: conflictError } = await (this.supabase as any)
           .from('patients')
           .select('id, name')
           .eq('patient_number', patient.original_patient_number)

@@ -116,17 +116,23 @@ export function ScheduleCreateModal({
   }, [presetPatientId, open, form])
 
   const loadItems = async () => {
+    if (!typedProfile?.organization_id) {
+      console.error('Organization ID not found')
+      return
+    }
+
     try {
-      const { data, error } = await supabase
-        .from('items')
+      const { data, error } = await (supabase as any)
+          .from('items')
         .select('*')
         .eq('is_active', true)
+        .eq('organization_id', typedProfile.organization_id)
         .order('sort_order')
         .order('name')
-      
+
       if (error) throw error
       
-      const formattedItems: ItemOption[] = (data || []).map(item => ({
+      const formattedItems: ItemOption[] = (data || []).map((item: any) => ({
         id: item.id,
         code: item.code,
         name: item.name,

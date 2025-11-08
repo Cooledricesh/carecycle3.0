@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import type { Database } from '@/lib/database.types';
 import { Profile } from '@/lib/database.types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -257,32 +258,40 @@ export default function AdminUsersPage() {
       let error = null;
 
       switch (action) {
-        case 'approve':
-          const { error: approveError } = await supabase.rpc('approve_user', {
+        case 'approve': {
+          const approveArgs = {
             user_id: userId
-          });
+          };
+          const { error: approveError } = await (supabase as any).rpc('approve_user', approveArgs);
           error = approveError;
           break;
-        case 'reject':
-          const { error: rejectError } = await supabase.rpc('reject_user', {
+        }
+        case 'reject': {
+          const rejectArgs = {
             user_id: userId,
             reason: '관리자에 의해 거부됨'
-          });
+          };
+          const { error: rejectError } = await (supabase as any).rpc('reject_user', rejectArgs);
           error = rejectError;
           break;
-        case 'activate':
-          const { error: activateError } = await supabase.rpc('approve_user', {
+        }
+        case 'activate': {
+          const activateArgs = {
             user_id: userId
-          });
+          };
+          const { error: activateError } = await (supabase as any).rpc('approve_user', activateArgs);
           error = activateError;
           break;
-        case 'deactivate':
-          const { error: deactivateError } = await supabase.rpc('deactivate_user', {
+        }
+        case 'deactivate': {
+          const deactivateArgs = {
             user_id: userId,
             reason: '관리자에 의해 비활성화됨'
-          });
+          };
+          const { error: deactivateError } = await (supabase as any).rpc('deactivate_user', deactivateArgs);
           error = deactivateError;
           break;
+        }
         case 'delete':
           const response = await fetch('/api/admin/delete-user', {
             method: 'POST',

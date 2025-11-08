@@ -26,7 +26,7 @@ export default function JoinRequestsPage() {
           .from('profiles')
           .select('role')
           .eq('id', user.id)
-          .single()
+          .single<{ role: string }>()
 
         if (error) {
           console.error('Error fetching user role:', error)

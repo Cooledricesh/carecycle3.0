@@ -10,6 +10,7 @@ export type ItemUpdate = Database['public']['Tables']['items']['Update']
 // Application-level types
 export interface Item {
   id: string
+  organizationId: string
   code: string
   name: string
   category: ItemCategory

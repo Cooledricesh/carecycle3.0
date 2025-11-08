@@ -3,14 +3,24 @@
 import { useQuery } from '@tanstack/react-query'
 import { getAllItems, getItemById } from '@/lib/api/items'
 import type { Item } from '@/lib/database.types'
+import { useProfile, Profile } from '@/hooks/useProfile'
 
 /**
  * 전체 아이템 목록을 가져오는 훅
  */
 export function useItems() {
+  const { data: profile } = useProfile()
+  const typedProfile = profile as Profile | null | undefined
+
   const query = useQuery({
-    queryKey: ['items'],
-    queryFn: getAllItems,
+    queryKey: ['items', typedProfile?.organization_id],
+    queryFn: async () => {
+      if (!typedProfile?.organization_id) {
+        throw new Error('Organization ID not available')
+      }
+      return await getAllItems(typedProfile.organization_id)
+    },
+    enabled: !!typedProfile?.organization_id,
     staleTime: 5 * 60 * 1000, // 5분
     gcTime: 10 * 60 * 1000, // 10분 (이전 cacheTime)
   })
@@ -28,10 +38,18 @@ export function useItems() {
  * 특정 아이템을 가져오는 훅
  */
 export function useItem(id: string | null) {
+  const { data: profile } = useProfile()
+  const typedProfile = profile as Profile | null | undefined
+
   const query = useQuery({
-    queryKey: ['items', id],
-    queryFn: () => getItemById(id!),
-    enabled: !!id,
+    queryKey: ['items', id, typedProfile?.organization_id],
+    queryFn: async () => {
+      if (!typedProfile?.organization_id) {
+        throw new Error('Organization ID not available')
+      }
+      return await getItemById(id!, typedProfile.organization_id)
+    },
+    enabled: !!id && !!typedProfile?.organization_id,
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
   })
@@ -50,7 +68,7 @@ export function useItem(id: string | null) {
 export function useActiveItems() {
   const { items, ...rest } = useItems()
 
-  const activeItems = items.filter(item => item.is_active === true)
+  const activeItems = items.filter((item: Item) => item.is_active === true)
 
   return {
     items: activeItems,
@@ -66,7 +84,7 @@ export function useItemsByCategory(category: string | 'all') {
 
   const filteredItems = category === 'all'
     ? items
-    : items.filter(item => item.category === category)
+    : items.filter((item: Item) => item.category === category)
 
   return {
     items: filteredItems,
@@ -82,14 +100,14 @@ export function useItemsStatistics() {
 
   const statistics = {
     total: items.length,
-    active: items.filter(item => item.is_active).length,
-    inactive: items.filter(item => !item.is_active).length,
+    active: items.filter((item: Item) => item.is_active).length,
+    inactive: items.filter((item: Item) => !item.is_active).length,
     byCategory: {
-      injection: items.filter(item => item.category === 'injection').length,
-      test: items.filter(item => item.category === 'test').length,
-      other: items.filter(item => item.category === 'other').length,
+      injection: items.filter((item: Item) => item.category === 'injection').length,
+      test: items.filter((item: Item) => item.category === 'test').length,
+      other: items.filter((item: Item) => item.category === 'other').length,
     },
-    withNotification: items.filter(item => item.requires_notification).length,
+    withNotification: items.filter((item: Item) => item.requires_notification).length,
   }
 
   return {
