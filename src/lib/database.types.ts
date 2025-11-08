@@ -75,6 +75,7 @@ export type Database = {
       }
       invitations: {
         Row: {
+          care_type: string | null
           created_at: string
           email: string
           expires_at: string
@@ -87,6 +88,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          care_type?: string | null
           created_at?: string
           email: string
           expires_at?: string
@@ -99,6 +101,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          care_type?: string | null
           created_at?: string
           email?: string
           expires_at?: string
