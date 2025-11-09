@@ -44,7 +44,7 @@ export class AdminFilterStrategy implements FilterStrategy {
           patient_care_type: item.care_type,
           patient_number: '',
           doctor_id: item.doctor_id,
-          doctor_name: '',
+          doctor_name: item.doctor_name || '미지정', // RPC returns doctor_name with COALESCE
           item_id: item.item_id,
           item_name: item.item_name,
           item_category: item.item_category,
@@ -104,8 +104,16 @@ export class AdminFilterStrategy implements FilterStrategy {
         updated_at,
         patients!inner (
           name,
-          care_type,
-          patient_number
+          patient_number,
+          department_id,
+          doctor_id,
+          assigned_doctor_name,
+          departments (
+            name
+          ),
+          profiles:doctor_id (
+            name
+          )
         ),
         items!inner (
           name,
@@ -119,10 +127,10 @@ export class AdminFilterStrategy implements FilterStrategy {
       query = query.eq('organization_id', userContext.organizationId)
     }
 
-    // Admin can filter by departments (Phase 1: care types) if specified
+    // Admin can filter by departments if specified
     if (filters.department_ids?.length) {
-      // Phase 1: department_ids contain care_type values
-      query = query.in('patients.care_type', filters.department_ids)
+      // Use department_id for filtering
+      query = query.in('patients.department_id', filters.department_ids)
     }
 
     // Apply date range
@@ -155,10 +163,11 @@ export class AdminFilterStrategy implements FilterStrategy {
       schedule_id: s.id,
       patient_id: s.patient_id,
       patient_name: s.patients?.name || '',
-      patient_care_type: s.patients?.care_type || '',
+      patient_care_type: s.patients?.departments?.name || '',
       patient_number: s.patients?.patient_number || '',
-      doctor_id: null, // Not available in current schema
-      doctor_name: '',
+      doctor_id: s.patients?.doctor_id || null,
+      // COALESCE: registered doctor name -> unregistered doctor name -> fallback
+      doctor_name: s.patients?.profiles?.name || s.patients?.assigned_doctor_name || '미지정',
       item_id: s.item_id,
       item_name: s.items?.name || '',
       item_category: s.items?.category || '',

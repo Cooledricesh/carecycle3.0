@@ -5,7 +5,8 @@ import type { ScheduleWithDetails } from '@/types/schedule'
 export interface UserContext {
   userId: string
   role: 'doctor' | 'nurse' | 'admin' | 'super_admin'
-  careType?: string | null
+  careType?: string | null // DEPRECATED: Legacy care_type value for backward compatibility
+  departmentId?: string | null // New: UUID reference to departments table
   organizationId: string | null // Allow null for super_admin
 }
 

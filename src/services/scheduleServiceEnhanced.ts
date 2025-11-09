@@ -265,9 +265,16 @@ export class ScheduleServiceEnhanced {
           patients!inner (
             id,
             name,
-            care_type,
+            department_id,
+            departments (
+              name
+            ),
             doctor_id,
-            patient_number
+            assigned_doctor_name,
+            patient_number,
+            profiles:doctor_id (
+              name
+            )
           ),
           items!inner (
             id,
@@ -283,8 +290,8 @@ export class ScheduleServiceEnhanced {
       if (!showAll && userContext.role !== 'admin') {
         if (userContext.role === 'doctor') {
           query = query.eq('patients.doctor_id', userContext.userId)
-        } else if (userContext.role === 'nurse' && userContext.careType) {
-          query = query.eq('patients.care_type', userContext.careType)
+        } else if (userContext.role === 'nurse' && userContext.departmentId) {
+          query = query.eq('patients.department_id', userContext.departmentId)
         }
       }
 
@@ -302,9 +309,16 @@ export class ScheduleServiceEnhanced {
           patients: {
             id: string
             name: string
-            care_type: string
+            department_id: string | null
+            departments: {
+              name: string
+            } | null
             doctor_id: string | null
+            assigned_doctor_name: string | null
             patient_number: string
+            profiles: {
+              name: string
+            } | null
           }
           items: {
             id: string
@@ -343,18 +357,21 @@ export class ScheduleServiceEnhanced {
         updatedAt: s.updated_at,
         // Add flat fields for UI compatibility
         patient_name: s.patients?.name || '',
-        patient_care_type: s.patients?.care_type || '',
+        patient_care_type: s.patients?.departments?.name || '',
         patient_number: s.patients?.patient_number || '',
         item_name: s.items?.name || '',
         item_category: s.items?.category || '',
         doctor_id: s.patients?.doctor_id || null,
-        doctor_name: null, // Not available in direct query
+        // COALESCE: registered doctor name -> unregistered doctor name -> fallback
+        doctor_name: s.patients?.profiles?.name || s.patients?.assigned_doctor_name || '미지정',
         // Nested patient object
         patient: s.patients ? {
             id: s.patients.id,
             name: s.patients.name,
-            care_type: s.patients.care_type,
-            careType: s.patients.care_type,
+            care_type: s.patients.departments?.name || '',
+            careType: s.patients.departments?.name || '',
+            department_id: s.patients.department_id,
+            departmentId: s.patients.department_id,
             doctor_id: s.patients.doctor_id,
             doctorId: s.patients.doctor_id,
             patient_number: s.patients.patient_number,

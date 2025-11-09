@@ -50,7 +50,7 @@ export class DoctorFilterStrategy implements FilterStrategy {
           patient_care_type: item.care_type,
           patient_number: '',
           doctor_id: item.doctor_id,
-          doctor_name: '',
+          doctor_name: item.doctor_name || '미지정', // RPC returns doctor_name with COALESCE
           item_id: item.item_id,
           item_name: item.item_name,
           item_category: item.item_category,
@@ -116,9 +116,16 @@ export class DoctorFilterStrategy implements FilterStrategy {
         patients:patient_id (
           id,
           name,
-          care_type,
           patient_number,
-          doctor_id
+          doctor_id,
+          assigned_doctor_name,
+          department_id,
+          departments (
+            name
+          ),
+          profiles:doctor_id (
+            name
+          )
         ),
         items:item_id (
           name,
@@ -138,10 +145,10 @@ export class DoctorFilterStrategy implements FilterStrategy {
       // We'll filter after fetching the data
     }
 
-    // Apply department filter if specified (Phase 1: care types)
+    // Apply department filter if specified
     if (filters.department_ids?.length) {
-      // Phase 1: department_ids contain care_type values
-      query = query.in('patients.care_type', filters.department_ids)
+      // Use department_id for filtering
+      query = query.in('patients.department_id', filters.department_ids)
     }
 
     // Apply date range filter if specified
@@ -188,10 +195,11 @@ export class DoctorFilterStrategy implements FilterStrategy {
       schedule_id: s.id,
       patient_id: s.patient_id,
       patient_name: s.patients?.name || '',
-      patient_care_type: s.patients?.care_type || '',
+      patient_care_type: s.patients?.departments?.name || '',
       patient_number: s.patients?.patient_number || '',
       doctor_id: s.patients?.doctor_id || null,
-      doctor_name: '',
+      // COALESCE: registered doctor name -> unregistered doctor name -> fallback
+      doctor_name: s.patients?.profiles?.name || s.patients?.assigned_doctor_name || '미지정',
       item_id: s.item_id,
       item_name: s.items?.name || '',
       item_category: s.items?.category || '',
