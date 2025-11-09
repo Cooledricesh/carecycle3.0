@@ -168,6 +168,8 @@ export class ScheduleServiceEnhanced {
           patient_number: s.patient_number || '',
           item_name: s.item_name || '',
           item_category: s.item_category || '',
+          doctor_id: s.doctor_id || null,
+          doctor_name: s.doctor_name || '미지정',  // CRITICAL: Include doctor_name from RPC
           // Create nested patient object
           patient: s.patient_name ? {
             id: s.patient_id,

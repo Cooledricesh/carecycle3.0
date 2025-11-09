@@ -69,11 +69,13 @@ export function useCalendarSchedules(currentDate: Date) {
         const allSchedules = result.schedules || []
 
         // Transform schedules to include display_type for UI rendering
-        return allSchedules.map(schedule => ({
+        const transformed = allSchedules.map(schedule => ({
           ...schedule,
           // Add display_type if not already present
           display_type: (schedule as any).display_type || 'scheduled'
         })) as CalendarSchedule[]
+
+        return transformed
 
       } catch (error) {
         const message = mapErrorToUserMessage(error)
