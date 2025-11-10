@@ -1,16 +1,19 @@
 'use client'
 
 // Filter types for schedule and patient filtering
+// DEPRECATED: CareType will be replaced by Department in Phase 2
 export type CareType = '외래' | '입원' | '낮병원'
 
 export interface ScheduleFilter {
-  // 진료 구분 필터 (복수 선택 가능)
-  careTypes: CareType[]
+  // 소속(부서) 필터 (복수 선택 가능)
+  // Phase 1: department IDs are care_type values (외래/입원/낮병원)
+  // Phase 2: will be UUID references to departments table
+  department_ids: string[]
 
   // 주치의 필터 (향후 구현 대비)
   doctorId?: string | null
 
-  // 부서 필터 (간호사 역할에서 사용)
+  // DEPRECATED: Legacy single department filter (kept for backward compatibility)
   department?: string | null
 
   // 날짜 범위 필터 (선택적)
@@ -39,7 +42,7 @@ export interface FilterState {
 
 // Default filter values
 export const defaultFilters: ScheduleFilter = {
-  careTypes: [], // 빈 배열 = 모든 타입 표시
+  department_ids: [], // 빈 배열 = 모든 소속 표시
   doctorId: null,
   department: null,
   dateRange: null,
@@ -52,7 +55,7 @@ export const defaultFilters: ScheduleFilter = {
 // Helper functions
 export const hasActiveFilters = (filters: ScheduleFilter): boolean => {
   return (
-    filters.careTypes.length > 0 ||
+    filters.department_ids.length > 0 ||
     filters.doctorId !== null ||
     filters.dateRange !== null ||
     filters.includeInactive === true ||

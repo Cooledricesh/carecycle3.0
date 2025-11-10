@@ -13,8 +13,8 @@ export interface Patient {
   hospitalId?: string | null
   patientNumber: string
   name: string
-  department?: string | null
-  careType?: '외래' | '입원' | '낮병원' | null
+  departmentId?: string | null
+  departmentName?: string | null  // From departments table join
   doctorId?: string | null
   doctorName?: string | null
   assignedDoctorName?: string | null  // For unregistered doctors
@@ -31,8 +31,8 @@ export interface PatientSecure {
   hospitalId?: string | null
   patientNumber: string | null
   name: string | null
-  department?: string | null
-  careType?: '외래' | '입원' | '낮병원' | null
+  departmentId?: string | null
+  departmentName?: string | null
   isActive: boolean
   metadata?: Record<string, any>
   createdBy?: string | null
@@ -44,8 +44,7 @@ export interface PatientSecure {
 export interface PatientCreateInput {
   patientNumber: string
   name: string
-  department?: string | null
-  careType?: '외래' | '입원' | '낮병원' | null
+  departmentId?: string | null
   doctorId?: string | null
   isActive?: boolean
   metadata?: Record<string, any>
@@ -54,8 +53,7 @@ export interface PatientCreateInput {
 export interface PatientUpdateInput {
   patientNumber?: string
   name?: string
-  department?: string | null
-  careType?: '외래' | '입원' | '낮병원' | null
+  departmentId?: string | null
   doctorId?: string | null
   assignedDoctorName?: string | null  // For unregistered doctors
   isActive?: boolean
@@ -64,8 +62,7 @@ export interface PatientUpdateInput {
 
 // List/Filter types
 export interface PatientFilter {
-  department?: string
-  careType?: '외래' | '입원' | '낮병원'
+  departmentId?: string
   isActive?: boolean
   searchTerm?: string
 }
@@ -74,8 +71,8 @@ export interface PatientListItem {
   id: string
   patientNumber: string
   name: string
-  department?: string | null
-  careType?: '외래' | '입원' | '낮병원' | null
+  departmentId?: string | null
+  departmentName?: string | null
   doctorId?: string | null
   doctorName?: string | null
   isActive: boolean

@@ -10,10 +10,15 @@ export class NurseFilterStrategy implements FilterStrategy {
     filters: FilterOptions,
     userContext: UserContext
   ): Promise<{ data: ScheduleWithDetails[] | null; error: Error | null }> {
-    // Nurse defaults to their care_type unless showing all
+    // Nurse defaults to their department_id unless showing all
+    // Fallback chain: filters.department_ids → user.departmentId → user.careType (legacy)
     const effectiveCareTypes = filters.showAll
-      ? filters.careTypes
-      : (filters.careTypes?.length ? filters.careTypes : (userContext.careType ? [userContext.careType] : null))
+      ? filters.department_ids
+      : (filters.department_ids?.length
+          ? filters.department_ids
+          : (userContext.departmentId
+              ? [userContext.departmentId]
+              : (userContext.careType ? [userContext.careType] : null)))
 
     // For calendar views with date range, use the calendar-specific function
     if (filters.dateRange?.start && filters.dateRange?.end) {
@@ -48,7 +53,7 @@ export class NurseFilterStrategy implements FilterStrategy {
           patient_care_type: item.care_type,
           patient_number: '',
           doctor_id: item.doctor_id,
-          doctor_name: '',
+          doctor_name: item.doctor_name || '미지정', // RPC returns doctor_name with COALESCE
           item_id: item.item_id,
           item_name: item.item_name,
           item_category: item.item_category,
@@ -107,8 +112,16 @@ export class NurseFilterStrategy implements FilterStrategy {
         updated_at,
         patients!inner (
           name,
-          care_type,
-          patient_number
+          patient_number,
+          department_id,
+          doctor_id,
+          assigned_doctor_name,
+          departments (
+            name
+          ),
+          profiles:doctor_id (
+            name
+          )
         ),
         items!inner (
           name,
@@ -122,11 +135,26 @@ export class NurseFilterStrategy implements FilterStrategy {
       query = query.eq('organization_id', userContext.organizationId)
     }
 
-    // Apply care type filtering
-    if (!filters.showAll && userContext.careType) {
-      query = query.eq('patients.care_type', userContext.careType)
+    // Apply department filtering
+    // IMPORTANT: patients.department_id is a UUID column
+    // Only filter if we have a valid UUID, not a legacy care_type string
+    const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+    const isValidUuid = (value: string) => UUID_REGEX.test(value)
+
+    if (!filters.showAll && userContext.departmentId && isValidUuid(userContext.departmentId)) {
+      // User has a valid department UUID
+      query = query.eq('patients.department_id', userContext.departmentId)
+    } else if (!filters.showAll && userContext.careType) {
+      // Legacy care_type string - skip filtering and log warning
+      console.warn('[NurseFilterStrategy] User has legacy care_type but no department_id. Skipping department filter.')
     } else if (effectiveCareTypes?.length) {
-      query = query.in('patients.care_type', effectiveCareTypes)
+      // Filter by department IDs only if they are valid UUIDs
+      const validUuids = effectiveCareTypes.filter(id => isValidUuid(id))
+      if (validUuids.length > 0) {
+        query = query.in('patients.department_id', validUuids)
+      } else {
+        console.warn('[NurseFilterStrategy] effectiveCareTypes contains non-UUID values. Skipping department filter.', effectiveCareTypes)
+      }
     }
 
     // Apply date range
@@ -159,10 +187,11 @@ export class NurseFilterStrategy implements FilterStrategy {
       schedule_id: s.id,
       patient_id: s.patient_id,
       patient_name: s.patients?.name || '',
-      patient_care_type: s.patients?.care_type || '',
+      patient_care_type: s.patients?.departments?.name || '',
       patient_number: s.patients?.patient_number || '',
-      doctor_id: null, // Not available in current schema
-      doctor_name: '',
+      doctor_id: s.patients?.doctor_id || null,
+      // COALESCE: registered doctor name -> unregistered doctor name -> fallback
+      doctor_name: s.patients?.profiles?.name || s.patients?.assigned_doctor_name || '미지정',
       item_id: s.item_id,
       item_name: s.items?.name || '',
       item_category: s.items?.category || '',
@@ -193,8 +222,9 @@ export class NurseFilterStrategy implements FilterStrategy {
       filterParts.push(`dept:${userContext.careType || 'none'}`)
     }
 
-    if (filters.careTypes?.length) {
-      filterParts.push(`care:${filters.careTypes.sort().join(',')}`)
+    // Phase 1: department_ids contain care_type values
+    if (filters.department_ids?.length) {
+      filterParts.push(`deptIds:${filters.department_ids.sort().join(',')}`)
     }
 
     if (filters.dateRange) {

@@ -1,25 +1,38 @@
 'use client'
 
+/**
+ * @deprecated This component is deprecated and replaced by DepartmentFilterDropdown.
+ * Kept for backward compatibility only. Use DepartmentFilterDropdown instead.
+ */
+
 import { useFilterContext } from '@/lib/filters/filter-context'
 import { careTypeLabels, careTypeColors, type CareType } from '@/lib/filters/filter-types'
 import { cn } from '@/lib/utils'
 import { Check } from 'lucide-react'
 
 export function CareTypeFilter() {
-  const { filters, toggleCareType } = useFilterContext()
+  const { filters, toggleCareType, toggleDepartment } = useFilterContext()
 
   const careTypes: CareType[] = ['외래', '입원', '낮병원']
+
+  const handleToggle = (careType: CareType) => {
+    if (toggleDepartment) {
+      toggleDepartment(careType)
+    } else if (toggleCareType) {
+      toggleCareType(careType)
+    }
+  }
 
   return (
     <div className="flex flex-wrap gap-2">
       {careTypes.map((careType) => {
-        const isSelected = filters.careTypes.includes(careType)
+        const isSelected = filters.department_ids.includes(careType)
         const colors = careTypeColors[careType]
 
         return (
           <button
             key={careType}
-            onClick={() => toggleCareType(careType)}
+            onClick={() => handleToggle(careType)}
             className={cn(
               'px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200',
               'flex items-center gap-1.5 border',
@@ -42,20 +55,28 @@ export function CareTypeFilter() {
 
 // Mobile version with larger touch targets
 export function CareTypeFilterMobile() {
-  const { filters, toggleCareType } = useFilterContext()
+  const { filters, toggleCareType, toggleDepartment } = useFilterContext()
 
   const careTypes: CareType[] = ['외래', '입원', '낮병원']
+
+  const handleToggle = (careType: CareType) => {
+    if (toggleDepartment) {
+      toggleDepartment(careType)
+    } else if (toggleCareType) {
+      toggleCareType(careType)
+    }
+  }
 
   return (
     <div className="grid grid-cols-3 gap-2 w-full">
       {careTypes.map((careType) => {
-        const isSelected = filters.careTypes.includes(careType)
+        const isSelected = filters.department_ids.includes(careType)
         const colors = careTypeColors[careType]
 
         return (
           <button
             key={careType}
-            onClick={() => toggleCareType(careType)}
+            onClick={() => handleToggle(careType)}
             className={cn(
               'px-3 py-3 rounded-lg text-sm font-medium transition-all duration-200',
               'flex items-center justify-center gap-1.5 border min-h-[44px]',

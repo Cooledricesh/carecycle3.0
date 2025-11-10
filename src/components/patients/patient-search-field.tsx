@@ -183,7 +183,7 @@ export function PatientSearchField({
                       {showPatientNumber && (
                         <div className="text-xs text-muted-foreground">
                           {patient.patientNumber}
-                          {patient.careType && ` · ${patient.careType}`}
+                          {patient.departmentName && ` · ${patient.departmentName}`}
                         </div>
                       )}
                     </div>

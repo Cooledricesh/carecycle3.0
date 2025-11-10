@@ -3,9 +3,6 @@ import { createServiceClient } from '@/lib/supabase/server'
 import { createClient } from '@/lib/supabase/server'
 import { z } from 'zod'
 
-// Define care type enum locally to avoid import issues
-const CareTypeEnum = z.enum(['외래', '입원', '낮병원'])
-
 // Define strict validation schemas for patient updates
 const BasePatientUpdateSchema = z.object({
   name: z
@@ -34,31 +31,44 @@ const BasePatientUpdateSchema = z.object({
     .optional(),
 })
 
-// Nurse can update care-related fields but not doctor assignment
+// Nurse can update department-related fields AND doctor assignment (per CLAUDE.md policy)
 const NurseUpdateSchema = BasePatientUpdateSchema.extend({
-  careType: CareTypeEnum.nullable().optional(),
-  department: z.string().max(50, '부서명은 50자 이내로 입력해주세요').nullable().optional(),
+  doctorId: z.string().uuid('올바른 의사 ID를 선택해주세요').nullable().optional(),
+  assignedDoctorName: z.string().max(100, '의사명은 100자 이내로 입력해주세요').nullable().optional(),
+  departmentId: z.string().uuid('올바른 부서 ID를 선택해주세요').nullable().optional(),
 })
 
 // Admin can update all fields including doctor assignment
 const AdminUpdateSchema = BasePatientUpdateSchema.extend({
   doctorId: z.string().uuid('올바른 의사 ID를 선택해주세요').nullable().optional(),
-  careType: CareTypeEnum.nullable().optional(),
-  department: z.string().max(50, '부서명은 50자 이내로 입력해주세요').nullable().optional(),
+  assignedDoctorName: z.string().max(100, '의사명은 100자 이내로 입력해주세요').nullable().optional(),
+  departmentId: z.string().uuid('올바른 부서 ID를 선택해주세요').nullable().optional(),
 })
 
-// Doctor can only update limited fields (no doctor assignment or care type changes)
-const DoctorUpdateSchema = BasePatientUpdateSchema
+// Doctor can update limited fields AND doctor assignment (per CLAUDE.md policy)
+const DoctorUpdateSchema = BasePatientUpdateSchema.extend({
+  doctorId: z.string().uuid('올바른 의사 ID를 선택해주세요').nullable().optional(),
+  assignedDoctorName: z.string().max(100, '의사명은 100자 이내로 입력해주세요').nullable().optional(),
+})
 
 // Define strict whitelists for each role
-const DOCTOR_ALLOWED_FIELDS = new Set(['name', 'patientNumber', 'isActive', 'metadata'])
+// CRITICAL: Per CLAUDE.md, doctorId is updatable by admin, doctor, and nurse roles
+const DOCTOR_ALLOWED_FIELDS = new Set([
+  'name',
+  'patientNumber',
+  'isActive',
+  'metadata',
+  'doctorId',
+  'assignedDoctorName'
+])
 const NURSE_ALLOWED_FIELDS = new Set([
   'name',
   'patientNumber',
   'isActive',
   'metadata',
-  'careType',
-  'department'
+  'departmentId',
+  'doctorId',
+  'assignedDoctorName'
 ])
 const ADMIN_ALLOWED_FIELDS = new Set([
   'name',
@@ -66,8 +76,8 @@ const ADMIN_ALLOWED_FIELDS = new Set([
   'isActive',
   'metadata',
   'doctorId',
-  'careType',
-  'department'
+  'assignedDoctorName',
+  'departmentId'
 ])
 
 // Type-safe field mapping utility with role-based filtering
@@ -98,8 +108,8 @@ const mapValidatedFields = (
   // Map validated fields with explicit type checking and role-based filtering
   const fieldMappings: Record<string, string> = {
     doctorId: 'doctor_id',
-    careType: 'care_type',
-    department: 'department',
+    assignedDoctorName: 'assigned_doctor_name',
+    departmentId: 'department_id',
     name: 'name',
     patientNumber: 'patient_number',
     isActive: 'is_active',
@@ -117,8 +127,8 @@ const mapValidatedFields = (
       if (value !== undefined) {
         // Additional role-based validation for sensitive fields
         if (userRole === 'doctor') {
-          // Double-check that doctors cannot update restricted fields
-          if (['doctorId', 'careType', 'department'].includes(camelCase)) {
+          // Per CLAUDE.md: Doctors CAN update doctorId/assignedDoctorName but NOT departmentId
+          if (['departmentId'].includes(camelCase)) {
             console.warn(`[SECURITY] Doctor attempted to update restricted field: ${camelCase}`)
             continue // Skip this field entirely
           }
@@ -143,23 +153,39 @@ export async function PUT(
     const userClient = await createClient()
     const { data: { user }, error: authError } = await userClient.auth.getUser()
 
+    console.log('[API /update] Auth check:', { hasUser: !!user, authError: authError?.message })
+
     if (authError || !user) {
+      console.error('[API /update] Authentication failed:', authError)
       return NextResponse.json(
         { error: '인증이 필요합니다' },
         { status: 401 }
       )
     }
 
-    // Check user role, care_type for nurses, and organization_id
+    // Check user role, department_id for nurses, and organization_id
+    console.log('[API /update] Querying profile for user:', user.id)
     const { data: profile, error: profileError } = await (userClient as any)
           .from('profiles')
-      .select('role, care_type, organization_id')
+      .select('role, department_id, organization_id')
       .eq('id', user.id)
       .single()
 
+    console.log('[API /update] Profile query result:', {
+      hasProfile: !!profile,
+      profileError: profileError?.message,
+      errorCode: profileError?.code,
+      errorDetails: profileError?.details,
+      profile: profile
+    })
+
     if (profileError || !profile) {
+      console.error('[API /update] Failed to fetch profile:', {
+        error: profileError,
+        userId: user.id
+      })
       return NextResponse.json(
-        { error: '사용자 정보를 확인할 수 없습니다' },
+        { error: '사용자 정보를 확인할 수 없습니다', details: profileError?.message },
         { status: 403 }
       )
     }
@@ -244,12 +270,12 @@ export async function PUT(
         )
       }
     } else if (profile.role === 'nurse') {
-      // Nurses can only update patients in their care_type and organization
+      // Nurses can only update patients in their department and organization
       // Using service client here to ensure we can read the patient even if RLS would block it
       const serviceClient = await createServiceClient()
       const { data: patient, error: patientError } = await (serviceClient as any)
           .from('patients')
-        .select('care_type, organization_id')
+        .select('department_id, organization_id')
         .eq('id', id)
         .single()
 
@@ -268,10 +294,10 @@ export async function PUT(
         )
       }
 
-      // Check if nurse's care_type matches patient's care_type
-      if (patient.care_type !== profile.care_type) {
+      // Check if nurse's department matches patient's department
+      if (patient.department_id !== profile.department_id) {
         return NextResponse.json(
-          { error: '담당 진료 구분의 환자만 수정할 수 있습니다' },
+          { error: '담당 부서의 환자만 수정할 수 있습니다' },
           { status: 403 }
         )
       }

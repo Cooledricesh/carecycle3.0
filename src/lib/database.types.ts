@@ -73,6 +73,47 @@ export type Database = {
           },
         ]
       }
+      departments: {
+        Row: {
+          created_at: string
+          description: string | null
+          display_order: number | null
+          id: string
+          is_active: boolean
+          name: string
+          organization_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          display_order?: number | null
+          id?: string
+          is_active?: boolean
+          name: string
+          organization_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          display_order?: number | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          organization_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "departments_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invitations: {
         Row: {
           care_type: string | null
@@ -346,6 +387,38 @@ export type Database = {
           },
         ]
       }
+      organization_policies: {
+        Row: {
+          auto_hold_overdue_days: number | null
+          created_at: string
+          id: string
+          organization_id: string
+          updated_at: string
+        }
+        Insert: {
+          auto_hold_overdue_days?: number | null
+          created_at?: string
+          id?: string
+          organization_id: string
+          updated_at?: string
+        }
+        Update: {
+          auto_hold_overdue_days?: number | null
+          created_at?: string
+          id?: string
+          organization_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_policies_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organizations: {
         Row: {
           created_at: string
@@ -452,9 +525,9 @@ export type Database = {
           archived: boolean | null
           archived_at: string | null
           assigned_doctor_name: string | null
-          care_type: string | null
           created_at: string | null
           created_by: string | null
+          department_id: string | null
           doctor_id: string | null
           id: string
           is_active: boolean | null
@@ -469,9 +542,9 @@ export type Database = {
           archived?: boolean | null
           archived_at?: string | null
           assigned_doctor_name?: string | null
-          care_type?: string | null
           created_at?: string | null
           created_by?: string | null
+          department_id?: string | null
           doctor_id?: string | null
           id?: string
           is_active?: boolean | null
@@ -486,9 +559,9 @@ export type Database = {
           archived?: boolean | null
           archived_at?: string | null
           assigned_doctor_name?: string | null
-          care_type?: string | null
           created_at?: string | null
           created_by?: string | null
+          department_id?: string | null
           doctor_id?: string | null
           id?: string
           is_active?: boolean | null
@@ -500,6 +573,13 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "patients_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "patients_doctor_id_fkey"
             columns: ["doctor_id"]
@@ -528,8 +608,8 @@ export type Database = {
           approval_status: Database["public"]["Enums"]["approval_status"] | null
           approved_at: string | null
           approved_by: string | null
-          care_type: string | null
           created_at: string | null
+          department_id: string | null
           email: string
           id: string
           is_active: boolean
@@ -546,8 +626,8 @@ export type Database = {
             | null
           approved_at?: string | null
           approved_by?: string | null
-          care_type?: string | null
           created_at?: string | null
+          department_id?: string | null
           email: string
           id: string
           is_active?: boolean
@@ -564,8 +644,8 @@ export type Database = {
             | null
           approved_at?: string | null
           approved_by?: string | null
-          care_type?: string | null
           created_at?: string | null
+          department_id?: string | null
           email?: string
           id?: string
           is_active?: boolean
@@ -589,6 +669,13 @@ export type Database = {
             columns: ["approved_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
             referencedColumns: ["id"]
           },
           {
@@ -658,6 +745,7 @@ export type Database = {
           executed_time: string | null
           id: string
           is_rescheduled: boolean | null
+          metadata: Json | null
           notes: string | null
           organization_id: string
           original_date: string | null
@@ -676,6 +764,7 @@ export type Database = {
           executed_time?: string | null
           id?: string
           is_rescheduled?: boolean | null
+          metadata?: Json | null
           notes?: string | null
           organization_id: string
           original_date?: string | null
@@ -694,6 +783,7 @@ export type Database = {
           executed_time?: string | null
           id?: string
           is_rescheduled?: boolean | null
+          metadata?: Json | null
           notes?: string | null
           organization_id?: string
           original_date?: string | null
@@ -1006,13 +1096,14 @@ export type Database = {
           item_name: string | null
           next_due_date: string | null
           notes: string | null
+          organization_id: string | null
           patient_id: string | null
           patient_name: string | null
           patient_number: string | null
           schedule_id: string | null
           status: Database["public"]["Enums"]["schedule_status"] | null
           updated_at: string | null
-          urgency_level: string | null
+          urgency_status: string | null
         }
         Relationships: [
           {
@@ -1034,6 +1125,13 @@ export type Database = {
             columns: ["item_id"]
             isOneToOne: false
             referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "schedules_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
           {
@@ -1069,21 +1167,23 @@ export type Database = {
           assigned_doctor_name: string | null
           care_type: string | null
           created_at: string | null
-          doctor_approval_status:
-            | Database["public"]["Enums"]["approval_status"]
-            | null
-          doctor_display_name: string | null
-          doctor_email: string | null
+          department_id: string | null
           doctor_id: string | null
-          doctor_role: Database["public"]["Enums"]["user_role"] | null
-          doctor_status: string | null
           id: string | null
           is_active: boolean | null
+          organization_id: string | null
           patient_name: string | null
           patient_number: string | null
           updated_at: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "patients_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "patients_doctor_id_fkey"
             columns: ["doctor_id"]
@@ -1096,6 +1196,13 @@ export type Database = {
             columns: ["doctor_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patients_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]
@@ -1197,6 +1304,7 @@ export type Database = {
         Args: {
           p_executed_by: string
           p_executed_date: string
+          p_metadata?: Json
           p_notes?: string
           p_planned_date: string
           p_schedule_id: string
@@ -1280,6 +1388,7 @@ export type Database = {
           display_type: string
           doctor_id: string
           doctor_id_at_completion: string
+          doctor_name: string
           executed_by: string
           execution_id: string
           execution_notes: string
@@ -1302,8 +1411,8 @@ export type Database = {
           approval_status: Database["public"]["Enums"]["approval_status"] | null
           approved_at: string | null
           approved_by: string | null
-          care_type: string | null
           created_at: string | null
+          department_id: string | null
           email: string
           id: string
           is_active: boolean
@@ -1440,6 +1549,7 @@ export type Database = {
           status: string
         }[]
       }
+      get_user_organization_id: { Args: never; Returns: string }
       get_user_profile_for_audit: {
         Args: { target_user_id: string }
         Returns: {
@@ -1495,18 +1605,20 @@ export type Database = {
       restore_patient_atomic: {
         Args: {
           patient_id: string
-          update_care_type?: string
+          update_department_id?: string
           update_name?: string
         }
         Returns: {
           archived: boolean
           archived_at: string
-          care_type: string
           created_at: string
+          department_id: string
+          doctor_id: string
           id: string
           is_active: boolean
           metadata: Json
           name: string
+          organization_id: string
           original_patient_number: string
           patient_number: string
           updated_at: string
@@ -1551,6 +1663,10 @@ export type Database = {
           target_user_id: string
         }
         Returns: Json
+      }
+      validate_execution_metadata: {
+        Args: { metadata_json: Json }
+        Returns: boolean
       }
       validate_schedule_resume: {
         Args: { p_resume_date: string; p_schedule_id: string }
@@ -1725,14 +1841,10 @@ export const Constants = {
   },
 } as const
 
-// Convenient type aliases for commonly used types
+// Type aliases for convenience (backward compatibility)
 export type Profile = Database['public']['Tables']['profiles']['Row']
 export type ProfileInsert = Database['public']['Tables']['profiles']['Insert']
 export type ProfileUpdate = Database['public']['Tables']['profiles']['Update']
-
-export type Item = Database['public']['Tables']['items']['Row']
-export type ItemInsert = Database['public']['Tables']['items']['Insert']
-export type ItemUpdate = Database['public']['Tables']['items']['Update']
 
 export type Patient = Database['public']['Tables']['patients']['Row']
 export type PatientInsert = Database['public']['Tables']['patients']['Insert']
@@ -1742,15 +1854,25 @@ export type Schedule = Database['public']['Tables']['schedules']['Row']
 export type ScheduleInsert = Database['public']['Tables']['schedules']['Insert']
 export type ScheduleUpdate = Database['public']['Tables']['schedules']['Update']
 
+export type Item = Database['public']['Tables']['items']['Row']
+export type ItemInsert = Database['public']['Tables']['items']['Insert']
+export type ItemUpdate = Database['public']['Tables']['items']['Update']
+
 export type Invitation = Database['public']['Tables']['invitations']['Row']
 export type InvitationInsert = Database['public']['Tables']['invitations']['Insert']
 export type InvitationUpdate = Database['public']['Tables']['invitations']['Update']
 
+export type Execution = Database['public']['Tables']['schedule_executions']['Row']
+export type ExecutionInsert = Database['public']['Tables']['schedule_executions']['Insert']
+export type ExecutionUpdate = Database['public']['Tables']['schedule_executions']['Update']
+
+export type Department = Database['public']['Tables']['departments']['Row']
+export type DepartmentInsert = Database['public']['Tables']['departments']['Insert']
+export type DepartmentUpdate = Database['public']['Tables']['departments']['Update']
+
 // Enum types
 export type UserRole = Database['public']['Enums']['user_role']
-export type ApprovalStatus = Database['public']['Enums']['approval_status']
 export type ScheduleStatus = Database['public']['Enums']['schedule_status']
 export type ExecutionStatus = Database['public']['Enums']['execution_status']
-
-// String types (not enums in database)
-export type ItemCategory = string
+export type ApprovalStatus = Database['public']['Enums']['approval_status']
+export type ItemCategory = string // items.category is a string field, not an enum

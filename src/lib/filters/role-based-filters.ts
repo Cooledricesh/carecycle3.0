@@ -1,17 +1,9 @@
 'use client'
 
 import type { ScheduleFilter } from './filter-types'
+import type { UserContext } from '@/services/filters/types'
 
 export type UserRole = 'doctor' | 'nurse' | 'admin' | 'super_admin'
-
-export interface UserContext {
-  id: string
-  role: UserRole
-  email: string
-  name: string
-  careType?: string | null // For nurses
-  doctorId?: string // For doctors (same as user id)
-}
 
 /**
  * Role-Based Filter Manager
@@ -27,8 +19,8 @@ export class RoleBasedFilterManager {
     switch (user.role) {
       case 'doctor':
         return {
-          careTypes: [],
-          doctorId: user.id, // Filter to own patients by default
+          department_ids: [],
+          doctorId: user.userId, // Filter to own patients by default
           department: null,
           dateRange: null,
           includeInactive: false,
@@ -39,9 +31,9 @@ export class RoleBasedFilterManager {
       case 'nurse':
         // Nurses see their department patients by default
         const nurseFilters: ScheduleFilter = {
-          careTypes: user.careType ? [user.careType as any] : [],
+          department_ids: user.departmentId ? [user.departmentId] : [], // Use departmentId (UUID)
           doctorId: null,
-          department: user.careType,
+          department: user.careType, // Keep legacy careType for backward compatibility
           dateRange: null,
           includeInactive: false,
           showAll: false, // Start with department view
@@ -52,7 +44,7 @@ export class RoleBasedFilterManager {
       case 'admin':
         // Admins see everything by default
         return {
-          careTypes: [], // Empty = all types
+          department_ids: [], // Empty = all types
           doctorId: null,
           department: null,
           dateRange: null,
@@ -64,7 +56,7 @@ export class RoleBasedFilterManager {
       default:
         // Fallback to most restrictive
         return {
-          careTypes: [],
+          department_ids: [],
           doctorId: null,
           department: null,
           dateRange: null,
@@ -93,7 +85,7 @@ export class RoleBasedFilterManager {
           viewMode: newViewMode,
           // When toggling to "all", remove doctor filter
           // When toggling to "my", add doctor filter back
-          doctorId: newShowAll ? null : user.id
+          doctorId: newShowAll ? null : user.userId
         }
 
       case 'nurse':
@@ -103,8 +95,8 @@ export class RoleBasedFilterManager {
           viewMode: newViewMode,
           // When toggling to "all", clear department filter
           // When toggling to "my", restore department filter
-          department: newShowAll ? null : user.careType,
-          careTypes: newShowAll ? [] : (user.careType ? [user.careType as any] : [])
+          department: newShowAll ? null : user.careType, // Keep legacy careType for backward compatibility
+          department_ids: newShowAll ? [] : (user.departmentId ? [user.departmentId] : []) // Use departmentId (UUID)
         }
 
       case 'admin':
@@ -145,8 +137,8 @@ export class RoleBasedFilterManager {
         break
 
       case 'admin':
-        if (filters.careTypes.length > 0) {
-          parts.push(filters.careTypes.join(', '))
+        if (filters.department_ids.length > 0) {
+          parts.push(filters.department_ids.join(', '))
         } else {
           parts.push('전체')
         }
@@ -228,15 +220,17 @@ export class RoleBasedFilterManager {
     const options = this.getAvailableFilterOptions(user)
 
     // Check if user is trying to use disabled filters
-    if (!options.canFilterByCareType && newFilters.careTypes.length > 0) {
+    if (!options.canFilterByCareType &&
+        Array.isArray(newFilters.department_ids) &&
+        newFilters.department_ids.length > 0) {
       return {
         valid: false,
-        reason: '진료 구분 필터를 사용할 수 없습니다'
+        reason: '소속 필터를 사용할 수 없습니다'
       }
     }
 
     if (!options.canFilterByDoctor && newFilters.doctorId &&
-        newFilters.doctorId !== user.id) {
+        newFilters.doctorId !== user.userId) {
       return {
         valid: false,
         reason: '다른 의사의 환자를 필터링할 수 없습니다'
@@ -301,7 +295,7 @@ export class RoleBasedFilterManager {
             name: '내 환자',
             icon: 'user-check',
             filters: {
-              doctorId: user.id,
+              doctorId: user.userId,
               showAll: false,
               viewMode: 'my'
             }
@@ -316,8 +310,8 @@ export class RoleBasedFilterManager {
             name: '우리 부서',
             icon: 'building',
             filters: {
-              department: user.careType,
-              careTypes: user.careType ? [user.careType as any] : [],
+              department: user.careType, // Keep legacy careType for backward compatibility
+              department_ids: user.departmentId ? [user.departmentId] : [], // Use departmentId (UUID)
               showAll: false,
               viewMode: 'my'
             }
@@ -332,27 +326,19 @@ export class RoleBasedFilterManager {
             name: '전체',
             icon: 'eye',
             filters: {
-              careTypes: [],
+              department_ids: [],
               doctorId: null,
               department: null
             }
           },
-          {
-            id: 'outpatient',
-            name: '외래만',
-            icon: 'hospital',
-            filters: {
-              careTypes: ['외래']
-            }
-          },
-          {
-            id: 'inpatient',
-            name: '입원만',
-            icon: 'bed',
-            filters: {
-              careTypes: ['입원']
-            }
-          },
+          // TODO: Department-specific presets require dynamic department UUID lookup
+          // These should be fetched from the database and populated at runtime
+          // Example implementation:
+          // 1. Query departments table: SELECT id, name FROM departments WHERE organization_id = ?
+          // 2. Build preset filters dynamically with actual UUIDs
+          // 3. Cache results in provider state
+          //
+          // Temporary workaround: Users can manually select departments in advanced filters
           ...basePresets
         ]
 

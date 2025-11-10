@@ -98,11 +98,51 @@ graph TB
     B -.->|Cache Updates| A
 ```
 
-### 데이터 흐름
+### 데이터 흐름 및 변환 파이프라인
+
+#### 기본 데이터 흐름
 1. **사용자 액션** → React Component → Optimistic Update → API Call
 2. **DB 변경** → PostgreSQL CDC → Supabase Realtime → WebSocket
 3. **실시간 이벤트** → Connection Manager → Event Manager → React Query Invalidation
 4. **폴백 모드** → Polling Timer → API Fetch → Cache Update
+
+#### 데이터 변환 파이프라인 (Schedule Data)
+```
+Database Layer (3가지 소스)
+├── RPC Functions (Flat Format)
+│   └── get_calendar_schedules_filtered, get_filtered_schedules
+│       → RpcFlatSchedule 타입
+├── Direct Queries (Nested Format)
+│   └── .from('schedules').select('*, patients(*), items(*)')
+│       → DbNestedSchedule 타입
+└── Already Transformed (UI Format)
+    └── 이미 변환된 데이터
+        → UiSchedule 타입
+
+                    ↓
+
+Transformation Layer (Type-Safe)
+├── scheduleServiceEnhanced.transformToUiFormat()
+│   ├── Type Guard: isRpcFlatSchedule()
+│   │   → transformRpcToUi()
+│   ├── Type Guard: isDbNestedSchedule()
+│   │   → transformDbToUi()
+│   └── Type Guard: isUiFormat()
+│       → 변환 없이 반환
+└── 타입 안전 변환으로 "Silent Data Loss" 방지
+
+                    ↓
+
+UI Layer (Unified Format)
+└── All components receive: UiSchedule[]
+    ├── Flat fields: patient_name, doctor_name, item_name
+    └── Nested objects: patient{}, item{}
+```
+
+**타입 안전성 보장:**
+- 컴파일 시점: TypeScript 타입 체크로 필드 누락 방지
+- 런타임 시점: Type Guards로 데이터 포맷 검증
+- 변환 시점: 명시적 타입 변환 메서드로 데이터 무결성 보장
 
 ### 코드 구성 & 컨벤션
 
@@ -242,6 +282,9 @@ src/
 ├── types/                        # TypeScript 타입 (도메인 기반)
 │   ├── patient.ts              # 환자 타입
 │   ├── schedule.ts             # 스케줄 타입
+│   ├── schedule-data-formats.ts # 스케줄 데이터 포맷 타입 (NEW 2025-11-09)
+│   │                            # - RpcFlatSchedule, DbNestedSchedule, UiSchedule
+│   │                            # - Type Guards: isRpcFlatSchedule, isDbNestedSchedule
 │   ├── execution.ts            # 시행 타입
 │   ├── activity.ts             # 활동 타입
 │   ├── item.ts                 # 항목 타입
@@ -319,11 +362,15 @@ src/
 - **실시간 WebSocket**: Postgres CDC 기반 실시간 변경 감지
 - **낙관적 업데이트**: UI 즉시 반영 → API 호출 → 롤백(실패 시)
 
-#### 캐싱 전략
-- **React Query 캐싱**:
+#### 캐싱 전략 (단일 책임 원칙)
+- **React Query 캐싱** (유일한 캐싱 계층):
   - staleTime: 5분 (불필요한 refetch 방지)
   - cacheTime: 10분 (메모리 효율)
   - 관련 쿼리 선택적 무효화
+  - **변경사항 (2025-11-09)**: scheduleServiceEnhanced 내부 캐싱 제거
+    - 이전: 이중 캐싱 (scheduleServiceEnhanced Map + React Query)
+    - 현재: 단일 캐싱 (React Query only)
+    - 효과: 캐시 불일치 리스크 제거, 유지보수 복잡도 감소
 
 #### 실시간 동기화 패턴
 ```typescript
@@ -336,6 +383,296 @@ DB Change → CDC → Realtime → WebSocket → Event Manager
 - **연결 성공**: 30-60초 백업 폴링
 - **연결 실패**: 3-5초 적극적 폴링
 - **재연결**: Exponential backoff (1s, 2s, 4s, 8s, 16s)
+
+## 3.5 타입 안전성 아키텍처 (Type Safety Architecture)
+
+### 핵심 원칙
+1. **타입 우선 설계**: 모든 데이터 구조에 명시적 타입 정의
+2. **컴파일 시점 검증**: TypeScript로 런타임 전 오류 탐지
+3. **런타임 검증**: Type Guards로 외부 데이터 안전성 보장
+4. **단일 진실의 원천**: 각 데이터 포맷마다 하나의 인터페이스
+5. **UUID 타입 검증**: PostgreSQL UUID 컬럼에 대한 런타임 validation (2025-11-10 추가)
+
+### 스케줄 데이터 포맷 타입 시스템
+
+#### 1. RPC Flat Format (RpcFlatSchedule)
+**용도**: 데이터베이스 RPC 함수 반환값 (`get_calendar_schedules_filtered`, `get_filtered_schedules`)
+
+**특징**:
+- 모든 필드가 루트 레벨에 평탄화 (flat structure)
+- JOIN된 테이블 데이터도 개별 필드로 전개
+- COALESCE 결과가 이미 적용됨 (예: `doctor_name`)
+
+**타입 정의**:
+```typescript
+interface RpcFlatSchedule {
+  // Schedule core
+  schedule_id: string
+  patient_id: string
+  item_id: string
+  next_due_date: string
+  interval_weeks: number
+  schedule_status: string
+
+  // Flattened patient data
+  patient_name: string
+  patient_care_type: string | null
+  patient_number: string
+
+  // Flattened doctor data (COALESCE applied)
+  doctor_id: string | null
+  doctor_name: string  // Always present
+
+  // Flattened item data
+  item_name: string
+  item_category: ItemCategory
+
+  // Display metadata
+  display_type?: 'scheduled' | 'completed'
+  execution_id?: string | null
+  // ...
+}
+```
+
+#### 2. DB Nested Format (DbNestedSchedule)
+**용도**: 직접 데이터베이스 쿼리 결과 (`.from('schedules').select('*, patients(*), items(*)')`)
+
+**특징**:
+- PostgreSQL의 중첩 객체 구조 유지
+- 각 JOIN된 테이블이 별도 객체로 표현
+- COALESCE 미적용 (수동 처리 필요)
+
+**타입 정의**:
+```typescript
+interface DbNestedSchedule {
+  // Root schedule fields
+  id: string
+  patient_id: string
+  item_id: string
+  next_due_date: string
+  status: string
+
+  // Nested patient object
+  patients?: {
+    id: string
+    name: string
+    doctor_id?: string | null
+    assigned_doctor_name?: string | null  // Unregistered doctor
+    profiles?: { name: string } | null    // Registered doctor
+    departments?: { name: string } | null
+  } | null
+
+  // Nested item object
+  items?: {
+    id: string
+    name: string
+    category: ItemCategory
+  } | null
+}
+```
+
+#### 3. UI Format (UiSchedule)
+**용도**: React 컴포넌트가 기대하는 최종 데이터 형식
+
+**특징**:
+- Flat fields + Nested objects 하이브리드 구조
+- 모든 필수 필드가 항상 존재 (nullable 최소화)
+- 컴포넌트 호환성을 위한 camelCase 변형 제공
+
+**타입 정의**:
+```typescript
+interface UiSchedule {
+  // Identifiers
+  schedule_id: string
+  id?: string  // Backward compatibility
+
+  // Flat patient data (always present)
+  patient_id: string
+  patient_name: string
+  patient_care_type: string
+  patient_number: string
+
+  // Flat doctor data (always present)
+  doctor_id: string | null
+  doctor_name: string  // Never null, defaults to '미지정'
+
+  // Flat item data (always present)
+  item_id: string
+  item_name: string
+  item_category: ItemCategory
+
+  // Nested objects (optional, for legacy components)
+  patient?: {
+    id: string
+    name: string
+    care_type: string
+    careType?: string      // camelCase variant
+    patient_number: string
+    patientNumber?: string // camelCase variant
+    doctor_id: string | null
+    doctorId?: string | null
+  } | null
+
+  item?: {
+    id: string
+    name: string
+    category: ItemCategory
+  } | null
+}
+```
+
+### Type Guards (타입 가드)
+
+**역할**: 런타임에 데이터 포맷을 안전하게 식별
+
+```typescript
+// RPC 포맷 감지
+function isRpcFlatSchedule(data: any): data is RpcFlatSchedule {
+  return (
+    typeof data === 'object' &&
+    data !== null &&
+    'schedule_id' in data &&
+    'patient_name' in data &&
+    !('patients' in data)  // No nested objects
+  )
+}
+
+// DB 중첩 포맷 감지
+function isDbNestedSchedule(data: any): data is DbNestedSchedule {
+  return (
+    typeof data === 'object' &&
+    data !== null &&
+    'id' in data &&
+    ('patients' in data || 'items' in data)  // Has nested objects
+  )
+}
+```
+
+### 타입 안전 변환 플로우
+
+```typescript
+class ScheduleServiceEnhanced {
+  // 자동 포맷 감지 및 변환
+  private transformToUiFormat(data: unknown): UiSchedule {
+    // Type guard로 포맷 식별
+    if (isRpcFlatSchedule(data)) {
+      return this.transformRpcToUi(data)  // ✓ Type-safe
+    }
+
+    if (isDbNestedSchedule(data)) {
+      return this.transformDbToUi(data)   // ✓ Type-safe
+    }
+
+    // Fallback (경고 로그)
+    console.warn('Unknown format, attempting RPC transformation:', data)
+    return this.transformRpcToUi(data as RpcFlatSchedule)
+  }
+
+  // RPC → UI 타입 안전 변환
+  private transformRpcToUi(rpc: RpcFlatSchedule): UiSchedule {
+    return {
+      schedule_id: rpc.schedule_id,
+      patient_name: rpc.patient_name,
+      doctor_name: rpc.doctor_name || '미지정', // TypeScript enforces this field
+      // ... TypeScript ensures all required fields are mapped
+    }
+  }
+
+  // DB → UI 타입 안전 변환
+  private transformDbToUi(db: DbNestedSchedule): UiSchedule {
+    const doctorName =
+      db.patients?.profiles?.name ||        // Registered doctor
+      db.patients?.assigned_doctor_name ||  // Unregistered doctor
+      '미지정'                               // Fallback
+
+    return {
+      schedule_id: db.id,
+      doctor_name: doctorName, // ✓ Never null
+      // ... All required fields populated
+    }
+  }
+}
+```
+
+### UUID 타입 검증 패턴 (2025-11-10)
+
+**배경**: PostgreSQL의 UUID 컬럼은 타입 강제를 하므로, 잘못된 타입(예: string)을 UUID 컬럼에 필터링 시도하면 쿼리 실패가 발생합니다.
+
+**해결책**: 런타임에 UUID 형식을 검증하는 Type Guard 패턴 구현
+
+```typescript
+// UUID validation utility
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+const isValidUuid = (value: string) => UUID_REGEX.test(value)
+
+// Filter Strategy에서 사용
+if (filters.department_ids?.length) {
+  const validUuids = filters.department_ids.filter(id => isValidUuid(id))
+
+  if (validUuids.length > 0) {
+    query = query.in('patients.department_id', validUuids)
+  } else {
+    console.warn('[FilterStrategy] department_ids contains non-UUID values.', filters.department_ids)
+  }
+}
+```
+
+**적용 위치**:
+- `NurseFilterStrategy.ts` (lines 138-158): department_id 필터링
+- `AdminFilterStrategy.ts` (lines 130-143): department_id 필터링
+- `scheduleService.ts` (lines 304-307, 396-399, 718-721, 1116-1119): departmentId 우선 사용, careType fallback
+
+**효과**:
+- 간호사 필터 완전 복구 (UUID 타입 불일치로 인한 쿼리 실패 방지)
+- 레거시 care_type 값과의 호환성 유지 (fallback 처리)
+- 타입 안전성 강화로 런타임 에러 사전 방지
+
+### 타입 안전성의 이점
+
+#### 컴파일 타임 이점
+- **필드 누락 방지**: 변환 함수가 모든 필수 필드를 매핑하지 않으면 컴파일 에러
+- **타입 불일치 탐지**: 잘못된 타입 할당 시 즉시 감지
+- **리팩토링 안전성**: 타입 정의 변경 시 영향받는 모든 코드 자동 표시
+
+#### 런타임 이점
+- **데이터 무결성**: Type Guards로 예상치 못한 데이터 포맷 조기 탐지
+- **명확한 에러 메시지**: 어떤 필드가 누락/잘못되었는지 구체적 로그
+- **자동 복구**: 포맷 감지 실패 시 폴백 로직 작동
+
+#### 개발자 경험 이점
+- **자동 완성**: IDE가 정확한 필드명 제안
+- **타입 문서화**: 인터페이스가 곧 문서
+- **버그 예방**: "Silent Data Loss" 패턴 근본적 차단
+
+### 기술 부채 해소 사례
+
+**이전 문제점**:
+```typescript
+// ❌ 타입 불안전 (any 사용)
+const schedules = flatSchedules.map((s: any) => ({
+  patient_name: s.patient_name || '',
+  item_name: s.item_name || '',
+  // doctor_name 필드 누락! (컴파일 시 감지 불가)
+}))
+```
+
+**개선 후**:
+```typescript
+// ✅ 타입 안전 (명시적 타입)
+private transformRpcToUi(rpc: RpcFlatSchedule): UiSchedule {
+  return {
+    patient_name: rpc.patient_name,
+    item_name: rpc.item_name,
+    doctor_name: rpc.doctor_name || '미지정'
+    // ↑ 이 필드를 빠뜨리면 TypeScript 컴파일 에러!
+  }
+}
+```
+
+**결과**:
+- 컴파일 시점에 버그 발견 (런타임 디버깅 불필요)
+- 데이터 변환 로직의 신뢰성 보장
+- 향후 필드 추가 시 자동 타입 체크
 
 ## 4. 성능 & 최적화 전략
 
@@ -497,6 +834,45 @@ DB Change → CDC → Realtime → WebSocket → Event Manager
 - **수동 복구**: Debug 대시보드에서 수동 개입 가능
 - **로그 수집**: 에러 추적 및 분석
 
+## 6.5 API 에러 처리 개선 (2025-11-10)
+
+### .maybeSingle() vs .single() 패턴
+
+**문제**: Supabase `.single()` 메서드는 결과가 없을 때 PGRST116 에러를 throw하여 500 Internal Server Error 반환
+
+**해결책**: `.maybeSingle()` 사용으로 null 반환, 명시적 404 응답 처리
+
+```typescript
+// ❌ Before: .single() - 500 에러 반환
+const { data, error } = await supabase
+  .from('departments')
+  .update({ name: 'Updated' })
+  .eq('id', id)
+  .single()  // PGRST116 에러 → 500 Internal Server Error
+
+// ✅ After: .maybeSingle() - 404 응답
+const { data, error } = await supabase
+  .from('departments')
+  .update({ name: 'Updated' })
+  .eq('id', id)
+  .maybeSingle()  // null 반환 → 명시적 404 처리
+
+if (!data) {
+  return NextResponse.json(
+    { error: 'Department not found' },
+    { status: 404 }
+  )
+}
+```
+
+**적용 위치**:
+- `src/app/api/admin/departments/[id]/route.ts`: PUT (lines 58-65), DELETE (lines 130-137)
+
+**효과**:
+- RESTful API 표준 준수 (404 Not Found)
+- 클라이언트 에러 처리 개선 (500 vs 404 구분)
+- 디버깅 용이성 향상
+
 ## 7. 기술적 성과 & 교훈
 
 ### 주요 성과
@@ -504,6 +880,7 @@ DB Change → CDC → Realtime → WebSocket → Event Manager
 - **안정성**: 99% 이상 실시간 연결 가동률
 - **사용자 경험**: 체감 지연 0ms (낙관적 업데이트)
 - **개발 생산성**: 컴포넌트 재사용률 80% 이상
+- **타입 안전성**: (as any) 캐스팅 제거로 컴파일 타임 에러 검출 (2025-11-10)
 
 ### 기술적 교훈
 
@@ -521,6 +898,9 @@ DB Change → CDC → Realtime → WebSocket → Event Manager
 - **교훈 7**: TypeScript 타입 생성 자동화가 생산성 향상
 - **교훈 8**: 모니터링은 개발 초기부터 구축 필요
 - **교훈 9**: 문서화는 개발과 동시에 진행해야 함
+- **교훈 10** (2025-11-10): PostgreSQL UUID 컬럼 필터링 시 런타임 타입 검증 필수
+- **교훈 11** (2025-11-10): .single() 대신 .maybeSingle() 사용으로 RESTful 에러 처리
+- **교훈 12** (2025-11-10): (as any) 타입 캐스팅은 기술 부채, Type Guard로 대체해야 함
 
 ### 향후 개선 방향
 1. **테스트 자동화**: E2E, 단위 테스트 구축

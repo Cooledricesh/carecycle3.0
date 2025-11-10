@@ -8,24 +8,41 @@ import {
   FilterStrategyFactory,
   FilterOptions,
   UserContext,
-  FilterStatistics
+  FilterStatistics,
+  ScheduleWithDetails
 } from './filters'
+import {
+  RpcFlatSchedule,
+  DbNestedSchedule,
+  UiSchedule,
+  isRpcFlatSchedule,
+  isDbNestedSchedule
+} from '@/types/schedule-data-formats'
 
-interface CacheEntry<T> {
-  data: T
-  timestamp: number
-  ttl: number
-}
-
+/**
+ * Performance Metrics Interface
+ * Tracks query performance without caching
+ */
 interface PerformanceMetrics {
   queryTime: number
-  cacheHit: boolean
   rowCount: number
+  strategyName: string
 }
 
+/**
+ * Enhanced Schedule Service
+ *
+ * Responsibilities:
+ * 1. Data transformation (RPC/DB → UI format)
+ * 2. Performance monitoring
+ * 3. Role-based data fetching
+ *
+ * NOT Responsible For:
+ * - Caching (delegated to React Query)
+ * - Direct database access (delegated to FilterStrategy)
+ */
 export class ScheduleServiceEnhanced {
   private static instance: ScheduleServiceEnhanced | null = null
-  private cache = new Map<string, CacheEntry<any>>()
   private metrics = new Map<string, PerformanceMetrics[]>()
 
   // Singleton pattern
@@ -38,13 +55,14 @@ export class ScheduleServiceEnhanced {
 
   /**
    * Get filtered schedules using server-side filtering
+   * @returns Transformed schedules in UI format
    */
   async getFilteredSchedules(
     filters: FilterOptions,
     userContext: UserContext,
     supabase?: SupabaseClient<Database>
   ): Promise<{
-    schedules: any[]  // Returns transformed data that UI expects
+    schedules: UiSchedule[]
     statistics?: FilterStatistics
     metrics?: PerformanceMetrics
   }> {
@@ -58,38 +76,23 @@ export class ScheduleServiceEnhanced {
     })
 
     const strategy = FilterStrategyFactory.create(userContext)
+    const strategyName = strategy.getQueryName()
 
-    console.log('[scheduleServiceEnhanced] Strategy selected:', strategy.getQueryName())
-
-    // Check cache first
-    const cacheKey = strategy.getCacheKey(filters, userContext)
-    const cached = this.getFromCache<any[]>(cacheKey)
-
-    if (cached) {
-      const metrics: PerformanceMetrics = {
-        queryTime: performance.now() - startTime,
-        cacheHit: true,
-        rowCount: cached.length
-      }
-      this.recordMetrics(strategy.getQueryName(), metrics)
-
-      console.log(`[Cache HIT] ${cacheKey}: ${cached.length} records`)
-
-      return {
-        schedules: cached,
-        metrics
-      }
-    }
+    console.log('[scheduleServiceEnhanced] Strategy selected:', strategyName)
 
     try {
       // Execute server-side query
       console.log('[scheduleServiceEnhanced] About to execute buildQuery with:', {
         filters,
         userContext,
-        strategyName: strategy.getQueryName()
+        strategyName
       })
 
-      const { data, error } = await strategy.buildQuery(client as any, filters, userContext)
+      const { data, error } = await strategy.buildQuery(
+        client as SupabaseClient<Database>,
+        filters,
+        userContext
+      )
 
       console.log('[scheduleServiceEnhanced] buildQuery result:', {
         hasData: !!data,
@@ -103,106 +106,23 @@ export class ScheduleServiceEnhanced {
         throw error
       }
 
-      const flatSchedules = data || []
+      const rawData = data || []
 
-      // Transform flattened data to nested format for UI compatibility
-      const schedules = flatSchedules.map((s: any) => {
-        // If it's already in nested format with camelCase, return as is
-        if (s.patient && s.item && s.id) {
-          return s
-        }
-
-        // If it's in nested format with patients/items (plural), transform to singular
-        if (s.patients || s.items) {
-          return {
-            // Keep both naming conventions for compatibility
-            id: s.id,
-            patient_id: s.patient_id,
-            patientId: s.patient_id,
-            item_id: s.item_id,
-            itemId: s.item_id,
-            next_due_date: s.next_due_date,
-            nextDueDate: s.next_due_date,
-            interval_weeks: s.interval_weeks,
-            intervalWeeks: s.interval_weeks,
-            status: s.status,
-            notes: s.notes,
-            created_at: s.created_at,
-            createdAt: s.created_at,
-            updated_at: s.updated_at,
-            updatedAt: s.updated_at,
-            patient: s.patients || null,
-            item: s.items || null
-          }
-        }
-
-        // Transform from flattened RPC format to nested format
-        // Keep both snake_case and camelCase for backward compatibility
-        return {
-          // CRITICAL: Map schedule_id for ScheduleWithDetails type compatibility
-          schedule_id: s.schedule_id || s.id,  // UI expects schedule_id
-          // Main schedule properties with both naming conventions
-          // Prefer s.id (DB primary key if present), then s.schedule_id (RPC renamed PK), then composite fallback
-          id: s.id || s.schedule_id || `${s.patient_id}-${s.item_id}-temp`,
-          patient_id: s.patient_id,  // snake_case for compatibility
-          patientId: s.patient_id,   // camelCase
-          item_id: s.item_id,        // snake_case
-          itemId: s.item_id,         // camelCase
-          next_due_date: s.next_due_date,  // snake_case (used by calendar)
-          nextDueDate: s.next_due_date,    // camelCase
-          interval_weeks: s.interval_weeks, // snake_case
-          intervalWeeks: s.interval_weeks,  // camelCase
-          status: s.status,
-          notes: s.notes,
-          created_at: s.created_at,  // snake_case
-          createdAt: s.created_at,   // camelCase
-          updated_at: s.updated_at,  // snake_case
-          updatedAt: s.updated_at,   // camelCase
-          // IMPORTANT: Preserve display_type for completed schedule UI
-          display_type: s.display_type || 'scheduled',
-          execution_id: s.execution_id,
-          executed_by: s.executed_by,
-          // Add flat fields for backward compatibility with CalendarDayCard
-          patient_name: s.patient_name || '',
-          patient_care_type: s.patient_care_type || '',
-          patient_number: s.patient_number || '',
-          item_name: s.item_name || '',
-          item_category: s.item_category || '',
-          // Create nested patient object
-          patient: s.patient_name ? {
-            id: s.patient_id,
-            name: s.patient_name,
-            careType: s.patient_care_type,
-            care_type: s.patient_care_type,  // Both formats
-            patientNumber: s.patient_number,
-            patient_number: s.patient_number, // Both formats
-            doctorId: s.doctor_id,
-            doctor_id: s.doctor_id  // Both formats
-          } : null,
-          // Create nested item object
-          item: s.item_name ? {
-            id: s.item_id,
-            name: s.item_name,
-            category: s.item_category
-          } : null
-        }
-      })
-
-      // Cache the result
-      this.setCache(cacheKey, schedules, strategy.getCacheTTL())
+      // Transform data using type-safe transformers
+      const schedules = rawData.map(item => this.transformToUiFormat(item))
 
       // Record metrics
       const metrics: PerformanceMetrics = {
         queryTime: performance.now() - startTime,
-        cacheHit: false,
-        rowCount: schedules.length
+        rowCount: schedules.length,
+        strategyName
       }
-      this.recordMetrics(strategy.getQueryName(), metrics)
+      this.recordMetrics(strategyName, metrics)
 
-      console.log(`[DB Query] ${cacheKey}: ${schedules.length} records in ${metrics.queryTime.toFixed(2)}ms`)
+      console.log(`[DB Query] ${strategyName}: ${schedules.length} records in ${metrics.queryTime.toFixed(2)}ms`)
 
       // Optionally fetch statistics
-      const statistics = await this.getFilterStatistics(userContext, client as any) ?? undefined
+      const statistics = await this.getFilterStatistics(userContext, client as SupabaseClient<Database>) ?? undefined
 
       console.log('[scheduleServiceEnhanced] Returning:', {
         schedulesCount: schedules.length,
@@ -215,15 +135,181 @@ export class ScheduleServiceEnhanced {
         statistics,
         metrics
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const err = error as { message?: string; details?: unknown; hint?: string; code?: string }
       console.error('[scheduleServiceEnhanced] Error fetching filtered schedules:', {
-        message: error?.message,
-        details: error?.details,
-        hint: error?.hint,
-        code: error?.code,
+        message: err?.message,
+        details: err?.details,
+        hint: err?.hint,
+        code: err?.code,
         fullError: error
       })
       throw new Error('일정 조회에 실패했습니다')
+    }
+  }
+
+  /**
+   * Transform any data format to UI format using type guards
+   * Handles: RPC flat, DB nested, already UI format
+   */
+  private transformToUiFormat(data: unknown): UiSchedule {
+    // Type guard: Already UI format
+    if (this.isUiFormat(data)) {
+      return data as UiSchedule
+    }
+
+    // Type guard: RPC flat format
+    if (isRpcFlatSchedule(data)) {
+      return this.transformRpcToUi(data)
+    }
+
+    // Type guard: DB nested format
+    if (isDbNestedSchedule(data)) {
+      return this.transformDbToUi(data)
+    }
+
+    // Fallback: Assume RPC-like structure
+    console.warn('[transformToUiFormat] Unknown format, attempting RPC transformation:', data)
+    return this.transformRpcToUi(data as RpcFlatSchedule)
+  }
+
+  /**
+   * Check if data is already in UI format
+   */
+  private isUiFormat(data: unknown): boolean {
+    if (typeof data !== 'object' || data === null) return false
+    const d = data as Record<string, unknown>
+    return (
+      'schedule_id' in d &&
+      'patient_name' in d &&
+      'doctor_name' in d &&
+      'item_name' in d &&
+      !('patients' in d)  // UI format doesn't have nested patients
+    )
+  }
+
+  /**
+   * Transform RPC flat format to UI format
+   */
+  private transformRpcToUi(rpc: RpcFlatSchedule): UiSchedule {
+    return {
+      // Schedule identifiers
+      schedule_id: rpc.schedule_id,
+      id: rpc.schedule_id,
+
+      // Patient data (flat)
+      patient_id: rpc.patient_id,
+      patient_name: rpc.patient_name,
+      patient_care_type: rpc.patient_care_type || '',
+      patient_number: rpc.patient_number,
+
+      // Doctor data (flat)
+      doctor_id: rpc.doctor_id,
+      doctor_name: rpc.doctor_name || '미지정',
+
+      // Item data (flat)
+      item_id: rpc.item_id,
+      item_name: rpc.item_name,
+      item_category: rpc.item_category,
+
+      // Schedule data
+      next_due_date: rpc.next_due_date,
+      interval_weeks: rpc.interval_weeks,
+      status: rpc.schedule_status,
+      priority: rpc.priority,
+      notes: rpc.notes,
+
+      // Display metadata
+      display_type: rpc.display_type,
+
+      // Execution metadata
+      execution_id: rpc.execution_id,
+      executed_by: rpc.executed_by,
+      doctor_id_at_completion: rpc.doctor_id_at_completion,
+      care_type_at_completion: rpc.care_type_at_completion,
+
+      // Audit (provide defaults if missing)
+      created_at: rpc.created_at || new Date().toISOString(),
+      updated_at: rpc.updated_at || new Date().toISOString(),
+
+      // Nested objects (for components that need them)
+      patient: {
+        id: rpc.patient_id,
+        name: rpc.patient_name,
+        care_type: rpc.patient_care_type || '',
+        careType: rpc.patient_care_type || '',
+        patient_number: rpc.patient_number,
+        patientNumber: rpc.patient_number,
+        doctor_id: rpc.doctor_id,
+        doctorId: rpc.doctor_id
+      },
+
+      item: {
+        id: rpc.item_id,
+        name: rpc.item_name,
+        category: rpc.item_category
+      }
+    }
+  }
+
+  /**
+   * Transform DB nested format to UI format
+   */
+  private transformDbToUi(db: DbNestedSchedule): UiSchedule {
+    const patient = db.patients
+    const item = db.items
+
+    // COALESCE pattern for doctor name
+    const doctorName = patient?.profiles?.name || patient?.assigned_doctor_name || '미지정'
+
+    return {
+      // Schedule identifiers
+      schedule_id: db.id,
+      id: db.id,
+
+      // Patient data (flat)
+      patient_id: db.patient_id,
+      patient_name: patient?.name || '',
+      patient_care_type: patient?.departments?.name || '',
+      patient_number: patient?.patient_number || '',
+
+      // Doctor data (flat)
+      doctor_id: patient?.doctor_id || null,
+      doctor_name: doctorName,
+
+      // Item data (flat)
+      item_id: db.item_id,
+      item_name: item?.name || '',
+      item_category: item?.category || ('other' as const),
+
+      // Schedule data
+      next_due_date: db.next_due_date,
+      interval_weeks: db.interval_weeks,
+      status: db.status,
+      priority: db.priority,
+      notes: db.notes,
+
+      // Audit (provide defaults if missing)
+      created_at: db.created_at || new Date().toISOString(),
+      updated_at: db.updated_at || new Date().toISOString(),
+
+      // Nested objects (if patient/item exist)
+      patient: patient ? {
+        id: patient.id,
+        name: patient.name,
+        care_type: patient.departments?.name || '',
+        careType: patient.departments?.name || '',
+        patient_number: patient.patient_number,
+        patientNumber: patient.patient_number,
+        doctor_id: patient.doctor_id || null,
+        doctorId: patient.doctor_id || null
+      } : null,
+
+      item: item ? {
+        id: item.id,
+        name: item.name,
+        category: item.category
+      } : null
     }
   }
 
@@ -234,8 +320,8 @@ export class ScheduleServiceEnhanced {
     showAll: boolean,
     userContext: UserContext,
     supabase?: SupabaseClient<Database>
-  ): Promise<any[]> {
-    const client = supabase || createClient()
+  ): Promise<UiSchedule[]> {
+    const client = (supabase || createClient()) as any
 
     console.log('[getTodayChecklist] Fetching today\'s checklist:', {
       userId: userContext.userId,
@@ -244,13 +330,11 @@ export class ScheduleServiceEnhanced {
     })
 
     try {
-      // Skip RPC call completely - go directly to optimized query
-      // RPC function doesn't exist in current migration, using direct query instead
       const today = format(new Date(), 'yyyy-MM-dd')
 
       console.log('[getTodayChecklist] Querying for today and overdue schedules up to:', today)
 
-      let query = (client as any)
+      let query = client
         .from('schedules')
         .select(`
           id,
@@ -265,9 +349,16 @@ export class ScheduleServiceEnhanced {
           patients!inner (
             id,
             name,
-            care_type,
+            department_id,
+            departments (
+              name
+            ),
             doctor_id,
-            patient_number
+            assigned_doctor_name,
+            patient_number,
+            profiles:doctor_id (
+              name
+            )
           ),
           items!inner (
             id,
@@ -275,45 +366,24 @@ export class ScheduleServiceEnhanced {
             category
           )
         `)
-        .lte('next_due_date', today)  // Less than or equal to today (includes overdue)
+        .lte('next_due_date', today)
         .eq('status', 'active')
-        .eq('organization_id', userContext.organizationId)
+
+      // Apply organization filter (skip for super_admin who has null organization_id)
+      if (userContext.organizationId) {
+        query = query.eq('organization_id', userContext.organizationId)
+      }
 
       // Apply role-based filtering
       if (!showAll && userContext.role !== 'admin') {
         if (userContext.role === 'doctor') {
           query = query.eq('patients.doctor_id', userContext.userId)
-        } else if (userContext.role === 'nurse' && userContext.careType) {
-          query = query.eq('patients.care_type', userContext.careType)
+        } else if (userContext.role === 'nurse' && userContext.departmentId) {
+          query = query.eq('patients.department_id', userContext.departmentId)
         }
       }
 
-      const { data: schedules, error: queryError } = await query as {
-        data: Array<{
-          id: string
-          patient_id: string
-          item_id: string
-          next_due_date: string
-          interval_weeks: number
-          notes: string | null
-          status: string
-          created_at: string
-          updated_at: string
-          patients: {
-            id: string
-            name: string
-            care_type: string
-            doctor_id: string | null
-            patient_number: string
-          }
-          items: {
-            id: string
-            name: string
-            category: string
-          }
-        }> | null
-        error: any
-      }
+      const { data: schedules, error: queryError } = await query
 
       if (queryError) {
         throw queryError
@@ -321,59 +391,16 @@ export class ScheduleServiceEnhanced {
 
       console.log('[getTodayChecklist] Query successful:', schedules?.length || 0, 'items')
 
-      // Transform the data to match expected format used by UI
-      return (schedules || []).map(s => ({
-        // Map 'id' to 'schedule_id' to match ScheduleWithDetails type
-        schedule_id: s.id,  // IMPORTANT: UI expects schedule_id, not id
-        // Keep both naming conventions for compatibility
-        id: s.id,
-        patient_id: s.patient_id,
-        patientId: s.patient_id,
-        item_id: s.item_id,
-        itemId: s.item_id,
-        next_due_date: s.next_due_date,
-        nextDueDate: s.next_due_date,
-        interval_weeks: s.interval_weeks,
-        intervalWeeks: s.interval_weeks,
-        status: s.status,
-        notes: s.notes,
-        created_at: s.created_at,
-        createdAt: s.created_at,
-        updated_at: s.updated_at,
-        updatedAt: s.updated_at,
-        // Add flat fields for UI compatibility
-        patient_name: s.patients?.name || '',
-        patient_care_type: s.patients?.care_type || '',
-        patient_number: s.patients?.patient_number || '',
-        item_name: s.items?.name || '',
-        item_category: s.items?.category || '',
-        doctor_id: s.patients?.doctor_id || null,
-        doctor_name: null, // Not available in direct query
-        // Nested patient object
-        patient: s.patients ? {
-            id: s.patients.id,
-            name: s.patients.name,
-            care_type: s.patients.care_type,
-            careType: s.patients.care_type,
-            doctor_id: s.patients.doctor_id,
-            doctorId: s.patients.doctor_id,
-            patient_number: s.patients.patient_number,
-            patientNumber: s.patients.patient_number
-          } : null,
-          // Nested item object
-          item: s.items ? {
-            id: s.items.id,
-            name: s.items.name,
-            category: s.items.category
-          } : null
-        }))
+      // Transform using type-safe transformer
+      return (schedules || []).map((s: any) => this.transformDbToUi(s as DbNestedSchedule))
 
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const err = error as { message?: string; details?: unknown; hint?: string; code?: string }
       console.error('Error fetching today checklist:', {
-        message: error?.message,
-        details: error?.details,
-        hint: error?.hint,
-        code: error?.code
+        message: err?.message,
+        details: err?.details,
+        hint: err?.hint,
+        code: err?.code
       })
 
       // Return empty array instead of throwing to prevent complete failure
@@ -384,22 +411,15 @@ export class ScheduleServiceEnhanced {
 
   /**
    * Get filter statistics for the user
+   * NOTE: Still uses internal caching due to expensive computation
    */
   async getFilterStatistics(
     userContext: UserContext,
     supabase?: SupabaseClient<Database>
   ): Promise<FilterStatistics | null> {
-    const client = supabase || createClient()
-    const cacheKey = `stats:${userContext.role}:${userContext.userId}`
+    const client = (supabase || createClient()) as any
 
-    // Check cache (shorter TTL for statistics)
-    const cached = this.getFromCache<FilterStatistics>(cacheKey, 60) // 1 minute cache
-
-    if (cached) {
-      return cached
-    }
-
-    const { data, error } = await (client as any).rpc('get_filter_statistics', {
+    const { data, error } = await client.rpc('get_filter_statistics', {
       p_user_id: userContext.userId,
       p_organization_id: userContext.organizationId
     })
@@ -411,7 +431,7 @@ export class ScheduleServiceEnhanced {
 
     if (data && data.length > 0) {
       // Transform snake_case from DB to camelCase for TypeScript interface
-      const dbStats = data[0] as any
+      const dbStats = data[0] as Record<string, number>
       const stats: FilterStatistics = {
         totalPatients: dbStats.total_patients || 0,
         myPatients: dbStats.my_patients || 0,
@@ -420,7 +440,6 @@ export class ScheduleServiceEnhanced {
         overdueSchedules: dbStats.overdue_schedules || 0,
         upcomingSchedules: dbStats.upcoming_schedules || 0
       }
-      this.setCache(cacheKey, stats, 60)
       return stats
     }
 
@@ -433,72 +452,16 @@ export class ScheduleServiceEnhanced {
   async refreshDashboardSummary(
     supabase?: SupabaseClient<Database>
   ): Promise<boolean> {
-    const client = supabase || createClient()
+    const client = (supabase || createClient()) as any
 
-    const { error } = await (client as any).rpc('refresh_dashboard_summary')
+    const { error } = await client.rpc('refresh_dashboard_summary')
 
     if (error) {
       console.error('Error refreshing dashboard summary:', error)
       return false
     }
 
-    // Clear all caches after refresh
-    this.clearCache()
     return true
-  }
-
-  /**
-   * Cache management
-   */
-  private getFromCache<T>(key: string, customTtl?: number): T | null {
-    const entry = this.cache.get(key)
-    if (!entry) return null
-
-    const ttl = customTtl || entry.ttl
-    if (Date.now() - entry.timestamp > ttl * 1000) {
-      this.cache.delete(key)
-      return null
-    }
-
-    return entry.data
-  }
-
-  private setCache<T>(key: string, data: T, ttlSeconds: number): void {
-    // Limit cache size to prevent memory issues
-    if (this.cache.size > 100) {
-      // Remove oldest entries
-      const keysToDelete = Array.from(this.cache.keys()).slice(0, 20)
-      keysToDelete.forEach(k => this.cache.delete(k))
-    }
-
-    this.cache.set(key, {
-      data,
-      timestamp: Date.now(),
-      ttl: ttlSeconds
-    })
-  }
-
-  /**
-   * Invalidate cache for a specific user
-   */
-  invalidateUserCache(userId: string, role?: string): void {
-    const pattern = role
-      ? new RegExp(`^schedules:${role}:${userId}:`)
-      : new RegExp(`:${userId}:`)
-
-    for (const key of this.cache.keys()) {
-      if (pattern.test(key)) {
-        this.cache.delete(key)
-      }
-    }
-  }
-
-  /**
-   * Clear all caches
-   */
-  clearCache(): void {
-    this.cache.clear()
-    FilterStrategyFactory.clearCache()
   }
 
   /**
@@ -526,27 +489,17 @@ export class ScheduleServiceEnhanced {
     return totalTime / metrics.length
   }
 
-  getCacheHitRate(operation?: string): number {
-    const metrics = operation
-      ? this.metrics.get(operation) || []
-      : Array.from(this.metrics.values()).flat()
-
-    if (metrics.length === 0) return 0
-
-    const hits = metrics.filter(m => m.cacheHit).length
-    return (hits / metrics.length) * 100
-  }
-
   getPerformanceSummary(): {
-    operations: { [key: string]: { avgTime: number; cacheHitRate: number } }
-    overall: { avgTime: number; cacheHitRate: number }
+    operations: { [key: string]: { avgTime: number; count: number } }
+    overall: { avgTime: number; totalQueries: number }
   } {
-    const operations: { [key: string]: { avgTime: number; cacheHitRate: number } } = {}
+    const operations: { [key: string]: { avgTime: number; count: number } } = {}
 
     for (const [operation] of this.metrics) {
+      const opMetrics = this.metrics.get(operation) || []
       operations[operation] = {
         avgTime: this.getAverageQueryTime(operation),
-        cacheHitRate: this.getCacheHitRate(operation)
+        count: opMetrics.length
       }
     }
 
@@ -559,9 +512,20 @@ export class ScheduleServiceEnhanced {
       operations,
       overall: {
         avgTime: overallAvgTime,
-        cacheHitRate: this.getCacheHitRate()
+        totalQueries: allMetrics.length
       }
     }
+  }
+
+  /**
+   * Clear cache - kept for compatibility but delegates to React Query
+   * React Query handles all caching now
+   */
+  clearCache(): void {
+    // No local cache to clear
+    // This method is kept for backward compatibility
+    console.log('[scheduleServiceEnhanced] clearCache called - caching delegated to React Query')
+    FilterStrategyFactory.clearCache()
   }
 }
 

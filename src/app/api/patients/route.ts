@@ -57,7 +57,8 @@ export async function POST(request: NextRequest) {
     const insertData = {
       name: validated.name,
       patient_number: validated.patientNumber,
-      care_type: validated.careType || null,
+      department_id: validated.departmentId || null,
+      doctor_id: validated.doctorId || null,
       is_active: validated.isActive ?? true,
       metadata: validated.metadata || {},
       // Add audit fields

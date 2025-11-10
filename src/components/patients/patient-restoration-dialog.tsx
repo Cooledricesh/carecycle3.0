@@ -127,15 +127,6 @@ export function PatientRestorationDialog({
                   <span>{inactivePatient.patientNumber}</span>
                 </div>
 
-                {inactivePatient.careType && (
-                  <div className="flex items-center gap-2">
-                    <span className="text-muted-foreground">진료구분:</span>
-                    <span className="px-2 py-1 text-xs rounded-md bg-secondary text-secondary-foreground">
-                      {inactivePatient.careType}
-                    </span>
-                  </div>
-                )}
-
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <Calendar className="h-4 w-4" />
                   <span>

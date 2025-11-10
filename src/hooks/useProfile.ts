@@ -9,8 +9,11 @@ export interface Profile {
   email: string;
   name: string;
   role: 'admin' | 'nurse' | 'doctor' | 'super_admin';
-  care_type: string | null;
+  care_type: string | null; // Deprecated: use department_name instead (kept for Phase 2 transition)
+  department_id: string | null; // FK to departments table
+  department_name: string | null; // Joined from departments table
   organization_id: string | null; // Allow null for super_admin
+  organization_name: string | null; // Joined from organizations table
   phone?: string | null;
   is_active?: boolean;
   created_at: string | null;
@@ -41,7 +44,11 @@ export function useProfile() {
 
       const queryPromise = supabase
         .from('profiles')
-        .select('*')
+        .select(`
+          *,
+          organization_name:organizations(name),
+          department_name:departments(name)
+        `)
         .eq('id', user.id)
         .single();
 
@@ -53,7 +60,23 @@ export function useProfile() {
           return null;
         }
 
-        return data;
+        // Transform nested organization and department data to flat structure
+        if (data) {
+          const rawData = data as any;
+          const organizationData = rawData.organization_name;
+          const departmentData = rawData.department_name;
+
+          // Extract all profile fields (exclude nested objects)
+          const { organization_name: orgNameNested, department_name: deptNameNested, ...profileFields } = rawData;
+
+          return {
+            ...profileFields,
+            organization_name: organizationData?.name || null,
+            department_name: departmentData?.name || null
+          } as Profile;
+        }
+
+        return null;
       } catch (timeoutError: any) {
         console.error('[useProfile] Query timeout:', timeoutError.message);
         return null;

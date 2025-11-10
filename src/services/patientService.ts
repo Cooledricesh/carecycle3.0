@@ -38,8 +38,7 @@ export const patientService = {
       const insertData = {
         name: validated.name,
         patient_number: validated.patientNumber,
-        department: validated.department || null,
-        care_type: validated.careType || null,
+        department_id: validated.departmentId || null,
         doctor_id: validated.doctorId || null,
         is_active: validated.isActive ?? true,
         metadata: validated.metadata || {},
@@ -82,8 +81,7 @@ export const patientService = {
               body: JSON.stringify({
                 name: validated.name,
                 patientNumber: validated.patientNumber,
-                department: validated.department,
-                careType: validated.careType,
+                departmentId: validated.departmentId,
                 doctorId: validated.doctorId,
                 isActive: validated.isActive,
                 metadata: validated.metadata
@@ -135,7 +133,7 @@ export const patientService = {
     }
   },
 
-  async getAll(organizationId: string, supabase?: SupabaseClient, userContext?: { role?: string; careType?: string | null; showAll?: boolean; userId?: string }): Promise<Patient[]> {
+  async getAll(organizationId: string, supabase?: SupabaseClient, userContext?: { role?: string; departmentId?: string | null; showAll?: boolean; userId?: string }): Promise<Patient[]> {
     const client = supabase || createClient()
 
     // Helper function to execute query with retry on auth failure
@@ -148,7 +146,8 @@ export const patientService = {
           .select(`
             *,
             assigned_doctor_name,
-            doctor:profiles!doctor_id(id, name)
+            doctor:profiles!doctor_id(id, name),
+            department:departments!department_id(id, name)
           `)
           .eq('is_active', true)
           .eq('organization_id', organizationId)
@@ -161,9 +160,9 @@ export const patientService = {
               // Doctor filter: filter by doctor_id using current user's ID
               console.log('[patientService.getAll] Doctor filtering by doctor_id:', userContext.userId)
               query = query.eq('doctor_id', userContext.userId)
-            } else if (userContext.role === 'nurse' && userContext.careType) {
-              console.log('[patientService.getAll] Nurse filtering by care_type:', userContext.careType)
-              query = query.eq('care_type', userContext.careType)
+            } else if (userContext.role === 'nurse' && userContext.departmentId) {
+              console.log('[patientService.getAll] Nurse filtering by department_id:', userContext.departmentId)
+              query = query.eq('department_id', userContext.departmentId)
             }
           } else {
             console.log('[patientService.getAll] Showing all patients (showAll: true)')
@@ -191,13 +190,15 @@ export const patientService = {
         
         const patients = (data || []).map(item => {
           const camelCaseItem = toCamelCase(item) as any
-          // Extract doctor information from the joined data
+          // Extract doctor and department information from the joined data
           // Use registered doctor name first, then fall back to assigned_doctor_name for pending doctors
           const patient: Patient = {
             ...camelCaseItem,
             doctorName: camelCaseItem.doctor?.name || camelCaseItem.assignedDoctorName || null,
-            // Remove the nested doctor object to keep the interface clean
-            doctor: undefined
+            departmentName: camelCaseItem.department?.name || null,
+            // Remove the nested objects to keep the interface clean
+            doctor: undefined,
+            department: undefined
           }
           return patient
         })
@@ -220,7 +221,8 @@ export const patientService = {
         .select(`
           *,
           assigned_doctor_name,
-          doctor:profiles!doctor_id(id, name)
+          doctor:profiles!doctor_id(id, name),
+          department:departments!department_id(id, name)
         `)
         .eq('id', id)
         .eq('organization_id', organizationId)
@@ -232,11 +234,13 @@ export const patientService = {
       }
 
       const camelCaseItem = toCamelCase(data) as any
-      // Use registered doctor name first, then fall back to assigned_doctor_name for pending doctors
+      // Extract doctor and department information from the joined data
       const patient: Patient = {
         ...camelCaseItem,
         doctorName: camelCaseItem.doctor?.name || camelCaseItem.assignedDoctorName || null,
-        doctor: undefined
+        departmentName: camelCaseItem.department?.name || null,
+        doctor: undefined,
+        department: undefined
       }
       return patient
     } catch (error) {

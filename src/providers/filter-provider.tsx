@@ -27,14 +27,13 @@ export function FilterProvider({
   const initializeFilters = (): ScheduleFilter => {
     if (!persistToUrl) return defaultFilters
 
-    const careTypesParam = searchParams.get('careTypes')
+    const departmentIdsParam = searchParams.get('departmentIds')
     const doctorIdParam = searchParams.get('doctorId')
 
     return {
       ...defaultFilters,
-      careTypes: careTypesParam
-        ? (careTypesParam.split(',').filter(t =>
-            ['외래', '입원', '낮병원'].includes(t)) as CareType[])
+      department_ids: departmentIdsParam
+        ? departmentIdsParam.split(',').filter(Boolean)
         : [],
       doctorId: doctorIdParam || null,
     }
@@ -50,10 +49,10 @@ export function FilterProvider({
     const params = new URLSearchParams(searchParams)
 
     // Update URL params based on filters
-    if (filters.careTypes.length > 0) {
-      params.set('careTypes', filters.careTypes.join(','))
+    if (filters.department_ids.length > 0) {
+      params.set('departmentIds', filters.department_ids.join(','))
     } else {
-      params.delete('careTypes')
+      params.delete('departmentIds')
     }
 
     if (filters.doctorId) {
@@ -82,26 +81,32 @@ export function FilterProvider({
     setFilters(defaultFilters)
   }, [])
 
-  // Toggle a care type
-  const toggleCareType = useCallback((careType: CareType) => {
+  // Toggle a department (multi-select support)
+  const toggleDepartment = useCallback((departmentId: string) => {
     setFilters(prev => {
-      const currentTypes = [...prev.careTypes]
-      const index = currentTypes.indexOf(careType)
+      const currentIds = [...prev.department_ids]
+      const index = currentIds.indexOf(departmentId)
 
       if (index > -1) {
         // Remove if already selected
-        currentTypes.splice(index, 1)
+        currentIds.splice(index, 1)
       } else {
         // Add if not selected
-        currentTypes.push(careType)
+        currentIds.push(departmentId)
       }
 
       return {
         ...prev,
-        careTypes: currentTypes
+        department_ids: currentIds
       }
     })
   }, [])
+
+  // DEPRECATED: Legacy care type toggle (for backward compatibility)
+  const toggleCareType = useCallback((careType: CareType) => {
+    // Delegate to toggleDepartment since care_type is used as department_id in Phase 1
+    toggleDepartment(careType)
+  }, [toggleDepartment])
 
   // Check if any filters are active
   const hasActiveFilters = useMemo(() => {
@@ -112,10 +117,11 @@ export function FilterProvider({
     filters,
     updateFilters,
     resetFilters,
-    toggleCareType,
+    toggleDepartment,
+    toggleCareType, // Keep for backward compatibility
     hasActiveFilters,
     isLoading
-  }), [filters, updateFilters, resetFilters, toggleCareType, hasActiveFilters, isLoading])
+  }), [filters, updateFilters, resetFilters, toggleDepartment, toggleCareType, hasActiveFilters, isLoading])
 
   return (
     <FilterContext.Provider value={contextValue}>

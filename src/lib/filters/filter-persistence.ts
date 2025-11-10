@@ -29,7 +29,7 @@ const FilterStateSchema = z.object({
   version: z.string(),
   timestamp: z.string(),
   filters: z.object({
-    careTypes: z.array(z.enum(['외래', '입원', '낮병원'])),
+    department_ids: z.array(z.string()),
     doctorId: z.string().nullable().optional(),
     department: z.string().nullable().optional(),
     dateRange: z.object({
@@ -211,7 +211,7 @@ export class FilterPersistence {
           version: FILTER_VERSION,
           timestamp: new Date().toISOString(),
           filters: {
-            careTypes: oldState.careTypes || [],
+            department_ids: oldState.careTypes || oldState.department_ids || [],
             doctorId: oldState.doctorId || null,
             department: oldState.department || null,
             dateRange: oldState.dateRange || null,

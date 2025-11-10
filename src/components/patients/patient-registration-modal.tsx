@@ -36,6 +36,7 @@ import { createClient } from '@/lib/supabase/client'
 import { usePatientRestoration } from '@/hooks/usePatientRestoration'
 import { PatientRestorationDialog } from './patient-restoration-dialog'
 import { useDoctors } from '@/hooks/useDoctors'
+import { useDepartments } from '@/hooks/useDepartments'
 import { useProfile, Profile } from '@/hooks/useProfile'
 
 const PatientRegistrationSchema = z.object({
@@ -44,15 +45,15 @@ const PatientRegistrationSchema = z.object({
     .min(1, '환자명을 입력해주세요')
     .max(100, '환자명은 100자 이내로 입력해주세요')
     .regex(/^[가-힣a-zA-Z\s]+$/, '환자명은 한글, 영문, 공백만 입력 가능합니다'),
-  
+
   patientNumber: z
     .string()
     .min(1, '환자번호를 입력해주세요')
     .max(50, '환자번호는 50자 이내로 입력해주세요')
     .regex(/^[A-Z0-9]+$/, '환자번호는 영문 대문자와 숫자만 입력 가능합니다'),
-  
-  careType: z
-    .enum(['외래', '입원', '낮병원'], {
+
+  departmentId: z
+    .string({
       required_error: '진료구분을 선택해주세요',
     }),
 
@@ -81,15 +82,19 @@ export function PatientRegistrationModal({
 
   const restoration = usePatientRestoration()
   const { data: doctors, isLoading: isLoadingDoctors } = useDoctors()
+  const { data: departments = [], isLoading: isLoadingDepartments } = useDepartments()
   const { data: profile } = useProfile()
   const typedProfile = profile as Profile | null | undefined
+
+  // Get default department ID (외래)
+  const defaultDepartmentId = departments.find(d => d.name === '외래')?.id || ''
 
   const form = useForm<PatientRegistrationFormData>({
     resolver: zodResolver(PatientRegistrationSchema),
     defaultValues: {
       name: '',
       patientNumber: '',
-      careType: '외래',
+      departmentId: defaultDepartmentId,
       doctorId: null,
     },
   })
@@ -156,7 +161,7 @@ export function PatientRegistrationModal({
       console.log('Creating patient with data:', {
         name: data.name,
         patientNumber: data.patientNumber,
-        careType: data.careType,
+        departmentId: data.departmentId,
         isActive: true,
       })
 
@@ -168,7 +173,7 @@ export function PatientRegistrationModal({
       const result = await patientService.create({
         name: data.name,
         patientNumber: data.patientNumber,
-        careType: data.careType,
+        departmentId: data.departmentId,
         doctorId: (typedProfile?.role === 'admin' || typedProfile?.role === 'doctor' || typedProfile?.role === 'nurse') ? data.doctorId : null,
         isActive: true,
       }, typedProfile.organization_id, supabase)
@@ -184,7 +189,7 @@ export function PatientRegistrationModal({
       form.reset({
         name: '',
         patientNumber: '',
-        careType: '외래',
+        departmentId: defaultDepartmentId,
         doctorId: null,
       })
       setOpen(false)
@@ -228,7 +233,7 @@ export function PatientRegistrationModal({
       await restoration.restorePatient(restoration.state.inactivePatient.id, {
         updateInfo: {
           name: formData.name,
-          careType: formData.careType
+          departmentId: formData.departmentId
         }
       })
 
@@ -236,7 +241,7 @@ export function PatientRegistrationModal({
       form.reset({
         name: '',
         patientNumber: '',
-        careType: '외래',
+        departmentId: defaultDepartmentId,
         doctorId: null,
       })
       setOpen(false)
@@ -278,7 +283,7 @@ export function PatientRegistrationModal({
 
       await restoration.createWithArchive(formData.patientNumber, {
         name: formData.name,
-        careType: formData.careType,
+        departmentId: formData.departmentId,
         organizationId: typedProfile.organization_id,
         metadata: {}
       })
@@ -287,7 +292,7 @@ export function PatientRegistrationModal({
       form.reset({
         name: '',
         patientNumber: '',
-        careType: '외래',
+        departmentId: defaultDepartmentId,
         doctorId: null,
       })
       setOpen(false)
@@ -375,14 +380,14 @@ export function PatientRegistrationModal({
             />
             <FormField
               control={form.control}
-              name="careType"
+              name="departmentId"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>진료구분 *</FormLabel>
                   <Select
                     onValueChange={field.onChange}
-                    defaultValue={field.value}
-                    disabled={isSubmitting}
+                    value={field.value}
+                    disabled={isSubmitting || isLoadingDepartments}
                   >
                     <FormControl>
                       <SelectTrigger>
@@ -390,9 +395,11 @@ export function PatientRegistrationModal({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="외래">외래</SelectItem>
-                      <SelectItem value="입원">입원</SelectItem>
-                      <SelectItem value="낮병원">낮병원</SelectItem>
+                      {departments.map((dept) => (
+                        <SelectItem key={dept.id} value={dept.id}>
+                          {dept.name}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -438,7 +445,7 @@ export function PatientRegistrationModal({
                   form.reset({
                     name: '',
                     patientNumber: '',
-                    careType: '외래',
+                    departmentId: defaultDepartmentId,
                     doctorId: null,
                   })
                   setOpen(false)

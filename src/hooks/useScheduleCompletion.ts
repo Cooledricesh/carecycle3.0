@@ -11,6 +11,12 @@ import { format } from 'date-fns'
 import { eventManager } from '@/lib/events/schedule-event-manager'
 import { scheduleServiceEnhanced } from '@/services/scheduleServiceEnhanced'
 
+export interface ScheduleExecutionMetadata {
+  dosage?: string
+  route?: 'IV' | 'IM' | 'SC'
+  notes?: string
+}
+
 interface UseScheduleCompletionReturn {
   selectedSchedule: ScheduleWithDetails | null
   executionDate: string
@@ -18,7 +24,7 @@ interface UseScheduleCompletionReturn {
   isSubmitting: boolean
   isDialogOpen: boolean
   handleComplete: (schedule: ScheduleWithDetails) => void
-  handleSubmit: () => Promise<void>
+  handleSubmit: (metadata?: ScheduleExecutionMetadata) => Promise<void>
   reset: () => void
   setExecutionDate: (date: string) => void
   setExecutionNotes: (notes: string) => void
@@ -45,7 +51,7 @@ export function useScheduleCompletion(): UseScheduleCompletionReturn {
     setIsDialogOpen(true)
   }
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (metadata?: ScheduleExecutionMetadata) => {
     if (!selectedSchedule || !user || !typedProfile?.organization_id) return
 
     setIsSubmitting(true)
@@ -65,7 +71,8 @@ export function useScheduleCompletion(): UseScheduleCompletionReturn {
       await scheduleService.markAsCompleted(selectedSchedule.schedule_id, {
         executedDate: executionDate,
         notes: executionNotes,
-        executedBy: user.id
+        executedBy: user.id,
+        metadata: metadata || undefined
       }, typedProfile.organization_id)
 
       toast({

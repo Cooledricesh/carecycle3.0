@@ -1,6 +1,6 @@
 'use client'
 
-import { CareTypeFilter, CareTypeFilterMobile } from './CareTypeFilter'
+import { DepartmentFilterDropdown, DepartmentFilterDropdownMobile } from './DepartmentFilterDropdown'
 import { SimpleFilterToggle, SimpleFilterToggleMobile } from './SimpleFilterToggle'
 import { FilterReset } from './FilterReset'
 import { useFilterContext } from '@/lib/filters/filter-context'
@@ -34,7 +34,7 @@ export function FilterBar({
   const [isOpen, setIsOpen] = useState(!collapsible)
 
   const activeFilterCount =
-    filters.careTypes.length +
+    filters.department_ids.length +
     (filters.doctorId ? 1 : 0) +
     (filters.dateRange ? 1 : 0) +
     (filters.showAll ? 1 : 0)
@@ -109,15 +109,15 @@ export function FilterBar({
         'flex items-center gap-3',
         isMobile && 'flex-col items-start w-full'
       )}>
-        {/* Care Type Filter */}
+        {/* Department Filter */}
         <div className={cn(
           'flex items-center gap-2',
           isMobile && 'w-full'
         )}>
           {!isMobile && showTitle && (
-            <span className="text-sm font-medium text-gray-600">진료 구분:</span>
+            <span className="text-sm font-medium text-gray-600">소속:</span>
           )}
-          {isMobile ? <CareTypeFilterMobile /> : <CareTypeFilter />}
+          {isMobile ? <DepartmentFilterDropdownMobile /> : <DepartmentFilterDropdown />}
         </div>
 
         {/* Reset Button */}
@@ -187,7 +187,7 @@ export function FilterBar({
 export function FilterBarCompact({ className }: { className?: string }) {
   return (
     <div className={cn('flex items-center gap-2', className)}>
-      <CareTypeFilter />
+      <DepartmentFilterDropdown />
       <FilterReset size="sm" showBadge={false} />
     </div>
   )

@@ -148,8 +148,8 @@ export default function DebugProfilePage() {
                 <dd>{profile.role}</dd>
               </div>
               <div>
-                <dt className="font-semibold">Care Type:</dt>
-                <dd>{profile.care_type || 'Not set'}</dd>
+                <dt className="font-semibold">Department ID:</dt>
+                <dd className="font-mono text-sm">{profile.department_id || 'Not set'}</dd>
               </div>
               <div>
                 <dt className="font-semibold">Approval Status:</dt>

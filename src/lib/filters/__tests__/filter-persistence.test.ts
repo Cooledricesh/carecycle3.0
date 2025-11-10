@@ -28,7 +28,7 @@ describe('FilterPersistence', () => {
   const testUserRole = 'doctor'
 
   const sampleFilter: ScheduleFilter = {
-    careTypes: ['외래', '입원'],
+    department_ids: ['외래', '입원'],
     doctorId: 'doctor-1',
     department: null,
     dateRange: null,
@@ -202,7 +202,7 @@ describe('FilterPersistence', () => {
         version: 'v1.0.0',
         timestamp: new Date().toISOString(),
         filters: {
-          careTypes: 'invalid' // Should be array
+          department_ids: 'invalid' // Should be array
         }
       }
 
@@ -278,7 +278,7 @@ describe('FilterPersistence', () => {
 
       // Assert
       expect(loaded).toBeTruthy()
-      expect(loaded?.careTypes).toEqual(['외래'])
+      expect(loaded?.department_ids).toEqual(['외래'])
       expect(loaded?.showAll).toBe(false) // New field should have default value
       expect(loaded?.viewMode).toBe('my') // New field should have default value
     })

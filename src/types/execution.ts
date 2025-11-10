@@ -26,6 +26,7 @@ export interface ScheduleExecution {
   skippedReason?: string | null
   isRescheduled: boolean
   originalDate?: string | null
+  metadata?: Record<string, any> | null
   createdAt: string
   updatedAt: string
 }
@@ -83,6 +84,7 @@ export interface ExecutionCompleteInput {
   executedDate: string
   executedTime?: string
   notes?: string | null
+  metadata?: Record<string, any> | null
 }
 
 export interface ExecutionSkipInput {

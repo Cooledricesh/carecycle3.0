@@ -592,9 +592,54 @@ This document provides a complete and accurate description of the medical schedu
 ### Removed Policies
 **SECURITY CRITICAL**: All "allow all" policies were removed in 2025-09-02 migration:
 - `*_allow_all_select`
-- `*_allow_all_insert` 
+- `*_allow_all_insert`
 - `*_allow_all_update`
 - `*_allow_all_delete`
+
+### 🚨 Known RLS Policy Gaps (Identified 2025-11-10, PR 50)
+
+**Critical Security Issue**: Multiple tables have INSERT/UPDATE policies that lack organization_id filtering, allowing potential cross-organization data access.
+
+**Affected Tables**:
+1. **join_requests**:
+   - Current: `WITH CHECK (true)` for INSERT
+   - Required: `WITH CHECK (organization_id = <session_org_id>)`
+
+2. **schedules**:
+   - Current: Basic `is_user_active_and_approved()` check
+   - Required: Additional `organization_id` verification on INSERT/UPDATE
+
+3. **patients**:
+   - Current: Basic authentication check
+   - Required: Organization-level access control
+
+4. **items**:
+   - Current: Admin-only INSERT/UPDATE
+   - Required: Organization-scoped admin access
+
+5. **schedule_executions**:
+   - Current: Basic user approval check
+   - Required: Verify parent schedule's organization_id
+
+**Recommended Migration** (2-3 hours estimated):
+```sql
+-- Example for schedules table
+CREATE POLICY "schedules_secure_insert" ON schedules
+FOR INSERT WITH CHECK (
+  organization_id = (SELECT organization_id FROM profiles WHERE id = auth.uid())
+  AND is_user_active_and_approved()
+);
+
+CREATE POLICY "schedules_secure_update" ON schedules
+FOR UPDATE USING (
+  organization_id = (SELECT organization_id FROM profiles WHERE id = auth.uid())
+  AND is_user_active_and_approved()
+);
+```
+
+**Priority**: **HIGH** - Must be completed before production deployment
+
+**Reference**: `/docs/PR50_COMPLETION_REPORT.md` (Issue #4)
 
 ---
 
@@ -828,6 +873,34 @@ CREATE TYPE appointment_type AS ENUM ('consultation', 'treatment', 'follow_up', 
 
 ---
 
+## Edge Functions
+
+### auto-hold-overdue-schedules
+**Purpose**: Automatically mark overdue schedules as 'on-hold' status
+**Status**: ⚠️ **Function implemented, Cron deployment pending**
+**Location**: `supabase/functions/auto-hold-overdue-schedules/`
+
+**Deployment Steps** (Identified 2025-11-10, PR 50):
+```bash
+# 1. Deploy Edge Function
+cd supabase/functions
+supabase functions deploy auto-hold-overdue-schedules
+
+# 2. Configure Cron Trigger (Supabase Dashboard)
+# Settings → Edge Functions → auto-hold-overdue-schedules
+# Enable cron trigger: 0 0 * * * (daily at midnight)
+
+# 3. Verify deployment
+supabase functions list
+# Expected: Status: active, Cron: 0 0 * * *
+```
+
+**Priority**: **HIGH** - Required before production deployment
+**Estimated Time**: 30 minutes
+**Reference**: `/docs/PR50_COMPLETION_REPORT.md` (Issue #14)
+
+---
+
 ## Future Considerations
 
 ### Planned Enhancements
@@ -836,11 +909,14 @@ CREATE TYPE appointment_type AS ENUM ('consultation', 'treatment', 'follow_up', 
 3. **Advanced Notifications**: Email and push notification implementation
 4. **Enhanced Reporting**: Additional materialized views for reporting
 
-### Technical Debt
-1. **Type Definition Consolidation**: Unify and update TypeScript types
-2. **Legacy Table Cleanup**: Remove or migrate patient_schedules table
-3. **Function Optimization**: Review and optimize database functions
-4. **Index Analysis**: Review index usage and optimize
+### Technical Debt (Updated 2025-11-10)
+1. **RLS Policy Enhancement** 🚨 HIGH PRIORITY: Add organization_id filtering to INSERT/UPDATE policies (see RLS section above)
+2. **Edge Function Cron Deployment** 🚨 HIGH PRIORITY: Deploy auto-hold-overdue-schedules with scheduling
+3. **Type Definition Consolidation**: Unify and update TypeScript types
+4. **TypeScript Errors**: Resolve 13 care_type → department_id migration errors
+5. **Legacy Table Cleanup**: Remove or migrate patient_schedules table
+6. **Function Optimization**: Review and optimize database functions
+7. **Index Analysis**: Review index usage and optimize
 
 ---
 

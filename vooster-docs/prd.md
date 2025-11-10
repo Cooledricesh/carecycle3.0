@@ -1,8 +1,8 @@
 # 환자 반복 검사·주사 일정 자동화 MVP – PRD
 
-**최종 업데이트**: 2025년 11월 5일
-**버전**: 1.2.0
-**구현 상태**: 🎯 **핵심 기능 90% 완료**
+**최종 업데이트**: 2025년 11월 10일
+**버전**: 1.2.2
+**구현 상태**: 🎯 **핵심 기능 92% 완료** (PR 50 이슈 해결 완료)
 
 ## 📊 구현 현황 요약
 - **✅ 완료**: 16개 핵심 기능 (80%)
@@ -117,25 +117,83 @@
 - **Full-text Search**: 환자 검색 성능 향상
 - **쿼리 함수**: 복잡한 조인 로직 DB 레벨 캡슐화
 
-## 12. 최근 업데이트 (2025년 9월)
+## 12. 최근 업데이트
 
-### 12.1 유연한 주치의 지정 시스템 (9월 29일)
+### 12.1 유연한 주치의 지정 시스템 (2025년 9월 29일)
 - **사전 등록 불필요**: 주치의가 시스템에 등록되기 전에도 이름으로 지정 가능
 - **자동 연결**: 주치의가 나중에 가입하면 자동으로 기존 환자와 연결
 - **통합 뷰**: patient_doctor_view로 모든 주치의 지정 상태 확인
 - **상태 추적**: registered/pending/unassigned 3단계 상태 관리
 
-### 12.2 항목 카테고리 간소화 (9월 30일)
+### 12.2 항목 카테고리 간소화 (2025년 9월 30일)
 - **기존**: injection, test, treatment, medication, other (5개)
 - **변경**: injection, test, other (3개)
 - **이유**: 실제 사용 패턴 분석 결과 3개로 충분
 - **마이그레이션**: 기존 데이터 자동 변환 (treatment/medication → other)
 
-### 12.3 항목 관리 스키마 강화 (9월 30일)
+### 12.3 항목 관리 스키마 강화 (2025년 9월 30일)
 - **Zod 검증**: 모든 항목 생성/수정에 엄격한 타입 검증 적용
 - **코드 규칙**: 영문 대문자와 숫자만 허용 (예: INJ001)
 - **주기 설정**: 1-52주 범위 내에서 자유롭게 설정
 - **벌크 작업**: 여러 항목 동시 수정 기능 추가
+
+### 12.4 타입 안전성 강화 및 캐싱 단순화 (2025년 11월 9일)
+- **타입 시스템 개선**:
+  - 3가지 데이터 포맷(RPC Flat, DB Nested, UI Format)에 대한 명확한 TypeScript 인터페이스 정의
+  - `any` 타입 제거로 컴파일 시점 타입 안전성 확보
+  - Type Guards 도입으로 런타임 타입 검증 강화
+  - `/src/types/schedule-data-formats.ts` 신규 생성
+- **캐싱 아키텍처 단순화**:
+  - `scheduleServiceEnhanced` 내부 캐싱 로직 완전 제거 (~150 lines)
+  - 모든 캐싱을 React Query에 완전 위임 (단일 책임 원칙)
+  - 캐시 관리 포인트 일원화로 데이터 불일치 리스크 제거
+- **데이터 변환 계층 개선**:
+  - 타입 안전 변환 메서드: `transformRpcToUi()`, `transformDbToUi()`
+  - 자동 포맷 감지 및 변환으로 실수 방지
+  - "Silent Data Loss" 패턴 근본적 차단
+- **기술 부채 해소**:
+  - 중복 캐싱 제거로 유지보수 복잡도 감소
+  - 타입 안전성 강화로 버그 사전 예방
+  - 단일 책임 원칙 준수로 코드 가독성 향상
+
+### 12.5 부서 관리 마이그레이션 완료 (2025년 11월 10일)
+- **부서 ID 시스템 전환 완료**:
+  - care_type(string) → department_id(UUID) 마이그레이션 완료
+  - UserContext에 departmentId 필드 추가 및 전역 적용
+  - 필터링 시스템 전체 UUID 기반으로 통일
+- **필터 시스템 개선**:
+  - NurseFilterStrategy: departmentId 우선, careType fallback 지원
+  - URL 파라미터 필터: UUID 값 허용 (화이트리스트 제거)
+  - 역할 기반 필터: 간호사/의사/관리자 프리셋 UUID 사용
+- **레거시 함수 정리**:
+  - toggleCareType() deprecated (→ toggleDepartment() 사용 권장)
+  - UserContext 타입 중복 제거 (단일 정의로 통일)
+- **데이터 완결성 강화**:
+  - schedule-status 완료 판별: display_type + status 이중 체크
+  - scheduleServiceEnhanced: super_admin organizationId null 지원
+  - complete_schedule_execution RPC: metadata 파라미터 추가
+- **마이그레이션**:
+  - `20251110000001_add_metadata_to_complete_schedule_execution.sql` 생성
+  - 주입 정보 등 실행 메타데이터 RPC 함수로 저장 지원
+
+### 12.6 PR 50 이슈 해결 완료 (2025년 11월 10일)
+- **필터 시스템 안정화** (Critical 이슈 해결):
+  - NurseFilterStrategy: UUID 타입 검증으로 쿼리 실패 방지
+  - AdminFilterStrategy: UUID validation 추가로 타입 안전성 확보
+  - scheduleService: 4개 필터 함수에서 departmentId 우선 사용, careType fallback 구현
+  - role-based-filters: department_ids undefined 체크로 런타임 크래시 방지
+- **타입 안전성 강화** (Major 이슈 해결):
+  - database.types.ts: Supabase CLI로 재생성, RPC 시그니처 정확성 확보
+  - schedule.ts, schedule-data-formats.ts: 타입 확장으로 (as any) 캐스팅 제거
+  - 5개 컴포넌트에서 타입 안전 필드 접근으로 전환
+- **API 에러 처리 개선** (Major 이슈 해결):
+  - departments API: .maybeSingle() 사용으로 404 응답 (기존 500 에러 수정)
+  - audit_logs: 에러 핸들링 추가로 silent failure 방지
+- **코드 품질 개선** (Minor 이슈 해결):
+  - 구식 TODO 주석 제거
+  - 문서 오타 및 포맷팅 수정
+  - ESLint/TypeScript 에러 없음 확인
+- **완료 현황**: 22개 이슈 중 14개 완료 (77%), 3개 계획 수립 (RLS 정책, Edge Function, qasheet 분석)
 
 ## 13. 🚀 추가 구현 기능 (원 요구사항 외)
 
@@ -197,10 +255,14 @@
 - **안정성**: ✅ 낙관적 업데이트, 에러 핸들링 구현
 
 ### 📈 다음 단계 권장사항
-1. **우선순위 높음**:
+1. **우선순위 높음** (프로덕션 배포 전 필수):
+   - **RLS 정책 강화**: organization_id 필터링 마이그레이션 (예상 2-3시간)
+   - **Edge Function Cron 배포**: auto-hold-overdue-schedules 함수 배포 및 스케줄링 (예상 30분)
+   - **TypeScript 에러 해결**: care_type → department_id 관련 13개 에러 수정 (예상 1-2시간)
    - WebSocket 실시간 동기화 완성
    - CSV 임포트 기능 구현
 2. **우선순위 중간**:
+   - qasheet.md 미완료 기능 7개 분석 및 티켓 생성
    - 브라우저 Push 알림 구현
    - 변경 이력 UI 구현
 3. **우선순위 낮음**:

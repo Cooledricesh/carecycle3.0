@@ -19,7 +19,7 @@ import type { Database } from "@/lib/database.types";
  */
 
 const createOrgSchema = z.object({
-  organization_name: z
+  name: z
     .string()
     .min(2, "Organization name must be at least 2 characters")
     .max(100, "Organization name must be less than 100 characters"),
@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
 
     // 2. Validate request body
     const body = await request.json();
-    const { organization_name, user_role } = createOrgSchema.parse(body);
+    const { name: organization_name, user_role } = createOrgSchema.parse(body);
 
     // 3. Get user profile to check if already has organization
     const { data: profile, error: profileError } = await supabase

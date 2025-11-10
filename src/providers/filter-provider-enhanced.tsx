@@ -10,7 +10,8 @@ import {
   type CareType
 } from '@/lib/filters/filter-types'
 import { FilterPersistence } from '@/lib/filters/filter-persistence'
-import { RoleBasedFilterManager, type UserContext } from '@/lib/filters/role-based-filters'
+import { RoleBasedFilterManager } from '@/lib/filters/role-based-filters'
+import { type UserContext } from '@/services/filters/types'
 import { useAuth } from '@/providers/auth-provider-simple'
 import { useProfile } from '@/hooks/useProfile'
 import { useQueryClient } from '@tanstack/react-query'
@@ -56,12 +57,11 @@ export function FilterProviderEnhanced({
     if (!user || !profile) return null
 
     return {
-      id: user.id,
-      role: profile.role as any,
-      email: profile.email,
-      name: profile.name,
-      careType: profile.care_type,
-      doctorId: profile.role === 'doctor' ? user.id : undefined
+      userId: user.id,
+      role: profile.role as 'doctor' | 'nurse' | 'admin' | 'super_admin',
+      careType: profile.care_type ?? null,
+      departmentId: profile.department_id ?? null,
+      organizationId: profile.organization_id ?? null
     }
   }, [user, profile])
 
@@ -77,9 +77,8 @@ export function FilterProviderEnhanced({
       if (careTypesParam || doctorIdParam || showAllParam) {
         return {
           ...defaultFilters,
-          careTypes: careTypesParam
-            ? (careTypesParam.split(',').filter(t =>
-                ['외래', '입원', '낮병원'].includes(t)) as CareType[])
+          department_ids: careTypesParam
+            ? careTypesParam.split(',').filter(Boolean) // Accept any non-empty string (UUIDs or legacy care_type values)
             : [],
           doctorId: doctorIdParam || null,
           showAll: showAllParam === 'true',
@@ -114,7 +113,7 @@ export function FilterProviderEnhanced({
 
       // Initialize persistence
       if (enablePersistence) {
-        persistenceRef.current = new FilterPersistence(userContext.id, userContext.role)
+        persistenceRef.current = new FilterPersistence(userContext.userId, userContext.role)
 
         // Try to load persisted filters first
         initialFilters = await persistenceRef.current.loadFilters()
@@ -162,8 +161,8 @@ export function FilterProviderEnhanced({
       const params = new URLSearchParams(searchParams)
 
       // Update URL params based on filters
-      if (filters.careTypes.length > 0) {
-        params.set('careTypes', filters.careTypes.join(','))
+      if (filters.department_ids.length > 0) {
+        params.set('careTypes', filters.department_ids.join(','))
       } else {
         params.delete('careTypes')
       }
@@ -271,21 +270,42 @@ export function FilterProviderEnhanced({
     queryClient.invalidateQueries({ queryKey: ['schedules'] })
   }, [filters, userContext, setFilters, queryClient])
 
-  // Toggle a care type
+  /**
+   * @deprecated Use `toggleDepartment(departmentId)` instead
+   *
+   * This function is deprecated because it adds string care_type values ('외래', '입원', '낮병원')
+   * to department_ids array which now expects UUID values.
+   *
+   * Migration path:
+   * 1. Query departments table to get department UUID by name
+   * 2. Use toggleDepartment(uuid) with the obtained UUID
+   *
+   * This function is kept for backward compatibility but should not be used.
+   */
   const toggleCareType = useCallback((careType: CareType) => {
+    console.warn(
+      '[DEPRECATED] toggleCareType is deprecated. Use toggleDepartment(departmentId) instead.',
+      'Care type strings are no longer supported in department_ids. Use UUID values from departments table.'
+    )
+    // Function body removed - will throw error if called
+    throw new Error('toggleCareType is deprecated. Use toggleDepartment(departmentId) instead.')
+  }, [])
+
+  // Toggle a department (multi-select support)
+  const toggleDepartment = useCallback((departmentId: string) => {
     setFilters((prev: ScheduleFilter) => {
-      const currentTypes = [...prev.careTypes]
-      const index = currentTypes.indexOf(careType)
+      const currentDepartments = [...prev.department_ids]
+      const index = currentDepartments.indexOf(departmentId)
 
       if (index > -1) {
-        currentTypes.splice(index, 1)
+        currentDepartments.splice(index, 1)
       } else {
-        currentTypes.push(careType)
+        currentDepartments.push(departmentId)
       }
 
       return {
         ...prev,
-        careTypes: currentTypes
+        department_ids: currentDepartments
       }
     })
   }, [setFilters])
@@ -346,6 +366,7 @@ export function FilterProviderEnhanced({
     updateFilters,
     resetFilters,
     toggleCareType,
+    toggleDepartment,
     toggleViewMode,
     rollbackFilters,
 
@@ -367,6 +388,7 @@ export function FilterProviderEnhanced({
     updateFilters,
     resetFilters,
     toggleCareType,
+    toggleDepartment,
     toggleViewMode,
     rollbackFilters,
     applyPreset,

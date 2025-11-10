@@ -5,10 +5,6 @@ import { z } from 'zod'
 // 환자번호 검증 규칙
 const patientNumberRegex = /^[A-Z0-9]{1,50}$/
 
-// 진료구분 enum
-export const CareTypeEnum = z.enum(['외래', '입원', '낮병원'])
-export type CareType = z.infer<typeof CareTypeEnum>
-
 // Base validation schemas
 export const PatientCreateSchema = z.object({
   patientNumber: z
@@ -16,20 +12,16 @@ export const PatientCreateSchema = z.object({
     .min(1, '환자번호를 입력해주세요')
     .max(50, '환자번호는 50자 이내로 입력해주세요')
     .regex(patientNumberRegex, '환자번호는 영문 대문자와 숫자만 입력 가능합니다'),
-  
+
   name: z
     .string()
     .min(1, '환자명을 입력해주세요')
     .max(100, '환자명은 100자 이내로 입력해주세요')
     .regex(/^[가-힣a-zA-Z\s]+$/, '환자명은 한글, 영문, 공백만 입력 가능합니다'),
-  
-  department: z
+
+  departmentId: z
     .string()
-    .max(50, '부서명은 50자 이내로 입력해주세요')
-    .nullable()
-    .optional(),
-  
-  careType: CareTypeEnum
+    .uuid('올바른 진료구분을 선택해주세요')
     .nullable()
     .optional(),
 
@@ -48,7 +40,7 @@ export const PatientCreateSchema = z.object({
   isActive: z
     .boolean()
     .default(true),
-  
+
   metadata: z
     .record(z.any())
     .optional(),
@@ -58,8 +50,7 @@ export const PatientUpdateSchema = PatientCreateSchema.partial()
 
 // Search/Filter validation
 export const PatientFilterSchema = z.object({
-  department: z.string().optional(),
-  careType: CareTypeEnum.optional(),
+  departmentId: z.string().uuid().optional(),
   isActive: z.boolean().optional(),
   searchTerm: z
     .string()
@@ -71,7 +62,7 @@ export const PatientFilterSchema = z.object({
 export const PatientImportRowSchema = z.object({
   patientNumber: z.string().min(1).max(50),
   name: z.string().min(1).max(100),
-  department: z.string().nullable().optional(),
+  departmentId: z.string().uuid().nullable().optional(),
 })
 
 export const PatientImportSchema = z.object({

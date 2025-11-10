@@ -371,6 +371,14 @@ export default function DashboardContent() {
                           </span>
                         )}
                       </p>
+                      <div className="flex items-center gap-3 text-xs text-gray-600">
+                        <span>
+                          주치의: {schedule.doctor_name || (schedule.doctor_id ? '지정됨' : '미지정')}
+                        </span>
+                        <span>
+                          소속: {schedule.care_type || schedule.patient_care_type || '미지정'}
+                        </span>
+                      </div>
                       {schedule.notes && (
                         <p className="text-xs text-gray-500">{schedule.notes}</p>
                       )}
@@ -482,6 +490,14 @@ export default function DashboardContent() {
                           </span>
                         )}
                       </p>
+                      <div className="flex items-center gap-3 text-xs text-gray-600">
+                        <span>
+                          주치의: {schedule.doctor_name || (schedule.doctor_id ? '지정됨' : '미지정')}
+                        </span>
+                        <span>
+                          소속: {schedule.care_type || schedule.patient_care_type || '미지정'}
+                        </span>
+                      </div>
                       {schedule.notes && (
                         <p className="text-xs text-gray-500">{schedule.notes}</p>
                       )}
