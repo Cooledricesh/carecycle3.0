@@ -230,7 +230,12 @@ function SchedulesContent() {
     }
   };
 
-  const filteredSchedules = (schedules as ScheduleItem[]).filter((schedule: ScheduleItem) => {
+  // Convert schedules to ScheduleItem format first
+  const schedulesAsItems: ScheduleItem[] = schedules.map(schedule =>
+    mapScheduleWithDetailsToItem(schedule as any)
+  );
+
+  const filteredSchedules = schedulesAsItems.filter((schedule: ScheduleItem) => {
     const matchesSearch =
       schedule.patient?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       schedule.item?.name?.toLowerCase().includes(searchTerm.toLowerCase());
@@ -308,7 +313,7 @@ function SchedulesContent() {
                 isMobile && "h-12 bg-white border border-gray-200 data-[state=active]:bg-blue-50 data-[state=active]:border-blue-300 data-[state=active]:text-blue-700"
               )}
             >
-              전체 ({schedules.length})
+              전체 ({schedulesAsItems.length})
             </TabsTrigger>
             <TabsTrigger
               value="active"
@@ -317,7 +322,7 @@ function SchedulesContent() {
                 isMobile && "h-12 bg-white border border-gray-200 data-[state=active]:bg-blue-50 data-[state=active]:border-blue-300 data-[state=active]:text-blue-700"
               )}
             >
-              활성 ({schedules.filter(s => s.status === 'active').length})
+              활성 ({schedulesAsItems.filter(s => s.status === 'active').length})
             </TabsTrigger>
             <TabsTrigger
               value="paused"
@@ -326,7 +331,7 @@ function SchedulesContent() {
                 isMobile && "h-12 bg-white border border-gray-200 data-[state=active]:bg-blue-50 data-[state=active]:border-blue-300 data-[state=active]:text-blue-700"
               )}
             >
-              보류 ({schedules.filter(s => s.status === 'paused').length})
+              보류 ({schedulesAsItems.filter(s => s.status === 'paused').length})
             </TabsTrigger>
             <TabsTrigger
               value="overdue"

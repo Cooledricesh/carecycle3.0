@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect } from 'react'
 import { PatientRegistrationModal } from '@/components/patients/patient-registration-modal'
 import { PatientDeleteDialog } from '@/components/patients/patient-delete-dialog'
-import { PatientCareTypeSelect } from '@/components/patients/patient-care-type-select'
+import { PatientDepartmentSelect } from '@/components/patients/patient-department-select'
 import { PatientDoctorSelect } from '@/components/patients/patient-doctor-select'
 import { ScheduleCreateModal } from '@/components/schedules/schedule-create-modal'
 import { usePatients } from '@/hooks/usePatients'
@@ -75,13 +75,13 @@ function PatientsContent({ userRole }: PatientsContentProps) {
       // Safely convert each field to string before calling toLowerCase/includes
       const name = String(patient.name ?? '').toLowerCase()
       const patientNumber = String(patient.patientNumber ?? '').toLowerCase()
-      const careType = String(patient.careType ?? '').toLowerCase()
+      const departmentName = String(patient.departmentName ?? '').toLowerCase()
       const doctorName = String(patient.doctorName ?? '').toLowerCase()
 
       return (
         name.includes(searchLower) ||
         patientNumber.includes(searchLower) ||
-        careType.includes(searchLower) ||
+        departmentName.includes(searchLower) ||
         doctorName.includes(searchLower)
       )
     })
@@ -261,7 +261,7 @@ function PatientsContent({ userRole }: PatientsContentProps) {
                         <div className="space-y-2">
                           <div className="flex justify-between items-center">
                             <span className={`${responsiveText.small} text-muted-foreground`}>진료구분</span>
-                            <PatientCareTypeSelect
+                            <PatientDepartmentSelect
                               patient={patient}
                               onSuccess={() => refetch()}
                               compact={true}
@@ -323,7 +323,7 @@ function PatientsContent({ userRole }: PatientsContentProps) {
                           </TableCell>
                           <TableCell>{patient.name}</TableCell>
                           <TableCell>
-                            <PatientCareTypeSelect
+                            <PatientDepartmentSelect
                               patient={patient}
                               onSuccess={() => refetch()}
                             />

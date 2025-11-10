@@ -10,11 +10,15 @@ export class NurseFilterStrategy implements FilterStrategy {
     filters: FilterOptions,
     userContext: UserContext
   ): Promise<{ data: ScheduleWithDetails[] | null; error: Error | null }> {
-    // Nurse defaults to their care_type unless showing all
-    // Phase 1: department_ids contain care_type values
+    // Nurse defaults to their department_id unless showing all
+    // Fallback chain: filters.department_ids → user.departmentId → user.careType (legacy)
     const effectiveCareTypes = filters.showAll
       ? filters.department_ids
-      : (filters.department_ids?.length ? filters.department_ids : (userContext.careType ? [userContext.careType] : null))
+      : (filters.department_ids?.length
+          ? filters.department_ids
+          : (userContext.departmentId
+              ? [userContext.departmentId]
+              : (userContext.careType ? [userContext.careType] : null)))
 
     // For calendar views with date range, use the calendar-specific function
     if (filters.dateRange?.start && filters.dateRange?.end) {

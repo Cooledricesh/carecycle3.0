@@ -368,7 +368,11 @@ export class ScheduleServiceEnhanced {
         `)
         .lte('next_due_date', today)
         .eq('status', 'active')
-        .eq('organization_id', userContext.organizationId as string)
+
+      // Apply organization filter (skip for super_admin who has null organization_id)
+      if (userContext.organizationId) {
+        query = query.eq('organization_id', userContext.organizationId)
+      }
 
       // Apply role-based filtering
       if (!showAll && userContext.role !== 'admin') {

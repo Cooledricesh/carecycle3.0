@@ -24,7 +24,7 @@ export function usePatients() {
   const supabase = createClient()
 
   const query = useQuery({
-    queryKey: ['patients', typedProfile?.organization_id, user?.id, typedProfile?.role, typedProfile?.care_type, filters.showAll],
+    queryKey: ['patients', typedProfile?.organization_id, user?.id, typedProfile?.role, typedProfile?.department_id, filters.showAll],
     queryFn: async () => {
       try {
         if (!typedProfile?.organization_id) {
@@ -33,7 +33,7 @@ export function usePatients() {
 
         const userContext = typedProfile ? {
           role: typedProfile.role,
-          careType: typedProfile.care_type,
+          departmentId: typedProfile.department_id,
           showAll: filters.showAll || false,
           userId: typedProfile.id
         } : undefined

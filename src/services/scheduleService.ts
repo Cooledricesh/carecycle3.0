@@ -951,13 +951,16 @@ export const scheduleService = {
       // RPC 함수가 존재하는지 먼저 확인하고, 없으면 기존 방식 사용
       try {
         // 새로운 UPSERT 함수 사용 시도
+        // TODO: RPC 함수를 업데이트하여 p_metadata 파라미터를 받도록 해야 함
+        // 현재는 fallback INSERT가 metadata를 처리함
         const { error: rpcError } = await (client as any)
           .rpc('complete_schedule_execution', {
             p_schedule_id: scheduleId,
             p_planned_date: schedule.next_due_date,
             p_executed_date: input.executedDate,
             p_executed_by: input.executedBy,
-            p_notes: input.notes ?? undefined
+            p_notes: input.notes ?? undefined,
+            p_metadata: input.metadata ?? null // 주입 정보 등 실행 메타데이터
           })
 
         if (rpcError) {

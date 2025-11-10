@@ -1,7 +1,7 @@
 # 환자 반복 검사·주사 일정 자동화 MVP – PRD
 
-**최종 업데이트**: 2025년 11월 5일
-**버전**: 1.2.0
+**최종 업데이트**: 2025년 11월 10일
+**버전**: 1.2.1
 **구현 상태**: 🎯 **핵심 기능 90% 완료**
 
 ## 📊 구현 현황 요약
@@ -155,6 +155,26 @@
   - 중복 캐싱 제거로 유지보수 복잡도 감소
   - 타입 안전성 강화로 버그 사전 예방
   - 단일 책임 원칙 준수로 코드 가독성 향상
+
+### 12.5 부서 관리 마이그레이션 완료 (2025년 11월 10일)
+- **부서 ID 시스템 전환 완료**:
+  - care_type(string) → department_id(UUID) 마이그레이션 완료
+  - UserContext에 departmentId 필드 추가 및 전역 적용
+  - 필터링 시스템 전체 UUID 기반으로 통일
+- **필터 시스템 개선**:
+  - NurseFilterStrategy: departmentId 우선, careType fallback 지원
+  - URL 파라미터 필터: UUID 값 허용 (화이트리스트 제거)
+  - 역할 기반 필터: 간호사/의사/관리자 프리셋 UUID 사용
+- **레거시 함수 정리**:
+  - toggleCareType() deprecated (→ toggleDepartment() 사용 권장)
+  - UserContext 타입 중복 제거 (단일 정의로 통일)
+- **데이터 완결성 강화**:
+  - schedule-status 완료 판별: display_type + status 이중 체크
+  - scheduleServiceEnhanced: super_admin organizationId null 지원
+  - complete_schedule_execution RPC: metadata 파라미터 추가
+- **마이그레이션**:
+  - `20251110000001_add_metadata_to_complete_schedule_execution.sql` 생성
+  - 주입 정보 등 실행 메타데이터 RPC 함수로 저장 지원
 
 ## 13. 🚀 추가 구현 기능 (원 요구사항 외)
 

@@ -1,17 +1,9 @@
 'use client'
 
 import type { ScheduleFilter } from './filter-types'
+import type { UserContext } from '@/services/filters/types'
 
 export type UserRole = 'doctor' | 'nurse' | 'admin' | 'super_admin'
-
-export interface UserContext {
-  id: string
-  role: UserRole
-  email: string
-  name: string
-  careType?: string | null // For nurses
-  doctorId?: string // For doctors (same as user id)
-}
 
 /**
  * Role-Based Filter Manager
@@ -28,7 +20,7 @@ export class RoleBasedFilterManager {
       case 'doctor':
         return {
           department_ids: [],
-          doctorId: user.id, // Filter to own patients by default
+          doctorId: user.userId, // Filter to own patients by default
           department: null,
           dateRange: null,
           includeInactive: false,
@@ -39,9 +31,9 @@ export class RoleBasedFilterManager {
       case 'nurse':
         // Nurses see their department patients by default
         const nurseFilters: ScheduleFilter = {
-          department_ids: user.careType ? [user.careType] : [], // Phase 1: careType as department_id
+          department_ids: user.departmentId ? [user.departmentId] : [], // Use departmentId (UUID)
           doctorId: null,
-          department: user.careType,
+          department: user.careType, // Keep legacy careType for backward compatibility
           dateRange: null,
           includeInactive: false,
           showAll: false, // Start with department view
@@ -93,7 +85,7 @@ export class RoleBasedFilterManager {
           viewMode: newViewMode,
           // When toggling to "all", remove doctor filter
           // When toggling to "my", add doctor filter back
-          doctorId: newShowAll ? null : user.id
+          doctorId: newShowAll ? null : user.userId
         }
 
       case 'nurse':
@@ -103,8 +95,8 @@ export class RoleBasedFilterManager {
           viewMode: newViewMode,
           // When toggling to "all", clear department filter
           // When toggling to "my", restore department filter
-          department: newShowAll ? null : user.careType,
-          department_ids: newShowAll ? [] : (user.careType ? [user.careType] : []) // Phase 1: careType as department_id
+          department: newShowAll ? null : user.careType, // Keep legacy careType for backward compatibility
+          department_ids: newShowAll ? [] : (user.departmentId ? [user.departmentId] : []) // Use departmentId (UUID)
         }
 
       case 'admin':
@@ -236,7 +228,7 @@ export class RoleBasedFilterManager {
     }
 
     if (!options.canFilterByDoctor && newFilters.doctorId &&
-        newFilters.doctorId !== user.id) {
+        newFilters.doctorId !== user.userId) {
       return {
         valid: false,
         reason: '다른 의사의 환자를 필터링할 수 없습니다'
@@ -301,7 +293,7 @@ export class RoleBasedFilterManager {
             name: '내 환자',
             icon: 'user-check',
             filters: {
-              doctorId: user.id,
+              doctorId: user.userId,
               showAll: false,
               viewMode: 'my'
             }
@@ -316,8 +308,8 @@ export class RoleBasedFilterManager {
             name: '우리 부서',
             icon: 'building',
             filters: {
-              department: user.careType,
-              department_ids: user.careType ? [user.careType] : [], // Phase 1: careType as department_id
+              department: user.careType, // Keep legacy careType for backward compatibility
+              department_ids: user.departmentId ? [user.departmentId] : [], // Use departmentId (UUID)
               showAll: false,
               viewMode: 'my'
             }
@@ -337,22 +329,14 @@ export class RoleBasedFilterManager {
               department: null
             }
           },
-          {
-            id: 'outpatient',
-            name: '외래만',
-            icon: 'hospital',
-            filters: {
-              department_ids: ['외래'] // Phase 1: care_type values
-            }
-          },
-          {
-            id: 'inpatient',
-            name: '입원만',
-            icon: 'bed',
-            filters: {
-              department_ids: ['입원'] // Phase 1: care_type values
-            }
-          },
+          // TODO: Department-specific presets require dynamic department UUID lookup
+          // These should be fetched from the database and populated at runtime
+          // Example implementation:
+          // 1. Query departments table: SELECT id, name FROM departments WHERE organization_id = ?
+          // 2. Build preset filters dynamically with actual UUIDs
+          // 3. Cache results in provider state
+          //
+          // Temporary workaround: Users can manually select departments in advanced filters
           ...basePresets
         ]
 

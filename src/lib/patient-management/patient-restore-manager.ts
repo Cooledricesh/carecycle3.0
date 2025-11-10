@@ -9,7 +9,7 @@ export interface InactivePatient {
   id: string
   patientNumber: string
   name: string
-  careType?: string | null
+  departmentId?: string | null
   archived: boolean
   archivedAt?: string | null
   originalPatientNumber?: string | null
@@ -19,13 +19,13 @@ export interface InactivePatient {
 export interface RestorePatientOptions {
   updateInfo?: {
     name?: string
-    careType?: string
+    departmentId?: string
   }
 }
 
 export interface CreateWithArchiveOptions {
   name: string
-  careType?: string
+  departmentId?: string
   organizationId: string
   metadata?: Record<string, any>
 }
@@ -48,7 +48,7 @@ export class PatientRestoreManager {
           id,
           patient_number,
           name,
-          care_type,
+          department_id,
           archived,
           archived_at,
           original_patient_number,
@@ -75,7 +75,7 @@ export class PatientRestoreManager {
           id,
           patient_number,
           name,
-          care_type,
+          department_id,
           archived,
           archived_at,
           original_patient_number,
@@ -112,13 +112,13 @@ export class PatientRestoreManager {
 
       // Prepare parameters for atomic restore function
       const updateName = options.updateInfo?.name || null
-      const updateCareType = options.updateInfo?.careType || null
+      const updateDepartmentId = options.updateInfo?.departmentId || null
 
       // Call atomic restore function that handles both restoration and updates
       const rpcArgs = {
         patient_id: patientId,
         update_name: updateName || undefined,
-        update_care_type: updateCareType || undefined
+        update_department_id: updateDepartmentId || undefined
       };
 
       const { data: restoredPatient, error: restoreError } = await (this.supabase as any)
@@ -183,7 +183,7 @@ export class PatientRestoreManager {
       const insertData = {
         patient_number: patientNumber,
         name: options.name,
-        care_type: options.careType || null,
+        department_id: options.departmentId || null,
         organization_id: options.organizationId,
         is_active: true,
         archived: false,
@@ -226,7 +226,7 @@ export class PatientRestoreManager {
           id,
           patient_number,
           name,
-          care_type,
+          department_id,
           archived,
           archived_at,
           original_patient_number,

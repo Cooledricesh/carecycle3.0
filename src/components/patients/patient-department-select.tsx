@@ -14,45 +14,39 @@ import type { Patient } from '@/types/patient'
 import { Loader2 } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useProfile, Profile } from '@/hooks/useProfile'
+import { useDepartments } from '@/hooks/useDepartments'
 
-// Type-safe care types
-const CARE_TYPES = ['외래', '입원', '낮병원'] as const
-type CareType = typeof CARE_TYPES[number]
-
-const isValidCareType = (value: string): value is CareType => {
-  return CARE_TYPES.includes(value as CareType)
-}
-
-interface PatientCareTypeSelectProps {
+interface PatientDepartmentSelectProps {
   patient: Patient
   onSuccess?: () => void
   compact?: boolean
 }
 
-export function PatientCareTypeSelect({
+export function PatientDepartmentSelect({
   patient,
   onSuccess,
   compact = false
-}: PatientCareTypeSelectProps) {
+}: PatientDepartmentSelectProps) {
   const [isLoading, setIsLoading] = useState(false)
-  const [currentValue, setCurrentValue] = useState<CareType | null>(patient.careType || null)
+  const [currentValue, setCurrentValue] = useState<string | null>(patient.departmentId || null)
   const { toast } = useToast()
   const queryClient = useQueryClient()
   const { data: profile } = useProfile()
   const typedProfile = profile as Profile | null | undefined
-  
+  const { data: departments = [], isLoading: isDepartmentsLoading } = useDepartments()
+
   // Request ID to handle race conditions
   const requestIdRef = useRef(0)
   const abortControllerRef = useRef<AbortController | null>(null)
-  
+
   // Sync local state with upstream changes (e.g., real-time updates, other users' changes)
   useEffect(() => {
     // Only sync when not loading to avoid overwriting user's pending changes
-    if (!isLoading && patient.careType !== currentValue) {
-      setCurrentValue(patient.careType ?? null)
+    if (!isLoading && patient.departmentId !== currentValue) {
+      setCurrentValue(patient.departmentId ?? null)
     }
-  }, [patient.careType, patient.id, isLoading, currentValue]) // Include all dependencies
-  
+  }, [patient.departmentId, patient.id, isLoading, currentValue])
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
@@ -64,35 +58,24 @@ export function PatientCareTypeSelect({
   }, [])
 
   const handleChange = async (value: string) => {
-    // Type-safe validation
-    if (!isValidCareType(value)) {
-      console.error('Invalid care type received:', value)
-      toast({
-        title: '잘못된 진료구분',
-        description: '올바른 진료구분을 선택해주세요.',
-        variant: 'destructive',
-      })
-      return
-    }
-    
-    const newCareType = value
-    
+    const newDepartmentId = value
+
     // 같은 값이면 무시
-    if (newCareType === currentValue) {
+    if (newDepartmentId === currentValue) {
       return
     }
-    
+
     // Cancel previous request if exists
     if (abortControllerRef.current) {
       abortControllerRef.current.abort()
     }
-    
+
     // Create new request ID and abort controller
     const currentRequestId = ++requestIdRef.current
     abortControllerRef.current = new AbortController()
 
     const previousValue = currentValue
-    setCurrentValue(newCareType)
+    setCurrentValue(newDepartmentId)
     setIsLoading(true)
 
     try {
@@ -103,21 +86,22 @@ export function PatientCareTypeSelect({
       await patientService.update(
         patient.id,
         {
-          careType: newCareType,
+          departmentId: newDepartmentId,
         },
         typedProfile.organization_id,
         {
           signal: abortControllerRef.current.signal
         }
       )
-      
+
       // Only process if this is still the latest request
       if (currentRequestId === requestIdRef.current) {
+        const departmentName = departments.find(d => d.id === newDepartmentId)?.name || '알 수 없음'
         toast({
           title: '진료구분이 변경되었습니다',
-          description: `${patient.name} 환자의 진료구분이 ${newCareType}(으)로 변경되었습니다.`,
+          description: `${patient.name} 환자의 진료구분이 ${departmentName}(으)로 변경되었습니다.`,
         })
-        
+
         // Invalidate related queries for real-time sync
         queryClient.invalidateQueries({ queryKey: ['patients'] })
         queryClient.invalidateQueries({ queryKey: ['patients', patient.id] })
@@ -129,7 +113,7 @@ export function PatientCareTypeSelect({
       if (currentRequestId === requestIdRef.current) {
         // 에러 시 이전 값으로 롤백
         setCurrentValue(previousValue)
-        
+
         // Don't show error for aborted requests
         if (error instanceof Error && error.name !== 'AbortError') {
           console.error('진료구분 변경 실패:', error)
@@ -149,16 +133,21 @@ export function PatientCareTypeSelect({
     }
   }
 
+  // Get current department name for display
+  const currentDepartmentName = currentValue
+    ? departments.find(d => d.id === currentValue)?.name
+    : null
+
   return (
     <div className={`relative ${compact ? 'w-24' : 'w-28'}`}>
-      <Select 
-        value={currentValue || ''} 
+      <Select
+        value={currentValue || ''}
         onValueChange={handleChange}
-        disabled={isLoading}
+        disabled={isLoading || isDepartmentsLoading}
       >
-        <SelectTrigger 
+        <SelectTrigger
           className={`
-            ${compact ? 'h-7 text-xs' : 'h-8 text-sm'} 
+            ${compact ? 'h-7 text-xs' : 'h-8 text-sm'}
             ${isLoading ? 'opacity-50' : ''}
             border-gray-200 hover:border-gray-300
             focus:ring-1 focus:ring-blue-500
@@ -169,16 +158,21 @@ export function PatientCareTypeSelect({
               <Loader2 className="h-3 w-3 animate-spin" />
               <span className="text-xs">변경 중...</span>
             </div>
+          ) : isDepartmentsLoading ? (
+            <div className="flex items-center gap-1">
+              <Loader2 className="h-3 w-3 animate-spin" />
+              <span className="text-xs">로딩...</span>
+            </div>
           ) : (
             <SelectValue placeholder="-">
-              {currentValue || '-'}
+              {currentDepartmentName || '-'}
             </SelectValue>
           )}
         </SelectTrigger>
         <SelectContent>
-          {CARE_TYPES.map((type) => (
-            <SelectItem key={type} value={type}>
-              {type}
+          {departments.map((dept) => (
+            <SelectItem key={dept.id} value={dept.id}>
+              {dept.name}
             </SelectItem>
           ))}
         </SelectContent>

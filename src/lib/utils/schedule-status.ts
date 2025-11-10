@@ -109,7 +109,10 @@ export function getStatusBadgeClass(variant: ScheduleStatusInfo['variant']): str
  * @returns 완료 여부
  */
 function isScheduleCompleted(schedule: any): boolean {
-  return schedule.display_type === 'completed'
+  // Check both display_type and status field for completion
+  // display_type is set for calendar views (includes completed executions)
+  // status is the schedule's base state ('active', 'completed', 'cancelled')
+  return schedule.display_type === 'completed' || schedule.status === 'completed'
 }
 
 /**
