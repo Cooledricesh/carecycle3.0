@@ -136,14 +136,25 @@ export class NurseFilterStrategy implements FilterStrategy {
     }
 
     // Apply department filtering
-    // Use departmentId if available, fallback to careType for backward compatibility
-    const userDepartmentFilter = userContext.departmentId || userContext.careType
-    if (!filters.showAll && userDepartmentFilter) {
-      query = query.eq('patients.department_id', userDepartmentFilter)
+    // IMPORTANT: patients.department_id is a UUID column
+    // Only filter if we have a valid UUID, not a legacy care_type string
+    const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+    const isValidUuid = (value: string) => UUID_REGEX.test(value)
+
+    if (!filters.showAll && userContext.departmentId && isValidUuid(userContext.departmentId)) {
+      // User has a valid department UUID
+      query = query.eq('patients.department_id', userContext.departmentId)
+    } else if (!filters.showAll && userContext.careType) {
+      // Legacy care_type string - skip filtering and log warning
+      console.warn('[NurseFilterStrategy] User has legacy care_type but no department_id. Skipping department filter.')
     } else if (effectiveCareTypes?.length) {
-      // Note: effectiveCareTypes may contain old care_type values or new department IDs
-      // This maintains backward compatibility during migration
-      query = query.in('patients.department_id', effectiveCareTypes)
+      // Filter by department IDs only if they are valid UUIDs
+      const validUuids = effectiveCareTypes.filter(id => isValidUuid(id))
+      if (validUuids.length > 0) {
+        query = query.in('patients.department_id', validUuids)
+      } else {
+        console.warn('[NurseFilterStrategy] effectiveCareTypes contains non-UUID values. Skipping department filter.', effectiveCareTypes)
+      }
     }
 
     // Apply date range

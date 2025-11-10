@@ -36,7 +36,7 @@ export function CalendarDayCard({
   const statusInfo = getScheduleStatusLabel(schedule)
   const isOverdue = statusInfo.variant === 'overdue'
   const isToday = statusInfo.variant === 'today'
-  const isCompleted = (schedule as any).display_type === 'completed'
+  const isCompleted = schedule.status === 'completed'
   const isPaused = schedule.status === 'paused'
 
   useEffect(() => {
@@ -127,15 +127,15 @@ export function CalendarDayCard({
           {/* 주치의 정보 */}
           <div className="flex items-center gap-2 text-gray-500">
             <span className="text-xs text-gray-600">
-              주치의: {(schedule as any).doctor_name || '미지정'}
+              주치의: {schedule.doctor_name || '미지정'}
             </span>
           </div>
 
           {/* 소속 정보 */}
-          {((schedule as any).care_type || (schedule as any).patient_care_type) && (
+          {(schedule.care_type || schedule.patient_care_type) && (
             <div className="flex items-center gap-2 text-gray-500">
               <span className="text-xs text-gray-600">
-                소속: {(schedule as any).care_type || (schedule as any).patient_care_type || '미지정'}
+                소속: {schedule.care_type || schedule.patient_care_type || '미지정'}
               </span>
             </div>
           )}

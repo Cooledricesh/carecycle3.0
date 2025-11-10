@@ -302,8 +302,14 @@ export const scheduleService = {
           // Filter by care types
           if (filters.department_ids && filters.department_ids.length > 0) {
             schedules = schedules.filter((schedule: any) => {
-              const careType = schedule.patient_care_type || (schedule as any).patient?.careType
-              return careType && filters.department_ids.includes(careType as any)
+              // departmentId 우선 사용, 없으면 레거시 careType 사용
+              const departmentId = (schedule as any).patient?.departmentId ?? null
+              if (departmentId) {
+                return filters.department_ids.includes(departmentId)
+              }
+              // Fallback to legacy care_type
+              const legacyCareType = schedule.patient_care_type || (schedule as any).patient?.careType
+              return legacyCareType ? filters.department_ids.includes(legacyCareType) : false
             })
           }
 
@@ -324,7 +330,7 @@ export const scheduleService = {
         throw new Error('오늘 체크리스트 조회에 실패했습니다')
       }
     }
-    
+
     return executeQuery()
   },
 
@@ -394,8 +400,14 @@ export const scheduleService = {
           // Filter by care types
           if (filters.department_ids && filters.department_ids.length > 0) {
             schedules = schedules.filter((schedule: any) => {
-              const careType = schedule.patient_care_type || (schedule as any).patient?.careType
-              return careType && filters.department_ids.includes(careType as any)
+              // departmentId 우선 사용, 없으면 레거시 careType 사용
+              const departmentId = (schedule as any).patient?.departmentId ?? null
+              if (departmentId) {
+                return filters.department_ids.includes(departmentId)
+              }
+              // Fallback to legacy care_type
+              const legacyCareType = schedule.patient_care_type || (schedule as any).patient?.careType
+              return legacyCareType ? filters.department_ids.includes(legacyCareType) : false
             })
           }
 
@@ -416,7 +428,7 @@ export const scheduleService = {
         throw new Error('예정된 일정 조회에 실패했습니다')
       }
     }
-    
+
     return executeQuery()
   },
 
@@ -716,8 +728,14 @@ export const scheduleService = {
           // Filter by care types
           if (filters.department_ids && filters.department_ids.length > 0) {
             schedules = schedules.filter((schedule: any) => {
-              const careType = schedule.patient_care_type || (schedule as any).patient?.careType
-              return careType && filters.department_ids.includes(careType as any)
+              // departmentId 우선 사용, 없으면 레거시 careType 사용
+              const departmentId = (schedule as any).patient?.departmentId ?? null
+              if (departmentId) {
+                return filters.department_ids.includes(departmentId)
+              }
+              // Fallback to legacy care_type
+              const legacyCareType = schedule.patient_care_type || (schedule as any).patient?.careType
+              return legacyCareType ? filters.department_ids.includes(legacyCareType) : false
             })
           }
 
@@ -951,8 +969,6 @@ export const scheduleService = {
       // RPC 함수가 존재하는지 먼저 확인하고, 없으면 기존 방식 사용
       try {
         // 새로운 UPSERT 함수 사용 시도
-        // TODO: RPC 함수를 업데이트하여 p_metadata 파라미터를 받도록 해야 함
-        // 현재는 fallback INSERT가 metadata를 처리함
         const { error: rpcError } = await (client as any)
           .rpc('complete_schedule_execution', {
             p_schedule_id: scheduleId,
@@ -1117,8 +1133,14 @@ export const scheduleService = {
         // Filter by care types
         if (filters.department_ids && filters.department_ids.length > 0) {
           schedules = schedules.filter((schedule: any) => {
-            const careType = schedule.patient_care_type || (schedule as any).patient?.careType
-            return careType && filters.department_ids.includes(careType as any)
+            // departmentId 우선 사용, 없으면 레거시 careType 사용
+            const departmentId = (schedule as any).patient?.departmentId ?? null
+            if (departmentId) {
+              return filters.department_ids.includes(departmentId)
+            }
+            // Fallback to legacy care_type
+            const legacyCareType = schedule.patient_care_type || (schedule as any).patient?.careType
+            return legacyCareType ? filters.department_ids.includes(legacyCareType) : false
           })
         }
 

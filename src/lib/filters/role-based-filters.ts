@@ -220,7 +220,9 @@ export class RoleBasedFilterManager {
     const options = this.getAvailableFilterOptions(user)
 
     // Check if user is trying to use disabled filters
-    if (!options.canFilterByCareType && newFilters.department_ids.length > 0) {
+    if (!options.canFilterByCareType &&
+        Array.isArray(newFilters.department_ids) &&
+        newFilters.department_ids.length > 0) {
       return {
         valid: false,
         reason: '소속 필터를 사용할 수 없습니다'

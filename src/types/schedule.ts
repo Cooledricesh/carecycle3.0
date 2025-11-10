@@ -49,7 +49,7 @@ export interface ScheduleWithDetails {
   patient_care_type: string
   patient_number: string
   doctor_id: string | null
-  doctor_name: string
+  doctor_name: string | null
   item_id: string
   item_name: string
   item_category: ItemCategory
@@ -60,6 +60,8 @@ export interface ScheduleWithDetails {
   created_at: string
   updated_at: string
   notes?: string | null
+  // Additional fields for display
+  care_type?: string | null
 }
 
 // Form input types

@@ -128,9 +128,18 @@ export class AdminFilterStrategy implements FilterStrategy {
     }
 
     // Admin can filter by departments if specified
+    // IMPORTANT: patients.department_id is a UUID column
+    // Only filter if department_ids contains valid UUIDs, not legacy care_type strings
     if (filters.department_ids?.length) {
-      // Use department_id for filtering
-      query = query.in('patients.department_id', filters.department_ids)
+      const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+      const isValidUuid = (value: string) => UUID_REGEX.test(value)
+      const validUuids = filters.department_ids.filter(id => isValidUuid(id))
+
+      if (validUuids.length > 0) {
+        query = query.in('patients.department_id', validUuids)
+      } else {
+        console.warn('[AdminFilterStrategy] department_ids contains non-UUID values. Skipping department filter.', filters.department_ids)
+      }
     }
 
     // Apply date range

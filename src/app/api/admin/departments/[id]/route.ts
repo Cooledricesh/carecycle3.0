@@ -61,7 +61,7 @@ export async function PUT(
       .eq('id', id)
       .eq('organization_id', typedProfile.organization_id)
       .select()
-      .single()
+      .maybeSingle()
 
     if (error) {
       // Check for unique constraint violation
@@ -134,7 +134,7 @@ export async function DELETE(
       .eq('id', id)
       .eq('organization_id', typedProfile.organization_id)
       .select()
-      .single()
+      .maybeSingle()
 
     if (error) {
       console.error('Error deleting department:', error)

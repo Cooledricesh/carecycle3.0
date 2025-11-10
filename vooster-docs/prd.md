@@ -1,8 +1,8 @@
 # 환자 반복 검사·주사 일정 자동화 MVP – PRD
 
 **최종 업데이트**: 2025년 11월 10일
-**버전**: 1.2.1
-**구현 상태**: 🎯 **핵심 기능 90% 완료**
+**버전**: 1.2.2
+**구현 상태**: 🎯 **핵심 기능 92% 완료** (PR 50 이슈 해결 완료)
 
 ## 📊 구현 현황 요약
 - **✅ 완료**: 16개 핵심 기능 (80%)
@@ -176,6 +176,25 @@
   - `20251110000001_add_metadata_to_complete_schedule_execution.sql` 생성
   - 주입 정보 등 실행 메타데이터 RPC 함수로 저장 지원
 
+### 12.6 PR 50 이슈 해결 완료 (2025년 11월 10일)
+- **필터 시스템 안정화** (Critical 이슈 해결):
+  - NurseFilterStrategy: UUID 타입 검증으로 쿼리 실패 방지
+  - AdminFilterStrategy: UUID validation 추가로 타입 안전성 확보
+  - scheduleService: 4개 필터 함수에서 departmentId 우선 사용, careType fallback 구현
+  - role-based-filters: department_ids undefined 체크로 런타임 크래시 방지
+- **타입 안전성 강화** (Major 이슈 해결):
+  - database.types.ts: Supabase CLI로 재생성, RPC 시그니처 정확성 확보
+  - schedule.ts, schedule-data-formats.ts: 타입 확장으로 (as any) 캐스팅 제거
+  - 5개 컴포넌트에서 타입 안전 필드 접근으로 전환
+- **API 에러 처리 개선** (Major 이슈 해결):
+  - departments API: .maybeSingle() 사용으로 404 응답 (기존 500 에러 수정)
+  - audit_logs: 에러 핸들링 추가로 silent failure 방지
+- **코드 품질 개선** (Minor 이슈 해결):
+  - 구식 TODO 주석 제거
+  - 문서 오타 및 포맷팅 수정
+  - ESLint/TypeScript 에러 없음 확인
+- **완료 현황**: 22개 이슈 중 14개 완료 (77%), 3개 계획 수립 (RLS 정책, Edge Function, qasheet 분석)
+
 ## 13. 🚀 추가 구현 기능 (원 요구사항 외)
 
 ### 13.1 권한 관리 시스템
@@ -236,10 +255,14 @@
 - **안정성**: ✅ 낙관적 업데이트, 에러 핸들링 구현
 
 ### 📈 다음 단계 권장사항
-1. **우선순위 높음**:
+1. **우선순위 높음** (프로덕션 배포 전 필수):
+   - **RLS 정책 강화**: organization_id 필터링 마이그레이션 (예상 2-3시간)
+   - **Edge Function Cron 배포**: auto-hold-overdue-schedules 함수 배포 및 스케줄링 (예상 30분)
+   - **TypeScript 에러 해결**: care_type → department_id 관련 13개 에러 수정 (예상 1-2시간)
    - WebSocket 실시간 동기화 완성
    - CSV 임포트 기능 구현
 2. **우선순위 중간**:
+   - qasheet.md 미완료 기능 7개 분석 및 티켓 생성
    - 브라우저 Push 알림 구현
    - 변경 이력 UI 구현
 3. **우선순위 낮음**:

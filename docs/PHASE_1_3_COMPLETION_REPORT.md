@@ -123,7 +123,7 @@ npx shadcn@latest add dropdown-menu
 ## Code Quality Checks
 
 ### Lint Results
-```
+```text
 ✔ No ESLint warnings or errors
 ```
 

@@ -108,7 +108,7 @@ serve(async (req) => {
 
         // STEP 5: Log audit trail
         for (const schedule of overdueSchedules) {
-          await supabase.from('audit_logs').insert({
+          const { error: auditError } = await supabase.from('audit_logs').insert({
             table_name: 'schedules',
             operation: 'UPDATE',
             record_id: schedule.id,
@@ -121,6 +121,9 @@ serve(async (req) => {
             organization_id: organization_id, // Required field
             timestamp: new Date().toISOString(),
           })
+          if (auditError) {
+            console.error('Audit log failed:', { scheduleId: schedule.id, error: auditError })
+          }
         }
 
         // Check if we need to fetch more

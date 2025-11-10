@@ -373,10 +373,10 @@ export default function DashboardContent() {
                       </p>
                       <div className="flex items-center gap-3 text-xs text-gray-600">
                         <span>
-                          주치의: {(schedule as any).doctor_name || ((schedule as any).doctor_id ? '지정됨' : '미지정')}
+                          주치의: {schedule.doctor_name || (schedule.doctor_id ? '지정됨' : '미지정')}
                         </span>
                         <span>
-                          소속: {(schedule as any).care_type || (schedule as any).patient_care_type || '미지정'}
+                          소속: {schedule.care_type || schedule.patient_care_type || '미지정'}
                         </span>
                       </div>
                       {schedule.notes && (
@@ -492,10 +492,10 @@ export default function DashboardContent() {
                       </p>
                       <div className="flex items-center gap-3 text-xs text-gray-600">
                         <span>
-                          주치의: {(schedule as any).doctor_name || ((schedule as any).doctor_id ? '지정됨' : '미지정')}
+                          주치의: {schedule.doctor_name || (schedule.doctor_id ? '지정됨' : '미지정')}
                         </span>
                         <span>
-                          소속: {(schedule as any).care_type || (schedule as any).patient_care_type || '미지정'}
+                          소속: {schedule.care_type || schedule.patient_care_type || '미지정'}
                         </span>
                       </div>
                       {schedule.notes && (

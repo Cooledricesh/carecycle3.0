@@ -122,7 +122,7 @@ export interface UiSchedule {
 
   // Doctor data (flat)
   doctor_id: string | null
-  doctor_name: string
+  doctor_name: string | null
 
   // Item data (flat)
   item_id: string
@@ -135,6 +135,7 @@ export interface UiSchedule {
   status: string
   priority?: number
   notes?: string | null
+  care_type?: string | null
 
   // Display metadata
   display_type?: 'scheduled' | 'completed'

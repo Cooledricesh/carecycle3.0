@@ -391,6 +391,7 @@ DB Change → CDC → Realtime → WebSocket → Event Manager
 2. **컴파일 시점 검증**: TypeScript로 런타임 전 오류 탐지
 3. **런타임 검증**: Type Guards로 외부 데이터 안전성 보장
 4. **단일 진실의 원천**: 각 데이터 포맷마다 하나의 인터페이스
+5. **UUID 타입 검증**: PostgreSQL UUID 컬럼에 대한 런타임 validation (2025-11-10 추가)
 
 ### 스케줄 데이터 포맷 타입 시스템
 
@@ -592,6 +593,39 @@ class ScheduleServiceEnhanced {
   }
 }
 ```
+
+### UUID 타입 검증 패턴 (2025-11-10)
+
+**배경**: PostgreSQL의 UUID 컬럼은 타입 강제를 하므로, 잘못된 타입(예: string)을 UUID 컬럼에 필터링 시도하면 쿼리 실패가 발생합니다.
+
+**해결책**: 런타임에 UUID 형식을 검증하는 Type Guard 패턴 구현
+
+```typescript
+// UUID validation utility
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+const isValidUuid = (value: string) => UUID_REGEX.test(value)
+
+// Filter Strategy에서 사용
+if (filters.department_ids?.length) {
+  const validUuids = filters.department_ids.filter(id => isValidUuid(id))
+
+  if (validUuids.length > 0) {
+    query = query.in('patients.department_id', validUuids)
+  } else {
+    console.warn('[FilterStrategy] department_ids contains non-UUID values.', filters.department_ids)
+  }
+}
+```
+
+**적용 위치**:
+- `NurseFilterStrategy.ts` (lines 138-158): department_id 필터링
+- `AdminFilterStrategy.ts` (lines 130-143): department_id 필터링
+- `scheduleService.ts` (lines 304-307, 396-399, 718-721, 1116-1119): departmentId 우선 사용, careType fallback
+
+**효과**:
+- 간호사 필터 완전 복구 (UUID 타입 불일치로 인한 쿼리 실패 방지)
+- 레거시 care_type 값과의 호환성 유지 (fallback 처리)
+- 타입 안전성 강화로 런타임 에러 사전 방지
 
 ### 타입 안전성의 이점
 
@@ -800,6 +834,45 @@ private transformRpcToUi(rpc: RpcFlatSchedule): UiSchedule {
 - **수동 복구**: Debug 대시보드에서 수동 개입 가능
 - **로그 수집**: 에러 추적 및 분석
 
+## 6.5 API 에러 처리 개선 (2025-11-10)
+
+### .maybeSingle() vs .single() 패턴
+
+**문제**: Supabase `.single()` 메서드는 결과가 없을 때 PGRST116 에러를 throw하여 500 Internal Server Error 반환
+
+**해결책**: `.maybeSingle()` 사용으로 null 반환, 명시적 404 응답 처리
+
+```typescript
+// ❌ Before: .single() - 500 에러 반환
+const { data, error } = await supabase
+  .from('departments')
+  .update({ name: 'Updated' })
+  .eq('id', id)
+  .single()  // PGRST116 에러 → 500 Internal Server Error
+
+// ✅ After: .maybeSingle() - 404 응답
+const { data, error } = await supabase
+  .from('departments')
+  .update({ name: 'Updated' })
+  .eq('id', id)
+  .maybeSingle()  // null 반환 → 명시적 404 처리
+
+if (!data) {
+  return NextResponse.json(
+    { error: 'Department not found' },
+    { status: 404 }
+  )
+}
+```
+
+**적용 위치**:
+- `src/app/api/admin/departments/[id]/route.ts`: PUT (lines 58-65), DELETE (lines 130-137)
+
+**효과**:
+- RESTful API 표준 준수 (404 Not Found)
+- 클라이언트 에러 처리 개선 (500 vs 404 구분)
+- 디버깅 용이성 향상
+
 ## 7. 기술적 성과 & 교훈
 
 ### 주요 성과
@@ -807,6 +880,7 @@ private transformRpcToUi(rpc: RpcFlatSchedule): UiSchedule {
 - **안정성**: 99% 이상 실시간 연결 가동률
 - **사용자 경험**: 체감 지연 0ms (낙관적 업데이트)
 - **개발 생산성**: 컴포넌트 재사용률 80% 이상
+- **타입 안전성**: (as any) 캐스팅 제거로 컴파일 타임 에러 검출 (2025-11-10)
 
 ### 기술적 교훈
 
@@ -824,6 +898,9 @@ private transformRpcToUi(rpc: RpcFlatSchedule): UiSchedule {
 - **교훈 7**: TypeScript 타입 생성 자동화가 생산성 향상
 - **교훈 8**: 모니터링은 개발 초기부터 구축 필요
 - **교훈 9**: 문서화는 개발과 동시에 진행해야 함
+- **교훈 10** (2025-11-10): PostgreSQL UUID 컬럼 필터링 시 런타임 타입 검증 필수
+- **교훈 11** (2025-11-10): .single() 대신 .maybeSingle() 사용으로 RESTful 에러 처리
+- **교훈 12** (2025-11-10): (as any) 타입 캐스팅은 기술 부채, Type Guard로 대체해야 함
 
 ### 향후 개선 방향
 1. **테스트 자동화**: E2E, 단위 테스트 구축

@@ -4,7 +4,11 @@ info:
   description: |
     A comprehensive medical scheduling system for hospital nurses to automate recurring test and injection schedules.
     Built with Next.js 15, TypeScript, and Supabase.
-  version: 1.0.0
+
+    **Recent Updates** (2025-11-10, PR 50):
+    - Improved error handling: 404 responses for missing resources (previously 500)
+    - Department API now uses .maybeSingle() for proper RESTful error codes
+  version: 1.0.1
   contact:
     name: API Support
     email: support@medical-scheduler.com
