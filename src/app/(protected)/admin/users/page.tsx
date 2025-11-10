@@ -35,6 +35,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { Check, X, UserCheck, UserX, Shield, User, Stethoscope, Edit2, Save, XCircle, Trash2, Mail, List } from 'lucide-react';
 import { InviteUserModal } from '@/components/admin/InviteUserModal';
+import { useDepartments, Department } from '@/hooks/useDepartments';
 import Link from 'next/link';
 
 type UserAction = {
@@ -45,32 +46,39 @@ type UserAction = {
 
 type ValidationResult = {
   valid: boolean;
-  careType: string | null;
+  departmentId: string | null;
   error?: string;
 };
 
-// Utility: Validate role and care_type combinations
-function validateRoleAndCareType(role?: string, care_type?: string): ValidationResult {
-  // Admin and doctor roles must have null care_type
+// Helper: Get department name from department_id
+function getDepartmentName(departmentId: string | null, departments: Department[]): string {
+  if (!departmentId) return '-';
+  const dept = departments.find(d => d.id === departmentId);
+  return dept ? dept.name : '-';
+}
+
+// Utility: Validate role and department_id combinations
+function validateRoleAndDepartment(role?: string, department_id?: string): ValidationResult {
+  // Admin and doctor roles must have null department_id
   if (role === 'admin' || role === 'doctor') {
-    return { valid: true, careType: null };
+    return { valid: true, departmentId: null };
   }
 
-  // Nurse role must have a valid care_type
+  // Nurse role must have a valid department_id
   if (role === 'nurse') {
-    if (!care_type || care_type === '_none') {
+    if (!department_id || department_id === '_none') {
       return {
         valid: false,
-        careType: null,
+        departmentId: null,
         error: '스텝(간호사)는 반드시 부서를 선택해야 합니다.'
       };
     }
-    return { valid: true, careType: care_type };
+    return { valid: true, departmentId: department_id };
   }
 
-  // Other roles: care_type is optional
-  const finalCareType = care_type === '_none' || care_type === undefined ? null : care_type;
-  return { valid: true, careType: finalCareType };
+  // Other roles: department_id is optional
+  const finalDepartmentId = department_id === '_none' || department_id === undefined ? null : department_id;
+  return { valid: true, departmentId: finalDepartmentId };
 }
 
 // Utility: Check if current user has admin permissions
@@ -97,7 +105,7 @@ async function checkAdminPermission(supabase: any): Promise<string> {
 async function updateUserByAdmin(payload: {
   userId: string;
   role?: string;
-  care_type?: string | null;
+  department_id?: string | null;
 }): Promise<void> {
   const response = await fetch('/api/admin/users/update', {
     method: 'POST',
@@ -121,19 +129,15 @@ export default function AdminUsersPage() {
   const [actionDialog, setActionDialog] = useState<UserAction | null>(null);
   const [processing, setProcessing] = useState(false);
   const [editingUser, setEditingUser] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState<{ role?: string; care_type?: string }>({});
+  const [editForm, setEditForm] = useState<{ role?: string; department_id?: string }>({});
   const [saving, setSaving] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const supabase = createClient();
   const { toast } = useToast();
 
-  // Available care types (departments) - 간호사 역할에만 중요
-  const careTypes = [
-    { value: '외래', label: '외래' },
-    { value: '입원', label: '병동' },  // Database expects '입원', display as '병동'
-    { value: '낮병원', label: '낮병원' },
-  ];
+  // Fetch departments from database
+  const { data: departments = [], isLoading: departmentsLoading } = useDepartments();
 
   // Available roles
   const roles = [
@@ -173,11 +177,11 @@ export default function AdminUsersPage() {
     fetchUsers();
   }, [fetchUsers]);
 
-  const handleEditStart = (userId: string, currentRole: string, currentCareType: string | null) => {
+  const handleEditStart = (userId: string, currentRole: string, currentDepartmentId: string | null) => {
     setEditingUser(userId);
     setEditForm({
       role: currentRole,
-      care_type: currentCareType || undefined,
+      department_id: currentDepartmentId || undefined,
     });
   };
 
@@ -186,11 +190,11 @@ export default function AdminUsersPage() {
     setEditForm({});
   };
 
-  const handleEditSave = async (userId: string, originalRole: string, originalCareType: string | null) => {
-    console.log('handleEditSave called:', { userId, originalRole, originalCareType, editForm });
+  const handleEditSave = async (userId: string, originalRole: string, originalDepartmentId: string | null) => {
+    console.log('handleEditSave called:', { userId, originalRole, originalDepartmentId, editForm });
 
-    // Step 1: Validate role and care_type combination
-    const validation = validateRoleAndCareType(editForm.role, editForm.care_type);
+    // Step 1: Validate role and department_id combination
+    const validation = validateRoleAndDepartment(editForm.role, editForm.department_id);
     if (!validation.valid) {
       toast({
         title: '오류',
@@ -200,10 +204,10 @@ export default function AdminUsersPage() {
       return;
     }
 
-    const newCareType = validation.careType;
+    const newDepartmentId = validation.departmentId;
 
     // Check if any changes were made
-    if (editForm.role === originalRole && newCareType === originalCareType) {
+    if (editForm.role === originalRole && newDepartmentId === originalDepartmentId) {
       handleEditCancel();
       return;
     }
@@ -222,7 +226,7 @@ export default function AdminUsersPage() {
       const payload = {
         userId,
         role: editForm.role !== originalRole ? editForm.role : undefined,
-        care_type: newCareType !== originalCareType ? newCareType : undefined,
+        department_id: newDepartmentId !== originalDepartmentId ? newDepartmentId : undefined,
       };
       console.log('Sending API request with payload:', payload);
 
@@ -379,7 +383,7 @@ export default function AdminUsersPage() {
     }
   };
 
-  if (loading) {
+  if (loading || departmentsLoading) {
     return (
       <div className="space-y-6">
         <div className="animate-pulse">
@@ -467,7 +471,7 @@ export default function AdminUsersPage() {
                   <TableRow key={user.id}>
                     <TableCell className="font-medium">{user.name}</TableCell>
                     <TableCell>{user.email}</TableCell>
-                    <TableCell>{user.care_type === '입원' ? '병동' : (user.care_type || '-')}</TableCell>
+                    <TableCell>{getDepartmentName(user.department_id, departments)}</TableCell>
                     <TableCell>{getRoleBadge(user.role)}</TableCell>
                     <TableCell>
                       {user.created_at ? new Date(user.created_at).toLocaleDateString('ko-KR') : '-'}
@@ -540,8 +544,8 @@ export default function AdminUsersPage() {
                     <TableCell>
                       {isEditing ? (
                         <Select
-                          value={editForm.care_type || '_none'}
-                          onValueChange={(value) => setEditForm({ ...editForm, care_type: value === '_none' ? undefined : value })}
+                          value={editForm.department_id || '_none'}
+                          onValueChange={(value) => setEditForm({ ...editForm, department_id: value === '_none' ? undefined : value })}
                           disabled={saving || editForm.role === 'admin' || editForm.role === 'doctor'}
                         >
                           <SelectTrigger className="w-[140px]">
@@ -555,9 +559,9 @@ export default function AdminUsersPage() {
                                 <SelectItem value="_none" disabled={editForm.role === 'nurse'}>
                                   없음
                                 </SelectItem>
-                                {careTypes.map(type => (
-                                  <SelectItem key={type.value} value={type.value}>
-                                    {type.label}
+                                {departments.map(dept => (
+                                  <SelectItem key={dept.id} value={dept.id}>
+                                    {dept.name}
                                   </SelectItem>
                                 ))}
                               </>
@@ -565,7 +569,7 @@ export default function AdminUsersPage() {
                           </SelectContent>
                         </Select>
                       ) : (
-                        user.care_type === '입원' ? '병동' : (user.care_type || '-')
+                        getDepartmentName(user.department_id, departments)
                       )}
                     </TableCell>
                     <TableCell>
@@ -573,13 +577,14 @@ export default function AdminUsersPage() {
                         <Select
                           value={editForm.role}
                           onValueChange={(value) => {
-                            // Auto-adjust care_type based on new role
+                            // Auto-adjust department_id based on new role
                             if (value === 'admin' || value === 'doctor') {
-                              // Admins and doctors must have null care_type
-                              setEditForm({ role: value, care_type: undefined });
-                            } else if (value === 'nurse' && !editForm.care_type) {
-                              // Nurses must have a care_type, default to 외래
-                              setEditForm({ role: value, care_type: '외래' });
+                              // Admins and doctors must have null department_id
+                              setEditForm({ role: value, department_id: undefined });
+                            } else if (value === 'nurse' && !editForm.department_id) {
+                              // Nurses must have a department_id, default to first department
+                              const firstDept = departments[0];
+                              setEditForm({ role: value, department_id: firstDept?.id });
                             } else {
                               setEditForm({ ...editForm, role: value });
                             }
@@ -620,7 +625,7 @@ export default function AdminUsersPage() {
                             <Button
                               size="sm"
                               variant="ghost"
-                              onClick={() => handleEditSave(user.id, user.role, user.care_type)}
+                              onClick={() => handleEditSave(user.id, user.role, user.department_id)}
                               disabled={saving}
                             >
                               <Save className="w-4 h-4" />
@@ -640,7 +645,7 @@ export default function AdminUsersPage() {
                               <Button
                                 size="sm"
                                 variant="ghost"
-                                onClick={() => handleEditStart(user.id, user.role, user.care_type)}
+                                onClick={() => handleEditStart(user.id, user.role, user.department_id)}
                               >
                                 <Edit2 className="w-4 h-4" />
                               </Button>

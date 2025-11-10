@@ -16,6 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import { User, Mail, Phone, Building, Shield, Save, Key } from "lucide-react";
 import { Profile } from "@/lib/database.types";
 import { useIsMobile } from "@/hooks/useIsMobile";
+import { useDepartments } from "@/hooks/useDepartments";
 import { touchTarget, responsiveText, responsivePadding } from "@/lib/utils";
 
 export default function ProfilePage() {
@@ -24,7 +25,8 @@ export default function ProfilePage() {
   const { toast } = useToast();
   const supabase = createClient();
   const isMobile = useIsMobile();
-  
+  const { data: departments = [], isLoading: departmentsLoading } = useDepartments();
+
   useEffect(() => {
     if (user) {
       // Fetch profile data
@@ -39,13 +41,13 @@ export default function ProfilePage() {
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
-  
+
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     phone: "",
-    care_type: "",
+    department_id: "",
     role: "nurse",
   });
 
@@ -56,12 +58,12 @@ export default function ProfilePage() {
         name: profile.name || "",
         email: profile.email || "",
         phone: profile.phone || "",
-        care_type: profile.care_type || "",
+        department_id: profile.department_id || "",
         role: profile.role || "nurse",
       });
     }
   }, [profile]);
-  
+
   const [passwordData, setPasswordData] = useState({
     currentPassword: "",
     newPassword: "",
@@ -80,7 +82,7 @@ export default function ProfilePage() {
       const updateData: Database['public']['Tables']['profiles']['Update'] = {
         name: formData.name,
         phone: formData.phone,
-        care_type: profile.role === 'nurse' ? (formData.care_type || null) : null,
+        department_id: profile.role === 'nurse' ? (formData.department_id || null) : null,
       };
 
       const { error } = await (supabase as any)
@@ -128,7 +130,7 @@ export default function ProfilePage() {
 
   const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (passwordData.newPassword !== passwordData.confirmPassword) {
       toast({
         title: "비밀번호 불일치",
@@ -179,6 +181,13 @@ export default function ProfilePage() {
     }
   };
 
+  // Helper function to get department name from ID
+  const getDepartmentName = (departmentId: string | null): string => {
+    if (!departmentId) return "-";
+    const dept = departments.find(d => d.id === departmentId);
+    return dept ? dept.name : "-";
+  };
+
   if (!profile) {
     return (
       <div className="flex items-center justify-center h-96">
@@ -216,11 +225,11 @@ export default function ProfilePage() {
                    profile.role === "doctor" ? "의사" :
                    profile.role === "nurse" ? "스텝" : "스텝"}
                 </span>
-                {profile.care_type && (
+                {profile.department_id && (
                   <>
                     <span className="text-gray-400">•</span>
                     <span className="text-xs sm:text-sm text-gray-600">
-                      {profile.care_type}
+                      {getDepartmentName(profile.department_id)}
                     </span>
                   </>
                 )}
@@ -302,22 +311,25 @@ export default function ProfilePage() {
 
                   {profile.role === 'nurse' && (
                     <div className="space-y-2">
-                      <Label htmlFor="care_type">소속</Label>
+                      <Label htmlFor="department_id">소속</Label>
                       <div className="relative flex items-center">
                         <Building className="absolute left-3 h-4 w-4 text-gray-400 z-10" />
                         <Select
-                          value={formData.care_type}
+                          value={formData.department_id}
                           onValueChange={(value) =>
-                            setFormData({ ...formData, care_type: value })
+                            setFormData({ ...formData, department_id: value })
                           }
+                          disabled={departmentsLoading}
                         >
-                          <SelectTrigger id="care_type" className={`pl-12 ${touchTarget.input}`} style={{ paddingLeft: '3rem' }}>
-                            <SelectValue placeholder="진료 유형 선택" />
+                          <SelectTrigger id="department_id" className={`pl-12 ${touchTarget.input}`} style={{ paddingLeft: '3rem' }}>
+                            <SelectValue placeholder="부서 선택" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="외래">외래</SelectItem>
-                            <SelectItem value="입원">입원</SelectItem>
-                            <SelectItem value="낮병원">낮병원</SelectItem>
+                            {departments.map(dept => (
+                              <SelectItem key={dept.id} value={dept.id}>
+                                {dept.name}
+                              </SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
                       </div>
@@ -326,8 +338,8 @@ export default function ProfilePage() {
                 </div>
 
                 <div className={`flex ${isMobile ? 'w-full' : 'justify-end'}`}>
-                  <Button 
-                    type="submit" 
+                  <Button
+                    type="submit"
                     disabled={isLoading}
                     className={`${isMobile ? 'w-full' : ''} ${touchTarget.button}`}
                   >

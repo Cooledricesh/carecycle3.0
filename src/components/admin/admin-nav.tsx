@@ -3,15 +3,15 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { 
-  LayoutDashboard, 
-  Users, 
-  Calendar, 
-  Settings, 
-  BarChart3, 
-  User, 
-  LogOut, 
-  Menu 
+import {
+  LayoutDashboard,
+  Users,
+  Calendar,
+  Settings,
+  BarChart3,
+  User,
+  LogOut,
+  Menu
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -25,6 +25,7 @@ import {
 import { Profile } from "@/lib/database.types";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
+import { useDepartments } from "@/hooks/useDepartments";
 import { touchTarget } from "@/lib/utils";
 
 interface AdminNavProps {
@@ -44,6 +45,7 @@ export default function AdminNav({ profile }: AdminNavProps) {
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
+  const { data: departments = [] } = useDepartments();
 
   const handleSignOut = async () => {
     try {
@@ -56,11 +58,19 @@ export default function AdminNav({ profile }: AdminNavProps) {
     }
   };
 
+  // Helper to get department name
+  const getDepartmentName = (departmentId: string | null): string | null => {
+    if (!departmentId) return null;
+    const dept = departments.find(d => d.id === departmentId);
+    return dept ? dept.name : null;
+  };
+
   // 네비게이션 콘텐츠 (모바일/데스크톱 공통)
   const NavigationContent = () => {
     // Compute safe display name and initial with fallbacks
     const displayName = profile?.name?.trim() || profile?.email || "사용자";
     const initial = displayName.charAt(0).toUpperCase() || "U";
+    const departmentName = getDepartmentName(profile?.department_id);
 
     return (
       <div className="flex h-full flex-col">
@@ -83,7 +93,7 @@ export default function AdminNav({ profile }: AdminNavProps) {
               </p>
               <p className="text-xs text-gray-500 truncate">
                 관리자
-                {profile?.care_type && ` • ${profile.care_type}`}
+                {departmentName && ` • ${departmentName}`}
               </p>
             </div>
           </div>
@@ -93,7 +103,7 @@ export default function AdminNav({ profile }: AdminNavProps) {
       <nav className="flex-1 px-4 py-4">
         <ul className="space-y-2">
           {navigation.map((item) => {
-            const isActive = pathname === item.href || 
+            const isActive = pathname === item.href ||
               (item.href !== "/admin" && pathname.startsWith(item.href));
             return (
               <li key={item.name}>
