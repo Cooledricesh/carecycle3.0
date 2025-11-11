@@ -515,11 +515,11 @@ export function ScheduleCreateModal({
                         onChange={(e) => {
                           const value = e.target.value
                           if (value === '' || /^\d+\.?\d*$/.test(value)) {
-                            setInjectionMetadata({
-                              ...injectionMetadata,
+                            setInjectionMetadata(prev => ({
+                              ...(prev ?? {}),
                               dosage: value ? `${value}mg` : undefined,
                               route: 'IM'
-                            })
+                            }))
                           }
                         }}
                         className="flex-1"

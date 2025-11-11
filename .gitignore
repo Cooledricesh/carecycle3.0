@@ -94,6 +94,9 @@ supabase/.temp/
 supabase/migrations/supabase/
 supabase/migrations/.backup/
 
+# Archived migrations (local backup of removed migrations)
+.archived-migrations/
+
 # Database backups (contains sensitive production data)
 backups/
 **/backups/

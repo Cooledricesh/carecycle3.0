@@ -36,7 +36,7 @@ export function useFilteredPatientCount() {
 
   // Get "my patients" count for doctors and nurses
   const { data: myPatientCount = 0 } = useQuery({
-    queryKey: ['my-patients', profile?.id, typedProfile?.role, typedProfile?.care_type, typedProfile?.organization_id],
+    queryKey: ['my-patients', profile?.id, typedProfile?.role, typedProfile?.care_type, typedProfile?.organization_id, typedProfile?.department_id],
     queryFn: async () => {
       if (!profile || !typedProfile || !typedProfile.organization_id) return 0
 

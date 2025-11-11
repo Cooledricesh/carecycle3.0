@@ -118,7 +118,7 @@ export async function POST(request: NextRequest) {
         .select('id')
         .eq('name', invitationData.care_type)
         .eq('organization_id', invitationData.organization_id)
-        .single();
+        .single<{ id: string }>();
 
       if (deptError || !department) {
         console.error('[Signup] Failed to find department:', deptError);
