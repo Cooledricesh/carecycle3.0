@@ -34,6 +34,7 @@ interface InjectionMetadataFormProps {
   onSubmit: (metadata: InjectionMetadata) => void
   onCancel: () => void
   isSubmitting?: boolean
+  currentDosage?: number | null
 }
 
 /**
@@ -50,10 +51,11 @@ interface InjectionMetadataFormProps {
 export function InjectionMetadataForm({
   onSubmit,
   onCancel,
-  isSubmitting = false
+  isSubmitting = false,
+  currentDosage
 }: InjectionMetadataFormProps) {
   const isMobile = useIsMobile()
-  const [dosage, setDosage] = useState('')
+  const [dosage, setDosage] = useState(currentDosage ? String(currentDosage) : '')
   const [route, setRoute] = useState<string>('')
   const [notes, setNotes] = useState('')
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -102,13 +104,13 @@ export function InjectionMetadataForm({
       {/* Dosage Input */}
       <div className="grid gap-2">
         <Label htmlFor="dosage" className="text-sm font-medium">
-          용량
+          용량 {currentDosage && <span className="text-blue-600">(기존: {currentDosage}mg)</span>}
         </Label>
         <div className="flex items-center gap-2">
           <Input
             id="dosage"
             type="text"
-            placeholder="예: 10"
+            placeholder={currentDosage ? `기존 용량: ${currentDosage}mg` : "예: 10"}
             value={dosage}
             onChange={(e) => setDosage(e.target.value)}
             className={`${touchTarget.input} ${errors.dosage ? 'border-red-500' : ''} flex-1`}
@@ -125,7 +127,7 @@ export function InjectionMetadataForm({
           </p>
         ) : (
           <p id="dosage-help" className="text-xs text-gray-500">
-            숫자만 입력하세요 (단위: mg)
+            {currentDosage ? '기존 용량이 자동 입력되었습니다. 변경이 없다면 그대로 저장하세요.' : '숫자만 입력하세요 (단위: mg)'}
           </p>
         )}
       </div>

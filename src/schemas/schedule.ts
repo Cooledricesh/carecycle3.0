@@ -236,6 +236,13 @@ export const ScheduleEditSchema = z.object({
     .string()
     .max(500, '메모는 500자 이내로 입력해주세요')
     .nullable()
+    .optional(),
+
+  injection_dosage: z
+    .number()
+    .positive('용량은 양수여야 합니다')
+    .max(10000, '용량은 10000mg 이하여야 합니다')
+    .nullable()
     .optional()
 })
 

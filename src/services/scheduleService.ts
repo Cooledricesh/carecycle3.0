@@ -702,6 +702,11 @@ export const scheduleService = {
         updateData.next_due_date = validated.nextDueDate
       }
 
+      // Add injection_dosage if provided
+      if (validated.injection_dosage !== undefined) {
+        updateData.injection_dosage = validated.injection_dosage
+      }
+
       if (process.env.NODE_ENV === 'development') {
         console.log('[editSchedule] Updating schedule:', {
           scheduleId,

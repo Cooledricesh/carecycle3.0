@@ -128,6 +128,7 @@ export function ScheduleCompletionDialog({
                 onSubmit={handleMetadataSubmit}
                 onCancel={onClose}
                 isSubmitting={isSubmitting}
+                currentDosage={(schedule as any)?.injection_dosage}
               />
             </>
           )}
