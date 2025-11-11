@@ -108,8 +108,16 @@ export function useFilteredTodayChecklist() {
   const filters = isFilterAvailable ? filterContext.filters : defaultFilters
   const supabase = createClient()
 
+  // Debug logging
+  console.log('[useFilteredTodayChecklist] Current filters:', {
+    isFilterAvailable,
+    showAll: filters.showAll,
+    department_ids: filters.department_ids,
+    role: typedProfile?.role
+  })
+
   return useQuery({
-    queryKey: ['schedules', 'today', typedProfile?.organization_id, filters.showAll], // Include filter state in key
+    queryKey: ['schedules', 'today', typedProfile?.organization_id, filters.showAll, filters.department_ids], // Include filter state in key
     queryFn: async () => {
       try {
         // Use enhanced service for today's checklist
@@ -118,14 +126,24 @@ export function useFilteredTodayChecklist() {
             userId: user.id,
             role: typedProfile.role || 'nurse',
             careType: typedProfile.care_type || null,
+            departmentId: typedProfile.department_id || null,  // Add departmentId
             organizationId: typedProfile.organization_id
           }
+
+          console.log('[useFilteredTodayChecklist] Calling getTodayChecklist with:', {
+            showAll: filters.showAll || false,
+            departmentIds: filters.department_ids,
+            userContext
+          })
 
           const result = await scheduleServiceEnhanced.getTodayChecklist(
             filters.showAll || false,
             userContext,
-            supabase as any
+            supabase as any,
+            filters.department_ids  // Pass department filter
           )
+
+          console.log('[useFilteredTodayChecklist] Result:', result.length, 'items')
 
           return result
         }
@@ -160,7 +178,7 @@ export function useFilteredUpcomingSchedules(daysAhead: number = 7) {
   const supabase = createClient()
 
   return useQuery({
-    queryKey: ['schedules', 'upcoming', typedProfile?.organization_id, daysAhead, filters.showAll], // Include filter state in key
+    queryKey: ['schedules', 'upcoming', typedProfile?.organization_id, daysAhead, filters.showAll, filters.department_ids], // Include filter state in key
     queryFn: async () => {
       try {
         if (!typedProfile || !user || !typedProfile.organization_id) {
@@ -180,7 +198,8 @@ export function useFilteredUpcomingSchedules(daysAhead: number = 7) {
           daysAhead,
           filters.showAll || false,
           userContext,
-          supabase as any
+          supabase as any,
+          filters.department_ids  // Pass department filter
         )
 
         return result

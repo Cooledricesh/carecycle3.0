@@ -319,14 +319,16 @@ export class ScheduleServiceEnhanced {
   async getTodayChecklist(
     showAll: boolean,
     userContext: UserContext,
-    supabase?: SupabaseClient<Database>
+    supabase?: SupabaseClient<Database>,
+    departmentIds?: string[]
   ): Promise<UiSchedule[]> {
     const client = (supabase || createClient()) as any
 
     console.log('[getTodayChecklist] Fetching today\'s checklist:', {
       userId: userContext.userId,
       showAll,
-      role: userContext.role
+      role: userContext.role,
+      departmentIds
     })
 
     try {
@@ -385,6 +387,16 @@ export class ScheduleServiceEnhanced {
         }
       }
 
+      // Apply department filter for admin (if specified)
+      if (departmentIds && departmentIds.length > 0) {
+        // Validate UUIDs
+        const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+        const validUuids = departmentIds.filter(id => UUID_REGEX.test(id))
+        if (validUuids.length > 0) {
+          query = query.in('patients.department_id', validUuids)
+        }
+      }
+
       // Add ordering (only by schedules table columns - cannot order by joined table columns in PostgREST)
       query = query.order('next_due_date', { ascending: true })
 
@@ -430,7 +442,8 @@ export class ScheduleServiceEnhanced {
     daysAhead: number,
     showAll: boolean,
     userContext: UserContext,
-    supabase?: SupabaseClient<Database>
+    supabase?: SupabaseClient<Database>,
+    departmentIds?: string[]
   ): Promise<UiSchedule[]> {
     const client = (supabase || createClient()) as any
 
@@ -438,7 +451,8 @@ export class ScheduleServiceEnhanced {
       userId: userContext.userId,
       daysAhead,
       showAll,
-      role: userContext.role
+      role: userContext.role,
+      departmentIds
     })
 
     try {
@@ -496,6 +510,16 @@ export class ScheduleServiceEnhanced {
           query = query.eq('patients.doctor_id', userContext.userId)
         } else if (userContext.role === 'nurse' && userContext.departmentId) {
           query = query.eq('patients.department_id', userContext.departmentId)
+        }
+      }
+
+      // Apply department filter for admin (if specified)
+      if (departmentIds && departmentIds.length > 0) {
+        // Validate UUIDs
+        const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+        const validUuids = departmentIds.filter(id => UUID_REGEX.test(id))
+        if (validUuids.length > 0) {
+          query = query.in('patients.department_id', validUuids)
         }
       }
 

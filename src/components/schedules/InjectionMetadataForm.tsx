@@ -125,7 +125,7 @@ export function InjectionMetadataForm({
           </p>
         ) : (
           <p id="dosage-help" className="text-xs text-gray-500">
-            숫자만 입력하세요 (단위: mg 고정)
+            숫자만 입력하세요 (단위: mg)
           </p>
         )}
       </div>
