@@ -18,7 +18,7 @@ export function InviteUserButton() {
     <div>
       <Button onClick={() => setIsModalOpen(true)}>
         <UserPlus className="mr-2 h-4 w-4" />
-        Invite User
+        사용자 초대
       </Button>
 
       <InviteUserModal open={isModalOpen} onOpenChange={setIsModalOpen} />

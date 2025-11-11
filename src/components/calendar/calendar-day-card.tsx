@@ -36,7 +36,8 @@ export function CalendarDayCard({
   const statusInfo = getScheduleStatusLabel(schedule)
   const isOverdue = statusInfo.variant === 'overdue'
   const isToday = statusInfo.variant === 'today'
-  const isCompleted = schedule.status === 'completed'
+  // Check display_type for completed items (from RPC), fallback to status
+  const isCompleted = (schedule as any).display_type === 'completed' || schedule.status === 'completed'
   const isPaused = schedule.status === 'paused'
 
   useEffect(() => {
@@ -94,7 +95,7 @@ export function CalendarDayCard({
             </div>
 
             {/* 검사/주사 정보 */}
-            <div className={`flex items-center gap-2 text-gray-600 ${
+            <div className={`flex items-center gap-2 flex-wrap text-gray-600 ${
               isMobile ? 'text-xs' : 'text-sm'
             }`}>
               {(() => {
@@ -107,6 +108,12 @@ export function CalendarDayCard({
               {category && (
                 <span className={`px-2 py-0.5 rounded-full text-xs ${getScheduleCategoryBgColor(category)} ${getScheduleCategoryColor(category)}`}>
                   {getScheduleCategoryLabel(category)}
+                </span>
+              )}
+              {/* 주사 용량 표시 */}
+              {category === 'injection' && (schedule as any).injection_dosage && (
+                <span className="text-xs text-blue-600 font-medium">
+                  용량: {(schedule as any).injection_dosage}mg
                 </span>
               )}
             </div>
