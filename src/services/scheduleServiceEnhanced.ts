@@ -288,6 +288,7 @@ export class ScheduleServiceEnhanced {
       status: db.status,
       priority: db.priority,
       notes: db.notes,
+      injection_dosage: db.injection_dosage,
 
       // Audit (provide defaults if missing)
       created_at: db.created_at || new Date().toISOString(),
