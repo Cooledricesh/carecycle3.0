@@ -144,3 +144,44 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
+
+// DELETE /api/admin/organization-policies
+export async function DELETE() {
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role, organization_id')
+      .eq('id', user.id)
+      .single()
+
+    if (!profile) {
+      return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
+    }
+
+    // Type assertion to help TypeScript understand the guard
+    const typedProfile = profile as { role: string; organization_id: string }
+
+    if (typedProfile.role !== 'admin' && typedProfile.role !== 'super_admin') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+
+    const { error } = await supabase
+      .from('organization_policies')
+      .delete()
+      .eq('organization_id', typedProfile.organization_id)
+
+    if (error) {
+      console.error('Error deleting policy:', error)
+      return NextResponse.json({ error: 'Failed to delete policy' }, { status: 500 })
+    }
+
+    return NextResponse.json({ message: 'Policy deleted successfully' })
+  } catch (error) {
+    console.error('DELETE /api/admin/organization-policies error:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}
