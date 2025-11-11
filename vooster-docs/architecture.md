@@ -639,6 +639,219 @@ if (filters.department_ids?.length) {
 - 레거시 care_type 값과의 호환성 유지 (fallback 처리)
 - 타입 안전성 강화로 런타임 에러 사전 방지
 
+## 3.6 필터링 시스템 아키텍처 (Filtering System Architecture)
+
+### 개요
+의료 일정 관리 시스템은 다중 조직(multi-tenant) 환경에서 역할 기반 접근 제어(RBAC)와 부서 기반 필터링을 지원합니다. 2025년 11월 11일 기준, organization-scoped filtering과 department-based filtering이 완전히 통합되었습니다.
+
+### 핵심 필터링 계층
+
+#### 1. Organization-Scoped Filtering (조직 범위 필터링)
+**목적**: 다중 조직 환경에서 데이터 격리 보장
+
+**구현 패턴**:
+```typescript
+// useFilteredPatientCount.ts
+const { count, error } = await supabase
+  .from('patients')
+  .select('id', { count: 'exact', head: true })
+  .eq('is_active', true)
+  .eq('organization_id', typedProfile.organization_id)  // ✓ Organization filtering
+```
+
+**적용 범위**:
+- `useFilteredPatientCount.ts`: 환자 수 조회 (전체 환자, 소속 환자)
+- 모든 데이터베이스 쿼리는 organization_id 필터링 필수
+- RLS 정책과 함께 데이터 격리 이중 보장
+
+#### 2. Department-Based Filtering (부서 기반 필터링)
+**목적**: 관리자 및 간호사의 부서별 데이터 필터링
+
+**구현 패턴**:
+```typescript
+// scheduleServiceEnhanced.ts - getTodayChecklist
+async getTodayChecklist(
+  showAll: boolean,
+  userContext: UserContext,
+  supabase?: SupabaseClient<Database>,
+  departmentIds?: string[]  // ✓ Department filter parameter
+): Promise<UiSchedule[]> {
+  // UUID validation
+  if (departmentIds && departmentIds.length > 0) {
+    const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+    const validUuids = departmentIds.filter(id => UUID_REGEX.test(id))
+
+    if (validUuids.length > 0) {
+      query = query.in('patients.department_id', validUuids)
+    }
+  }
+}
+```
+
+**적용 범위**:
+- `scheduleServiceEnhanced.getTodayChecklist()`: 오늘 체크리스트 부서 필터링
+- `scheduleServiceEnhanced.getUpcomingSchedules()`: 예정된 일정 부서 필터링
+- UUID 검증으로 PostgreSQL 타입 호환성 보장
+
+#### 3. UserContext Pattern (사용자 컨텍스트 패턴)
+**목적**: 역할 기반 필터링 로직에 사용자 정보 전달
+
+**타입 정의**:
+```typescript
+interface UserContext {
+  userId: string
+  role: 'admin' | 'doctor' | 'nurse'
+  careType: string | null
+  departmentId: string | null      // ✓ Department ID added (2025-11-11)
+  organizationId: string
+}
+```
+
+**구현 패턴**:
+```typescript
+// useFilteredSchedules.ts - useFilteredTodayChecklist
+const userContext: UserContext & { organizationId: string } = {
+  userId: user.id,
+  role: typedProfile.role || 'nurse',
+  careType: typedProfile.care_type || null,
+  departmentId: typedProfile.department_id || null,  // ✓ Department ID
+  organizationId: typedProfile.organization_id
+}
+
+const result = await scheduleServiceEnhanced.getTodayChecklist(
+  filters.showAll || false,
+  userContext,
+  supabase as any,
+  filters.department_ids  // ✓ Pass department filter
+)
+```
+
+**적용 범위**:
+- `useFilteredSchedules.ts`: 모든 필터링 훅에서 UserContext 사용
+- `scheduleServiceEnhanced.ts`: 역할 기반 필터 전략 선택
+
+### 역할 기반 필터링 전략
+
+#### Admin Strategy (관리자 전략)
+- **기본**: 조직 내 모든 데이터 조회
+- **showAll=false**: department_ids 파라미터로 특정 부서만 필터링
+- **UUID 검증**: 잘못된 department_ids 값 자동 필터링
+
+#### Nurse Strategy (간호사 전략)
+- **마이그레이션 완료** (2025-11-10 → 2025-11-11):
+  - 이전: care_type (string) 기반 필터링
+  - 현재: department_id (UUID) 기반 필터링
+  - fallback: care_type 지원 (레거시 호환성)
+- **showAll=false**: 자신의 department_id만 조회
+- **showAll=true**: 조직 내 모든 데이터 조회 (권한 있을 시)
+
+#### Doctor Strategy (의사 전략)
+- **기본**: 자신이 담당하는 환자만 조회
+- **showAll=true**: 조직 내 모든 환자 조회
+
+### 필터링 아키텍처 다이어그램
+
+```
+User Action (Filter Toggle)
+        ↓
+┌─────────────────────────────────────┐
+│  Filter Context                     │
+│  - showAll: boolean                 │
+│  - department_ids: string[]         │
+└─────────────────────────────────────┘
+        ↓
+┌─────────────────────────────────────┐
+│  React Query Hooks                  │
+│  - useFilteredSchedules             │
+│  - useFilteredPatientCount          │
+└─────────────────────────────────────┘
+        ↓
+┌─────────────────────────────────────┐
+│  UserContext Construction           │
+│  - userId, role, careType           │
+│  - departmentId (NEW)               │
+│  - organizationId                   │
+└─────────────────────────────────────┘
+        ↓
+┌─────────────────────────────────────┐
+│  Service Layer                      │
+│  - scheduleServiceEnhanced          │
+│    - getTodayChecklist()            │
+│    - getUpcomingSchedules()         │
+└─────────────────────────────────────┘
+        ↓
+┌─────────────────────────────────────┐
+│  Filter Strategy Selection          │
+│  - AdminFilterStrategy              │
+│  - NurseFilterStrategy              │
+│  - DoctorFilterStrategy             │
+└─────────────────────────────────────┘
+        ↓
+┌─────────────────────────────────────┐
+│  UUID Validation                    │
+│  - department_ids validation        │
+│  - Type-safe filtering              │
+└─────────────────────────────────────┘
+        ↓
+┌─────────────────────────────────────┐
+│  Database Query                     │
+│  - organization_id filter (ALWAYS)  │
+│  - department_id filter (if needed) │
+│  - role-based joins                 │
+└─────────────────────────────────────┘
+```
+
+### 마이그레이션 히스토리
+
+#### Phase 1: care_type 기반 (레거시)
+```typescript
+// ❌ Old pattern
+.eq('patients.care_type', userContext.careType)
+```
+
+#### Phase 2: department_id 전환 (2025-11-10)
+```typescript
+// ⚠️ Transition pattern
+if (userContext.departmentId) {
+  query = query.eq('patients.department_id', userContext.departmentId)
+} else if (userContext.careType) {
+  query = query.eq('patients.care_type', userContext.careType)  // Fallback
+}
+```
+
+#### Phase 3: 완전 마이그레이션 (2025-11-11)
+```typescript
+// ✅ Current pattern
+const userContext: UserContext = {
+  userId: user.id,
+  role: typedProfile.role,
+  careType: typedProfile.care_type || null,      // Fallback only
+  departmentId: typedProfile.department_id || null,  // Primary
+  organizationId: typedProfile.organization_id
+}
+
+// UUID validation before filtering
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+const validUuids = departmentIds.filter(id => UUID_REGEX.test(id))
+```
+
+### 개선 효과
+
+#### 데이터 정확성
+- ✅ 조직 범위 환자 수 정확히 집계
+- ✅ 부서별 일정 필터링 정상 작동
+- ✅ 역할 기반 데이터 접근 제어 강화
+
+#### 타입 안전성
+- ✅ UUID 검증으로 PostgreSQL 타입 에러 방지
+- ✅ UserContext에 departmentId 명시적 추가
+- ✅ 레거시 care_type 호환성 유지 (fallback)
+
+#### 사용자 경험
+- ✅ 대시보드 필터 토글 정상 작동
+- ✅ 환자 수 표시 오류 해결
+- ✅ 부서별 데이터 필터링 정확성 향상
+
 ### 타입 안전성의 이점
 
 #### 컴파일 타임 이점
