@@ -20,11 +20,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { OrganizationSearchDialog } from "./OrganizationSearchDialog";
 import { CreateOrganizationDialog } from "./CreateOrganizationDialog";
+import { Building2, UserPlus, Search } from "lucide-react";
+
+type OrganizationMode = "create" | "join";
 
 export function SignUpForm({
   className,
@@ -37,7 +47,8 @@ export function SignUpForm({
   const [role, setRole] = useState<"nurse" | "doctor">("nurse");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [signupStep, setSignupStep] = useState<"basic" | "organization">("basic");
+  const [currentStep, setCurrentStep] = useState<"basic" | "organization">("basic");
+  const [organizationMode, setOrganizationMode] = useState<OrganizationMode>("join");
   const [userId, setUserId] = useState<string | null>(null);
   const [showOrgSearch, setShowOrgSearch] = useState(false);
   const [showOrgCreate, setShowOrgCreate] = useState(false);
@@ -87,8 +98,7 @@ export function SignUpForm({
 
       // Basic signup successful, now show organization selection
       setUserId(data.user.id);
-      setSignupStep("organization");
-      setShowOrgSearch(true);
+      setCurrentStep("organization");
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : "회원가입 중 오류가 발생했습니다.");
     } finally {
@@ -187,93 +197,183 @@ export function SignUpForm({
           <div className="text-center">
             <CardTitle className="text-2xl">회원가입</CardTitle>
             <CardDescription>
-              {signupStep === "basic" ? "새 계정을 만드세요" : "조직을 선택하세요"}
+              {currentStep === "basic" ? "새 계정을 만드세요" : "조직을 선택하세요"}
             </CardDescription>
           </div>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSignUp}>
-            <div className="flex flex-col gap-6">
-              <div className="grid gap-2">
-                <Label htmlFor="name">이름</Label>
-                <Input
-                  id="name"
-                  type="text"
-                  placeholder="홍길동"
-                  required
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  disabled={signupStep === "organization"}
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="email">이메일</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="staff@hospital.com"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  disabled={signupStep === "organization"}
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="role">직군</Label>
-                <Select
-                  value={role}
-                  onValueChange={(value: "nurse" | "doctor") => setRole(value)}
-                  disabled={signupStep === "organization"}
+          <Tabs value={currentStep} className="w-full">
+            <TabsList className="grid w-full grid-cols-2 mb-6">
+              <TabsTrigger value="basic" disabled>
+                1. 기본 정보
+              </TabsTrigger>
+              <TabsTrigger value="organization" disabled>
+                2. 조직 선택
+              </TabsTrigger>
+            </TabsList>
+
+            {/* Step 1: Basic Information */}
+            <TabsContent value="basic" className="space-y-4">
+              <form onSubmit={handleSignUp}>
+                <div className="flex flex-col gap-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="name">이름</Label>
+                    <Input
+                      id="name"
+                      type="text"
+                      placeholder="홍길동"
+                      required
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="email">이메일</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="staff@hospital.com"
+                      required
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="role">직군</Label>
+                    <Select
+                      value={role}
+                      onValueChange={(value: "nurse" | "doctor") => setRole(value)}
+                    >
+                      <SelectTrigger id="role">
+                        <SelectValue placeholder="직군을 선택하세요" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="nurse">스텝</SelectItem>
+                        <SelectItem value="doctor">의사</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="password">비밀번호</Label>
+                    <Input
+                      id="password"
+                      type="password"
+                      required
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="repeat-password">비밀번호 확인</Label>
+                    <Input
+                      id="repeat-password"
+                      type="password"
+                      required
+                      value={repeatPassword}
+                      onChange={(e) => setRepeatPassword(e.target.value)}
+                    />
+                  </div>
+                  {error && <p className="text-sm text-red-500">{error}</p>}
+                  <Button type="submit" className="w-full" disabled={isLoading}>
+                    {isLoading ? "계정 생성 중..." : "다음 단계"}
+                  </Button>
+                </div>
+              </form>
+            </TabsContent>
+
+            {/* Step 2: Organization Selection */}
+            <TabsContent value="organization" className="space-y-4">
+              <div className="space-y-4">
+                <div className="text-sm text-muted-foreground text-center">
+                  조직을 생성하거나 기존 조직에 가입하세요
+                </div>
+
+                <RadioGroup
+                  value={organizationMode}
+                  onValueChange={(value) => setOrganizationMode(value as OrganizationMode)}
+                  className="space-y-3"
                 >
-                  <SelectTrigger id="role">
-                    <SelectValue placeholder="직군을 선택하세요" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="nurse">스텝</SelectItem>
-                    <SelectItem value="doctor">의사</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid gap-2">
-                <div className="flex items-center">
-                  <Label htmlFor="password">비밀번호</Label>
+                  <div className="flex items-start space-x-3 space-y-0 rounded-md border p-4">
+                    <RadioGroupItem value="join" id="join" />
+                    <div className="flex-1 space-y-1">
+                      <Label
+                        htmlFor="join"
+                        className="flex items-center gap-2 text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                      >
+                        <UserPlus className="h-4 w-4" />
+                        기존 조직 가입
+                      </Label>
+                      <p className="text-sm text-muted-foreground">
+                        이미 존재하는 조직을 검색하여 가입 요청을 보냅니다
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start space-x-3 space-y-0 rounded-md border p-4">
+                    <RadioGroupItem value="create" id="create" />
+                    <div className="flex-1 space-y-1">
+                      <Label
+                        htmlFor="create"
+                        className="flex items-center gap-2 text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                      >
+                        <Building2 className="h-4 w-4" />
+                        새 조직 생성
+                      </Label>
+                      <p className="text-sm text-muted-foreground">
+                        새로운 조직을 생성하고 관리자로 등록됩니다
+                      </p>
+                    </div>
+                  </div>
+                </RadioGroup>
+
+                {error && <p className="text-sm text-red-500">{error}</p>}
+
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => {
+                      setCurrentStep("basic");
+                      setError(null);
+                    }}
+                  >
+                    이전
+                  </Button>
+                  <Button
+                    type="button"
+                    className="flex-1"
+                    onClick={() => {
+                      if (organizationMode === "join") {
+                        setShowOrgSearch(true);
+                      } else {
+                        setShowOrgCreate(true);
+                      }
+                    }}
+                  >
+                    {organizationMode === "join" ? (
+                      <span className="flex items-center gap-2">
+                        <Search className="h-4 w-4" />
+                        조직 검색
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-2">
+                        <Building2 className="h-4 w-4" />
+                        조직 생성
+                      </span>
+                    )}
+                  </Button>
                 </div>
-                <Input
-                  id="password"
-                  type="password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  disabled={signupStep === "organization"}
-                />
               </div>
-              <div className="grid gap-2">
-                <div className="flex items-center">
-                  <Label htmlFor="repeat-password">비밀번호 확인</Label>
-                </div>
-                <Input
-                  id="repeat-password"
-                  type="password"
-                  required
-                  value={repeatPassword}
-                  onChange={(e) => setRepeatPassword(e.target.value)}
-                  disabled={signupStep === "organization"}
-                />
-              </div>
-              {error && <p className="text-sm text-red-500">{error}</p>}
-              {signupStep === "basic" && (
-                <Button type="submit" className="w-full" disabled={isLoading}>
-                  {isLoading ? "계정 생성 중..." : "회원가입"}
-                </Button>
-              )}
-            </div>
-            <div className="mt-4 text-center text-sm">
-              이미 계정이 있으신가요?{" "}
-              <Link href="/auth/signin" className="underline underline-offset-4">
-                로그인
-              </Link>
-            </div>
-          </form>
+            </TabsContent>
+          </Tabs>
+
+          <div className="mt-4 text-center text-sm">
+            이미 계정이 있으신가요?{" "}
+            <Link href="/auth/signin" className="underline underline-offset-4">
+              로그인
+            </Link>
+          </div>
         </CardContent>
       </Card>
 

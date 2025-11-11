@@ -11,7 +11,8 @@ import {
   BarChart3,
   User,
   LogOut,
-  Menu
+  Menu,
+  Building2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -35,6 +36,7 @@ interface AdminNavProps {
 const navigation = [
   { name: "대시보드", href: "/admin", icon: LayoutDashboard },
   { name: "사용자 관리", href: "/admin/users", icon: Users },
+  { name: "부서 관리", href: "/admin/departments", icon: Building2 },
   { name: "스케줄 관리", href: "/admin/schedules", icon: Calendar },
   { name: "보고서", href: "/admin/reports", icon: BarChart3 },
   { name: "설정", href: "/admin/settings", icon: Settings },

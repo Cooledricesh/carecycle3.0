@@ -38,8 +38,7 @@ interface ItemFormProps {
 const formSteps = [
   { title: '기본 정보', fields: ['name', 'category'] },
   { title: '일정 설정', fields: ['default_interval_weeks', 'requires_notification', 'notification_days_before'] },
-  { title: '상세 정보', fields: ['description', 'instructions', 'preparation_notes'] },
-  { title: '추가 설정', fields: ['is_active', 'sort_order'] },
+  { title: '추가 정보', fields: ['notes', 'is_active'] },
 ]
 
 export function ItemForm({
@@ -56,12 +55,9 @@ export function ItemForm({
     category: 'injection',
     default_interval_weeks: 4,
     description: '',
-    instructions: '',
-    preparation_notes: '',
     requires_notification: true,
     notification_days_before: 7,
     is_active: true,
-    sort_order: 0
   })
 
   // 아이템 수정 시 폼 데이터 초기화
@@ -72,12 +68,9 @@ export function ItemForm({
         category: item.category,
         default_interval_weeks: item.default_interval_weeks || 4,
         description: item.description || '',
-        instructions: item.instructions || '',
-        preparation_notes: item.preparation_notes || '',
         requires_notification: item.requires_notification ?? true,
         notification_days_before: item.notification_days_before || 7,
         is_active: item.is_active ?? true,
-        sort_order: item.sort_order || 0
       })
     } else {
       // 새 아이템 추가 시 폼 초기화
@@ -86,12 +79,9 @@ export function ItemForm({
         category: 'injection',
         default_interval_weeks: 4,
         description: '',
-        instructions: '',
-        preparation_notes: '',
         requires_notification: true,
         notification_days_before: 7,
         is_active: true,
-        sort_order: 0
       })
       setCurrentStep(0)
     }
@@ -139,50 +129,33 @@ export function ItemForm({
         )}
 
         {(!isMobile || currentFields?.includes('category')) && (
-          <div className={cn(
-            !isMobile && "grid grid-cols-2 gap-4"
-          )}>
-            <div className="space-y-2">
-              <Label htmlFor="category">카테고리 *</Label>
-              <Select
-                value={formData.category}
-                onValueChange={(value) => setFormData({ ...formData, category: value })}
-              >
-                <SelectTrigger className={touchTarget.input}>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="injection">주사</SelectItem>
-                  <SelectItem value="test">검사</SelectItem>
-                  <SelectItem value="other">기타</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="category">카테고리 *</Label>
+            <Select
+              value={formData.category}
+              onValueChange={(value) => setFormData({ ...formData, category: value })}
+            >
+              <SelectTrigger className={touchTarget.input}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="injection">주사</SelectItem>
+                <SelectItem value="test">검사</SelectItem>
+                <SelectItem value="other">기타</SelectItem>
+              </SelectContent>
+            </Select>
 
-            {!isMobile && (
-              <div className="space-y-2">
-                <Label htmlFor="interval">기본 주기 (주)</Label>
-                <Input
-                  id="interval"
-                  type="number"
-                  value={formData.default_interval_weeks || ''}
-                  onChange={(e) => {
-                    const parsed = parseInt(e.target.value, 10);
-                    setFormData({
-                      ...formData,
-                      default_interval_weeks: e.target.value === '' ? null : (Number.isNaN(parsed) ? null : parsed)
-                    });
-                  }}
-                  placeholder="4"
-                  className={touchTarget.input}
-                />
-              </div>
+            {/* 주사 카테고리 선택 시 용량 안내 */}
+            {formData.category === 'injection' && (
+              <p className="text-sm text-muted-foreground mt-1">
+                주사 용량은 일정 생성 시 개별 설정됩니다.
+              </p>
             )}
           </div>
         )}
 
         {/* 일정 설정 */}
-        {(!isMobile || currentFields?.includes('default_interval_weeks')) && isMobile && (
+        {(!isMobile || currentFields?.includes('default_interval_weeks')) && (
           <div className="space-y-2">
             <Label htmlFor="interval">기본 주기 (주)</Label>
             <Input
@@ -240,79 +213,31 @@ export function ItemForm({
           </div>
         )}
 
-        {/* 상세 정보 */}
-        {(!isMobile || currentFields?.includes('description')) && (
+        {/* 메모 */}
+        {(!isMobile || currentFields?.includes('notes')) && (
           <div className="space-y-2">
-            <Label htmlFor="description">설명</Label>
+            <Label htmlFor="notes">메모</Label>
             <Textarea
-              id="description"
+              id="notes"
               value={formData.description || ''}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              placeholder="항목에 대한 설명을 입력하세요"
-              rows={isMobile ? 3 : 2}
+              placeholder="항목에 대한 메모나 특이사항을 입력하세요"
+              rows={isMobile ? 3 : 3}
             />
           </div>
         )}
 
-        {(!isMobile || currentFields?.includes('instructions')) && (
-          <div className="space-y-2">
-            <Label htmlFor="instructions">지시사항</Label>
-            <Textarea
-              id="instructions"
-              value={formData.instructions || ''}
-              onChange={(e) => setFormData({ ...formData, instructions: e.target.value })}
-              placeholder="시행 시 주의사항이나 지시사항"
-              rows={isMobile ? 3 : 2}
-            />
-          </div>
-        )}
-
-        {(!isMobile || currentFields?.includes('preparation_notes')) && (
-          <div className="space-y-2">
-            <Label htmlFor="preparation">준비사항</Label>
-            <Textarea
-              id="preparation"
-              value={formData.preparation_notes || ''}
-              onChange={(e) => setFormData({ ...formData, preparation_notes: e.target.value })}
-              placeholder="사전 준비사항"
-              rows={isMobile ? 3 : 2}
-            />
-          </div>
-        )}
-
-        {/* 추가 설정 */}
+        {/* 활성 상태 */}
         {(!isMobile || currentFields?.includes('is_active')) && (
-          <div className={cn(
-            !isMobile && "grid grid-cols-2 gap-4"
-          )}>
-            <div className="flex items-center space-x-2">
-              <Switch
-                id="active"
-                checked={formData.is_active ?? true}
-                onCheckedChange={(checked) =>
-                  setFormData({ ...formData, is_active: checked })
-                }
-              />
-              <Label htmlFor="active">활성 상태</Label>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="sort_order">정렬 순서</Label>
-              <Input
-                id="sort_order"
-                type="number"
-                value={formData.sort_order || ''}
-                onChange={(e) => {
-                  const parsed = parseInt(e.target.value, 10);
-                  setFormData({
-                    ...formData,
-                    sort_order: e.target.value === '' ? null : (Number.isNaN(parsed) ? null : parsed)
-                  });
-                }}
-                placeholder="0"
-                className={touchTarget.input}
-              />
-            </div>
+          <div className="flex items-center space-x-2">
+            <Switch
+              id="active"
+              checked={formData.is_active ?? true}
+              onCheckedChange={(checked) =>
+                setFormData({ ...formData, is_active: checked })
+              }
+            />
+            <Label htmlFor="active">활성 상태</Label>
           </div>
         )}
       </div>

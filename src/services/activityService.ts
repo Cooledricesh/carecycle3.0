@@ -192,8 +192,7 @@ export const activityService = {
     if (table === 'patients' && newValues) {
       const patientName = newValues.name || '이름 없음'
       const patientNumber = newValues.patient_number || ''
-      const careType = newValues.care_type || ''
-      return `${userName}님이 새로운 환자를 등록했습니다. (${patientName} ${patientNumber}${careType ? ` - ${careType}` : ''})`
+      return `${userName}님이 새로운 환자를 등록했습니다. (${patientName} ${patientNumber})`
     }
 
     if (table === 'schedules' && newValues) {
@@ -228,8 +227,8 @@ export const activityService = {
       if (oldValues.name !== newValues.name) {
         changes.push(`이름: ${oldValues.name} → ${newValues.name}`)
       }
-      if (oldValues.care_type !== newValues.care_type) {
-        changes.push(`진료구분: ${oldValues.care_type || '없음'} → ${newValues.care_type || '없음'}`)
+      if (oldValues.department_id !== newValues.department_id) {
+        changes.push(`진료과 변경`)
       }
       if (oldValues.doctor_id !== newValues.doctor_id) {
         changes.push(`담당의 변경`)
@@ -301,8 +300,8 @@ export const activityService = {
       if (oldValues.role !== newValues.role) {
         changes.push(`역할: ${oldValues.role} → ${newValues.role}`)
       }
-      if (oldValues.care_type !== newValues.care_type) {
-        changes.push(`진료구분: ${oldValues.care_type || '없음'} → ${newValues.care_type || '없음'}`)
+      if (oldValues.department_id !== newValues.department_id) {
+        changes.push(`진료과 변경`)
       }
       if (oldValues.approval_status !== newValues.approval_status) {
         changes.push(`승인상태: ${oldValues.approval_status} → ${newValues.approval_status}`)
