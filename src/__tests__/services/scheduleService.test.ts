@@ -389,8 +389,17 @@ describe('scheduleService - Multitenancy Data Isolation', () => {
         organization_id: org1.id,
         status: 'active',
         next_due_date: '2025-01-07',
-        patients: patient1,
+        patients: {
+          ...patient1,
+          departments: { name: 'Test Department' },
+          assigned_doctor_name: 'Dr. Test',
+          profiles: { name: 'Dr. Test' }
+        },
         items: item1,
+        interval_weeks: 4,
+        notes: null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
       };
 
       const org2Schedule = {
@@ -412,10 +421,8 @@ describe('scheduleService - Multitenancy Data Isolation', () => {
             eq: vi.fn().mockReturnValue({
               lte: vi.fn().mockReturnValue({
                 order: vi.fn().mockReturnValue({
-                  order: vi.fn().mockResolvedValue({
-                    data: [org1Schedule], // Only org1 data
-                    error: null,
-                  }),
+                  data: [org1Schedule], // Only org1 data
+                  error: null,
                 }),
               }),
             }),
