@@ -100,13 +100,36 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate nurse role has care_type
-    if (invitationData.role === 'nurse' && !invitationData.care_type) {
-      console.error('[Signup] Nurse invitation missing care_type');
-      return NextResponse.json(
-        { error: 'Nurse invitation must have care_type' },
-        { status: 400 }
-      );
+    // Validate nurse role has care_type and convert to department_id
+    let departmentId: string | null = null;
+
+    if (invitationData.role === 'nurse') {
+      if (!invitationData.care_type) {
+        console.error('[Signup] Nurse invitation missing care_type');
+        return NextResponse.json(
+          { error: 'Nurse invitation must have care_type' },
+          { status: 400 }
+        );
+      }
+
+      // Find department_id from care_type
+      const { data: department, error: deptError } = await supabase
+        .from('departments')
+        .select('id')
+        .eq('name', invitationData.care_type)
+        .eq('organization_id', invitationData.organization_id)
+        .single<{ id: string }>();
+
+      if (deptError || !department) {
+        console.error('[Signup] Failed to find department:', deptError);
+        return NextResponse.json(
+          { error: `Department not found for care_type: ${invitationData.care_type}` },
+          { status: 400 }
+        );
+      }
+
+      departmentId = department.id;
+      console.log(`[Signup] Mapped care_type "${invitationData.care_type}" to department_id: ${departmentId}`);
     }
 
     // Create Supabase Auth user
@@ -133,19 +156,17 @@ export async function POST(request: NextRequest) {
     const userId = authData.user.id;
 
     // Build profile data using pure function
+    // Note: care_type is no longer used - we use department_id instead
     const invitationInfo: InvitationInfo = {
       email: invitationData.email,
       role: invitationData.role as 'admin' | 'doctor' | 'nurse' | 'super_admin',
       organization_id: invitationData.organization_id,
-      care_type: invitationData.care_type as '외래' | '입원' | '낮병원' | null,
     };
 
     const profileData = buildProfileData(invitationInfo, { name, password });
 
     // Create profile
-    // Note: care_type must be NULL for admin/doctor/super_admin (per CHECK constraint)
-    // For nurse: care_type must be one of: '외래', '입원', '낮병원'
-    // Use profile data directly from buildProfileData - it already handles care_type correctly
+    // Note: department_id is required for nurses, NULL for admin/doctor/super_admin
     const profilePayload: any = {
       id: userId,
       email: profileData.email,
@@ -154,7 +175,7 @@ export async function POST(request: NextRequest) {
       approval_status: profileData.approval_status,
       name: profileData.name,
       is_active: true,
-      care_type: profileData.care_type,
+      department_id: departmentId,
     };
 
     console.log('[Signup] Upserting profile with payload:', JSON.stringify(profilePayload, null, 2));

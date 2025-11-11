@@ -195,6 +195,25 @@
   - ESLint/TypeScript 에러 없음 확인
 - **완료 현황**: 22개 이슈 중 14개 완료 (77%), 3개 계획 수립 (RLS 정책, Edge Function, qasheet 분석)
 
+### 12.7 대시보드 필터링 시스템 개선 (2025년 11월 11일)
+- **Organization-scoped 환자 수 조회**:
+  - useFilteredPatientCount: organization_id 필터링 추가
+  - 전체 환자 수와 소속 환자 수가 조직 범위 내에서만 집계
+  - 다중 조직 환경에서 데이터 격리 보장
+- **부서 기반 필터링 강화**:
+  - getTodayChecklist: departmentIds 파라미터 추가로 관리자 부서 필터링 지원
+  - getUpcomingSchedules: departmentIds 파라미터 추가로 일정 조회 필터링
+  - UUID 검증으로 타입 안전성 확보 (PostgreSQL UUID 컬럼 호환성)
+- **UserContext 개선**:
+  - useFilteredTodayChecklist: UserContext에 departmentId 필드 추가
+  - useFilteredUpcomingSchedules: UserContext에 departmentId 필드 추가
+  - 역할 기반 필터링 로직에 부서 정보 정확히 전달
+- **간호사 필터링 마이그레이션**:
+  - useFilteredPatientCount: 간호사 필터링을 care_type에서 department_id로 전환
+  - 부서 관리 시스템 완전 마이그레이션의 최종 단계
+  - UUID 기반 부서 필터링으로 타입 안전성 향상
+- **영향**: 대시보드 필터가 조직/부서 범위 내에서 정확히 작동, 환자 수 표시 오류 해결
+
 ## 13. 🚀 추가 구현 기능 (원 요구사항 외)
 
 ### 13.1 권한 관리 시스템

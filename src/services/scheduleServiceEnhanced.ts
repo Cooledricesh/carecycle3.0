@@ -3,7 +3,7 @@
 import { SupabaseClient } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
 import { Database } from '@/lib/database.types'
-import { format } from 'date-fns'
+import { format, addDays } from 'date-fns'
 import {
   FilterStrategyFactory,
   FilterOptions,
@@ -319,14 +319,16 @@ export class ScheduleServiceEnhanced {
   async getTodayChecklist(
     showAll: boolean,
     userContext: UserContext,
-    supabase?: SupabaseClient<Database>
+    supabase?: SupabaseClient<Database>,
+    departmentIds?: string[]
   ): Promise<UiSchedule[]> {
     const client = (supabase || createClient()) as any
 
     console.log('[getTodayChecklist] Fetching today\'s checklist:', {
       userId: userContext.userId,
       showAll,
-      role: userContext.role
+      role: userContext.role,
+      departmentIds
     })
 
     try {
@@ -366,8 +368,136 @@ export class ScheduleServiceEnhanced {
             category
           )
         `)
-        .lte('next_due_date', today)
         .eq('status', 'active')
+
+      // Apply organization filter (skip for super_admin who has null organization_id)
+      if (userContext.organizationId) {
+        query = query.eq('organization_id', userContext.organizationId)
+      }
+
+      // Apply date filter after organization filter
+      query = query.lte('next_due_date', today)
+
+      // Apply role-based filtering
+      if (!showAll && userContext.role !== 'admin') {
+        if (userContext.role === 'doctor') {
+          query = query.eq('patients.doctor_id', userContext.userId)
+        } else if (userContext.role === 'nurse' && userContext.departmentId) {
+          query = query.eq('patients.department_id', userContext.departmentId)
+        }
+      }
+
+      // Apply department filter for admin (if specified)
+      if (departmentIds && departmentIds.length > 0) {
+        // Validate UUIDs
+        const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+        const validUuids = departmentIds.filter(id => UUID_REGEX.test(id))
+        if (validUuids.length > 0) {
+          query = query.in('patients.department_id', validUuids)
+        }
+      }
+
+      // Add ordering (only by schedules table columns - cannot order by joined table columns in PostgREST)
+      query = query.order('next_due_date', { ascending: true })
+
+      const { data: schedules, error: queryError } = await query
+
+      if (queryError) {
+        throw queryError
+      }
+
+      console.log('[getTodayChecklist] Query successful:', schedules?.length || 0, 'items')
+
+      // Transform using type-safe transformer
+      const transformed = (schedules || []).map((s: any) => this.transformDbToUi(s as DbNestedSchedule))
+
+      // Sort by patient name on client side (cannot do in PostgREST with joined tables)
+      return transformed.sort((a: UiSchedule, b: UiSchedule) => {
+        if (a.next_due_date === b.next_due_date) {
+          return (a.patient_name || '').localeCompare(b.patient_name || '')
+        }
+        return 0
+      })
+
+    } catch (error: unknown) {
+      const err = error as { message?: string; details?: unknown; hint?: string; code?: string }
+      console.error('Error fetching today checklist:', {
+        message: err?.message,
+        details: err?.details,
+        hint: err?.hint,
+        code: err?.code
+      })
+
+      // Return empty array instead of throwing to prevent complete failure
+      console.log('[getTodayChecklist] Returning empty array due to error')
+      return []
+    }
+  }
+
+  /**
+   * Get upcoming schedules (within execution window: 7 days before to 7 days after due date)
+   * Uses same JOIN pattern as getTodayChecklist to ensure data consistency
+   */
+  async getUpcomingSchedules(
+    daysAhead: number,
+    showAll: boolean,
+    userContext: UserContext,
+    supabase?: SupabaseClient<Database>,
+    departmentIds?: string[]
+  ): Promise<UiSchedule[]> {
+    const client = (supabase || createClient()) as any
+
+    console.log('[getUpcomingSchedules] Fetching upcoming schedules:', {
+      userId: userContext.userId,
+      daysAhead,
+      showAll,
+      role: userContext.role,
+      departmentIds
+    })
+
+    try {
+      const today = new Date()
+      const futureDate = format(addDays(today, daysAhead), 'yyyy-MM-dd')
+      const pastDate = format(addDays(today, -7), 'yyyy-MM-dd')
+
+      console.log('[getUpcomingSchedules] Date range:', { pastDate, futureDate })
+
+      let query = client
+        .from('schedules')
+        .select(`
+          id,
+          patient_id,
+          item_id,
+          next_due_date,
+          interval_weeks,
+          notes,
+          status,
+          created_at,
+          updated_at,
+          patients!inner (
+            id,
+            name,
+            department_id,
+            departments (
+              name
+            ),
+            doctor_id,
+            assigned_doctor_name,
+            patient_number,
+            profiles:doctor_id (
+              name
+            )
+          ),
+          items!inner (
+            id,
+            name,
+            category
+          )
+        `)
+        .gte('next_due_date', pastDate)
+        .lte('next_due_date', futureDate)
+        .eq('status', 'active')
+        .order('next_due_date', { ascending: true })
 
       // Apply organization filter (skip for super_admin who has null organization_id)
       if (userContext.organizationId) {
@@ -383,20 +513,30 @@ export class ScheduleServiceEnhanced {
         }
       }
 
+      // Apply department filter for admin (if specified)
+      if (departmentIds && departmentIds.length > 0) {
+        // Validate UUIDs
+        const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+        const validUuids = departmentIds.filter(id => UUID_REGEX.test(id))
+        if (validUuids.length > 0) {
+          query = query.in('patients.department_id', validUuids)
+        }
+      }
+
       const { data: schedules, error: queryError } = await query
 
       if (queryError) {
         throw queryError
       }
 
-      console.log('[getTodayChecklist] Query successful:', schedules?.length || 0, 'items')
+      console.log('[getUpcomingSchedules] Query successful:', schedules?.length || 0, 'items')
 
       // Transform using type-safe transformer
       return (schedules || []).map((s: any) => this.transformDbToUi(s as DbNestedSchedule))
 
     } catch (error: unknown) {
       const err = error as { message?: string; details?: unknown; hint?: string; code?: string }
-      console.error('Error fetching today checklist:', {
+      console.error('Error fetching upcoming schedules:', {
         message: err?.message,
         details: err?.details,
         hint: err?.hint,
@@ -404,9 +544,24 @@ export class ScheduleServiceEnhanced {
       })
 
       // Return empty array instead of throwing to prevent complete failure
-      console.log('[getTodayChecklist] Returning empty array due to error')
+      console.log('[getUpcomingSchedules] Returning empty array due to error')
       return []
     }
+  }
+
+  // Keep getTodayChecklist error handling consistent
+  private handleTodayChecklistError(error: unknown): UiSchedule[] {
+    const err = error as { message?: string; details?: unknown; hint?: string; code?: string }
+    console.error('Error fetching today checklist:', {
+      message: err?.message,
+      details: err?.details,
+      hint: err?.hint,
+      code: err?.code
+    })
+
+    // Return empty array instead of throwing to prevent complete failure
+    console.log('[getTodayChecklist] Returning empty array due to error')
+    return []
   }
 
   /**

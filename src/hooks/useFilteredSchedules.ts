@@ -108,8 +108,16 @@ export function useFilteredTodayChecklist() {
   const filters = isFilterAvailable ? filterContext.filters : defaultFilters
   const supabase = createClient()
 
+  // Debug logging
+  console.log('[useFilteredTodayChecklist] Current filters:', {
+    isFilterAvailable,
+    showAll: filters.showAll,
+    department_ids: filters.department_ids,
+    role: typedProfile?.role
+  })
+
   return useQuery({
-    queryKey: ['schedules', 'today', typedProfile?.organization_id, filters.showAll], // Include filter state in key
+    queryKey: ['schedules', 'today', typedProfile?.organization_id, filters.showAll, filters.department_ids], // Include filter state in key
     queryFn: async () => {
       try {
         // Use enhanced service for today's checklist
@@ -118,14 +126,24 @@ export function useFilteredTodayChecklist() {
             userId: user.id,
             role: typedProfile.role || 'nurse',
             careType: typedProfile.care_type || null,
+            departmentId: typedProfile.department_id || null,  // Add departmentId
             organizationId: typedProfile.organization_id
           }
+
+          console.log('[useFilteredTodayChecklist] Calling getTodayChecklist with:', {
+            showAll: filters.showAll || false,
+            departmentIds: filters.department_ids,
+            userContext
+          })
 
           const result = await scheduleServiceEnhanced.getTodayChecklist(
             filters.showAll || false,
             userContext,
-            supabase as any
+            supabase as any,
+            filters.department_ids  // Pass department filter
           )
+
+          console.log('[useFilteredTodayChecklist] Result:', result.length, 'items')
 
           return result
         }
@@ -160,41 +178,31 @@ export function useFilteredUpcomingSchedules(daysAhead: number = 7) {
   const supabase = createClient()
 
   return useQuery({
-    queryKey: ['schedules', 'upcoming', typedProfile?.organization_id, daysAhead, filters.showAll], // Include filter state in key
+    queryKey: ['schedules', 'upcoming', typedProfile?.organization_id, daysAhead, filters.showAll, filters.department_ids], // Include filter state in key
     queryFn: async () => {
       try {
         if (!typedProfile || !user || !typedProfile.organization_id) {
           return []
         }
 
-        // Get all schedules first
-        const allSchedules = await scheduleService.getUpcomingSchedules(daysAhead, typedProfile.organization_id, filters, supabase)
-
-        // Apply role-based filtering if showAll is false
-        if (!filters.showAll) {
-          if (typedProfile.role === 'nurse' && typedProfile.care_type) {
-            // Filter by care_type for nurses
-            // Handle both possible property names (patients or patient)
-            const filtered = allSchedules.filter((schedule: any) =>
-              (schedule.patients?.care_type === typedProfile.care_type) ||
-              (schedule.patient?.careType === typedProfile.care_type) ||
-              (schedule.patient?.care_type === typedProfile.care_type)
-            )
-            return filtered
-          } else if (typedProfile.role === 'doctor') {
-            // Filter by doctor_id for doctors
-            // Handle both possible property names (patients or patient)
-            const filtered = allSchedules.filter((schedule: any) =>
-              (schedule.patients?.doctor_id === user.id) ||
-              (schedule.patient?.doctorId === user.id) ||
-              (schedule.patient?.doctor_id === user.id)
-            )
-            return filtered
-          }
+        // Use enhanced service for upcoming schedules (same JOIN pattern as getTodayChecklist)
+        const userContext: UserContext & { organizationId: string } = {
+          userId: user.id,
+          role: typedProfile.role || 'nurse',
+          careType: typedProfile.care_type || null,
+          departmentId: typedProfile.department_id || null,
+          organizationId: typedProfile.organization_id
         }
 
-        // Admin or showAll = true: return all schedules
-        return allSchedules
+        const result = await scheduleServiceEnhanced.getUpcomingSchedules(
+          daysAhead,
+          filters.showAll || false,
+          userContext,
+          supabase as any,
+          filters.department_ids  // Pass department filter
+        )
+
+        return result
       } catch (error) {
         const message = mapErrorToUserMessage(error)
         toast({

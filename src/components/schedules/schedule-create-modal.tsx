@@ -55,6 +55,8 @@ import { patientService } from '@/services/patientService'
 import { PatientSearchField } from '@/components/patients/patient-search-field'
 import type { Patient } from '@/types/patient'
 import { useProfile, Profile } from '@/hooks/useProfile'
+import { InjectionMetadataForm, type InjectionMetadata } from './InjectionMetadataForm'
+import { Separator } from '@/components/ui/separator'
 
 interface ScheduleCreateModalProps {
   presetPatientId?: string
@@ -83,6 +85,9 @@ export function ScheduleCreateModal({
   const [itemComboOpen, setItemComboOpen] = useState(false)
   const [itemSearchValue, setItemSearchValue] = useState('')
   const [datePopoverOpen, setDatePopoverOpen] = useState(false)
+  const [selectedItemCategory, setSelectedItemCategory] = useState<string | null>(null)
+  const [injectionMetadata, setInjectionMetadata] = useState<InjectionMetadata | null>(null)
+  const [showInjectionForm, setShowInjectionForm] = useState(false)
   const { toast } = useToast()
   const supabase = createClient()
   const { data: profile } = useProfile()
@@ -148,7 +153,7 @@ export function ScheduleCreateModal({
 
   const handleItemSelect = (itemName: string) => {
     form.setValue('itemName', itemName)
-    
+
     // 선택한 항목의 기본 주기 설정 (주 단위로 변환)
     const selectedItem = items.find(item => item.name === itemName)
     if (selectedItem) {
@@ -157,8 +162,11 @@ export function ScheduleCreateModal({
       const weeks = Math.max(1, Math.round(days / 7))
       form.setValue('intervalValue', weeks)
       form.setValue('intervalUnit', 'week')
+
+      // 카테고리 저장 (주사 여부 판단용)
+      setSelectedItemCategory(selectedItem.category)
     }
-    
+
     setItemComboOpen(false)
   }
 
@@ -187,6 +195,20 @@ export function ScheduleCreateModal({
       const selectedItem = items.find(item => item.name === data.itemName)
       const category = selectedItem?.category as 'injection' | 'test' | 'other' | undefined
 
+      // Prepare notes with injection metadata if applicable
+      let finalNotes = data.notes || ''
+      if (category === 'injection' && injectionMetadata) {
+        const metadataParts = []
+        if (injectionMetadata.dosage) {
+          metadataParts.push(`용량: ${injectionMetadata.dosage}`)
+        }
+        if (metadataParts.length > 0) {
+          finalNotes = finalNotes
+            ? `${finalNotes}\n\n[용량]\n${metadataParts.join('\n')}`
+            : `[용량]\n${metadataParts.join('\n')}`
+        }
+      }
+
       // Create schedule
       await scheduleService.createWithCustomItem({
         patientId: data.patientId,
@@ -196,7 +218,7 @@ export function ScheduleCreateModal({
         intervalValue: data.intervalValue,
         startDate: formatDateForDB(data.firstPerformedAt),
         nextDueDate: formatDateForDB(firstDueDate), // Use first performed date as first due date
-        notes: data.notes || null,
+        notes: finalNotes || null,
         category: category || 'other', // Use item's category or default to 'other'
         notificationDaysBefore: 7 // Default notification days
       }, typedProfile.organization_id)
@@ -212,6 +234,8 @@ export function ScheduleCreateModal({
 
       // Reset form and close modal
       form.reset()
+      setSelectedItemCategory(null)
+      setInjectionMetadata(null)
       setOpen(false)
 
       // Call success callback
@@ -455,7 +479,7 @@ export function ScheduleCreateModal({
                 <FormItem>
                   <FormLabel>메모</FormLabel>
                   <FormControl>
-                    <Textarea 
+                    <Textarea
                       placeholder="추가 정보나 특이사항을 입력하세요"
                       className="resize-none"
                       {...field}
@@ -466,6 +490,49 @@ export function ScheduleCreateModal({
                 </FormItem>
               )}
             />
+
+            {/* Injection Metadata - Conditional for injection category */}
+            {selectedItemCategory === 'injection' && (
+              <>
+                <Separator className="my-2" />
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <h4 className="text-sm font-semibold text-gray-900">주사 정보 (선택사항)</h4>
+                    <p className="text-xs text-gray-500">
+                      용량을 설정할 수 있습니다. 완료 처리 시 참고됩니다.
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <label htmlFor="dosage-input" className="text-sm font-medium">
+                      용량
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        id="dosage-input"
+                        type="text"
+                        placeholder="예: 10"
+                        value={injectionMetadata?.dosage?.replace('mg', '') || ''}
+                        onChange={(e) => {
+                          const value = e.target.value
+                          if (value === '' || /^\d+\.?\d*$/.test(value)) {
+                            setInjectionMetadata(prev => ({
+                              ...(prev ?? {}),
+                              dosage: value ? `${value}mg` : undefined,
+                              route: 'IM'
+                            }))
+                          }
+                        }}
+                        className="flex-1"
+                      />
+                      <span className="text-sm font-medium text-gray-600">mg</span>
+                    </div>
+                    <p className="text-xs text-gray-500">
+                      숫자만 입력하세요 (단위: mg)
+                    </p>
+                  </div>
+                </div>
+              </>
+            )}
 
             <DialogFooter>
               <Button
