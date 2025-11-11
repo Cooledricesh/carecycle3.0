@@ -84,21 +84,23 @@ export function ScheduleCompletionDialog({
             />
           </div>
 
-          {/* Execution Notes */}
-          <div className={`${isMobile ? 'grid gap-2' : 'grid grid-cols-4 items-center gap-4'}`}>
-            <Label htmlFor="execution-notes" className={isMobile ? '' : 'text-right'}>
-              메모
-            </Label>
-            <Textarea
-              id="execution-notes"
-              value={executionNotes}
-              onChange={(e) => onExecutionNotesChange(e.target.value)}
-              placeholder="시행 관련 메모를 입력하세요 (선택사항)"
-              className={`${isMobile ? 'w-full' : 'col-span-3'}`}
-              rows={3}
-              disabled={isSubmitting}
-            />
-          </div>
+          {/* Execution Notes - Only for non-injection categories */}
+          {!isInjectionCategory && (
+            <div className={`${isMobile ? 'grid gap-2' : 'grid grid-cols-4 items-center gap-4'}`}>
+              <Label htmlFor="execution-notes" className={isMobile ? '' : 'text-right'}>
+                메모
+              </Label>
+              <Textarea
+                id="execution-notes"
+                value={executionNotes}
+                onChange={(e) => onExecutionNotesChange(e.target.value)}
+                placeholder="시행 관련 메모를 입력하세요 (선택사항)"
+                className={`${isMobile ? 'w-full' : 'col-span-3'}`}
+                rows={3}
+                disabled={isSubmitting}
+              />
+            </div>
+          )}
 
           {/* Next Due Date Info */}
           {schedule && schedule.interval_weeks && (

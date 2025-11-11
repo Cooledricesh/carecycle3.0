@@ -167,34 +167,23 @@ export function useFilteredUpcomingSchedules(daysAhead: number = 7) {
           return []
         }
 
-        // Get all schedules first
-        const allSchedules = await scheduleService.getUpcomingSchedules(daysAhead, typedProfile.organization_id, filters, supabase)
-
-        // Apply role-based filtering if showAll is false
-        if (!filters.showAll) {
-          if (typedProfile.role === 'nurse' && typedProfile.care_type) {
-            // Filter by care_type for nurses
-            // Handle both possible property names (patients or patient)
-            const filtered = allSchedules.filter((schedule: any) =>
-              (schedule.patients?.care_type === typedProfile.care_type) ||
-              (schedule.patient?.careType === typedProfile.care_type) ||
-              (schedule.patient?.care_type === typedProfile.care_type)
-            )
-            return filtered
-          } else if (typedProfile.role === 'doctor') {
-            // Filter by doctor_id for doctors
-            // Handle both possible property names (patients or patient)
-            const filtered = allSchedules.filter((schedule: any) =>
-              (schedule.patients?.doctor_id === user.id) ||
-              (schedule.patient?.doctorId === user.id) ||
-              (schedule.patient?.doctor_id === user.id)
-            )
-            return filtered
-          }
+        // Use enhanced service for upcoming schedules (same JOIN pattern as getTodayChecklist)
+        const userContext: UserContext & { organizationId: string } = {
+          userId: user.id,
+          role: typedProfile.role || 'nurse',
+          careType: typedProfile.care_type || null,
+          departmentId: typedProfile.department_id || null,
+          organizationId: typedProfile.organization_id
         }
 
-        // Admin or showAll = true: return all schedules
-        return allSchedules
+        const result = await scheduleServiceEnhanced.getUpcomingSchedules(
+          daysAhead,
+          filters.showAll || false,
+          userContext,
+          supabase as any
+        )
+
+        return result
       } catch (error) {
         const message = mapErrorToUserMessage(error)
         toast({

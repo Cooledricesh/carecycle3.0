@@ -19,8 +19,8 @@ export interface InjectionMetadata {
 // Validation schema for injection metadata
 const InjectionMetadataSchema = z.object({
   dosage: z.string()
-    .max(50, '용량은 50자를 초과할 수 없습니다')
-    .regex(/^[\d.]+\s*(mg|ml|cc|g|L|mL|mcg|units?|IU)?$/i, '올바른 용량 형식을 입력하세요 (예: 10mg, 5ml)')
+    .max(20, '용량은 20자를 초과할 수 없습니다')
+    .regex(/^\d+\.?\d*$/, '숫자만 입력하세요')
     .optional()
     .or(z.literal('')),
   route: z.enum(['IV', 'IM', 'SC']).optional().or(z.literal('')),
@@ -84,9 +84,10 @@ export function InjectionMetadataForm({
     }
 
     // Submit validated data
+    // Automatically append 'mg' to dosage if provided
     onSubmit({
-      dosage: dosage || undefined,
-      route: (route as 'IV' | 'IM' | 'SC') || undefined,
+      dosage: dosage ? `${dosage}mg` : undefined,
+      route: 'IM', // Fixed to IM (Intramuscular)
       notes: notes || undefined,
     })
   }
@@ -103,56 +104,34 @@ export function InjectionMetadataForm({
         <Label htmlFor="dosage" className="text-sm font-medium">
           용량
         </Label>
-        <Input
-          id="dosage"
-          type="text"
-          placeholder="예: 10mg, 5ml"
-          value={dosage}
-          onChange={(e) => setDosage(e.target.value)}
-          className={`${touchTarget.input} ${errors.dosage ? 'border-red-500' : ''}`}
-          disabled={isSubmitting}
-          aria-label="주사 용량 입력"
-          aria-invalid={!!errors.dosage}
-          aria-describedby={errors.dosage ? 'dosage-error' : 'dosage-help'}
-        />
+        <div className="flex items-center gap-2">
+          <Input
+            id="dosage"
+            type="text"
+            placeholder="예: 10"
+            value={dosage}
+            onChange={(e) => setDosage(e.target.value)}
+            className={`${touchTarget.input} ${errors.dosage ? 'border-red-500' : ''} flex-1`}
+            disabled={isSubmitting}
+            aria-label="주사 용량 입력"
+            aria-invalid={!!errors.dosage}
+            aria-describedby={errors.dosage ? 'dosage-error' : 'dosage-help'}
+          />
+          <span className="text-sm font-medium text-gray-600">mg</span>
+        </div>
         {errors.dosage ? (
           <p id="dosage-error" className="text-xs text-red-600">
             {errors.dosage}
           </p>
         ) : (
           <p id="dosage-help" className="text-xs text-gray-500">
-            숫자와 단위를 함께 입력하세요 (예: 10mg, 5ml)
+            숫자만 입력하세요 (단위: mg 고정)
           </p>
         )}
       </div>
 
-      {/* Route Selection */}
-      <div className="grid gap-2">
-        <Label htmlFor="route" className="text-sm font-medium">
-          주사 경로
-        </Label>
-        <Select
-          value={route}
-          onValueChange={setRoute}
-          disabled={isSubmitting}
-        >
-          <SelectTrigger
-            id="route"
-            className={touchTarget.input}
-            aria-label="주사 경로 선택"
-          >
-            <SelectValue placeholder="선택하세요" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="IV">정맥주사 (IV)</SelectItem>
-            <SelectItem value="IM">근육주사 (IM)</SelectItem>
-            <SelectItem value="SC">피하주사 (SC)</SelectItem>
-          </SelectContent>
-        </Select>
-        <p className="text-xs text-gray-500">
-          주사 투여 경로를 선택하세요
-        </p>
-      </div>
+      {/* Route Selection - Hidden (Fixed to IM) */}
+      {/* Route is always IM (Intramuscular) for this system */}
 
       {/* Notes Textarea */}
       <div className="grid gap-2">

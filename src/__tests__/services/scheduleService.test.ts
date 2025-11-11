@@ -12,6 +12,8 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '@/lib/database.types';
 import { scheduleService } from '@/services/scheduleService';
+import { scheduleServiceEnhanced } from '@/services/scheduleServiceEnhanced';
+import type { UserContext } from '@/services/filters/types';
 
 // Test data types
 type TestOrganization = {
@@ -332,7 +334,7 @@ describe('scheduleService - Multitenancy Data Isolation', () => {
     });
   });
 
-  describe('getTodayChecklist() - Data Isolation', () => {
+  describe('getTodayChecklist() - Data Isolation (scheduleServiceEnhanced)', () => {
     it('should filter schedules by organization_id', async () => {
       // Arrange
       const mockFrom = mockSupabase.from as ReturnType<typeof vi.fn>;
@@ -361,8 +363,16 @@ describe('scheduleService - Multitenancy Data Isolation', () => {
         }),
       });
 
+      const userContext: UserContext & { organizationId: string } = {
+        userId: 'test-user-id',
+        role: 'nurse',
+        careType: null,
+        departmentId: null,
+        organizationId: org1.id
+      };
+
       // Act
-      await scheduleService.getTodayChecklist(org1.id, undefined, mockSupabase);
+      await scheduleServiceEnhanced.getTodayChecklist(false, userContext, mockSupabase);
 
       // Assert: Verify organization_id filter was applied
       expect(eqSpy).toHaveBeenCalledWith('status');
@@ -413,8 +423,16 @@ describe('scheduleService - Multitenancy Data Isolation', () => {
         }),
       });
 
+      const userContext: UserContext & { organizationId: string } = {
+        userId: 'test-user-id',
+        role: 'nurse',
+        careType: null,
+        departmentId: null,
+        organizationId: org1.id
+      };
+
       // Act
-      const result = await scheduleService.getTodayChecklist(org1.id, undefined, mockSupabase);
+      const result = await scheduleServiceEnhanced.getTodayChecklist(false, userContext, mockSupabase);
 
       // Assert
       expect(result).toHaveLength(1);
@@ -442,8 +460,16 @@ describe('scheduleService - Multitenancy Data Isolation', () => {
         }),
       });
 
+      const userContext: UserContext & { organizationId: string } = {
+        userId: 'test-user-id',
+        role: 'nurse',
+        careType: null,
+        departmentId: null,
+        organizationId: null as any
+      };
+
       // Act
-      const result = await scheduleService.getTodayChecklist(null as any, undefined, mockSupabase);
+      const result = await scheduleServiceEnhanced.getTodayChecklist(false, userContext, mockSupabase);
 
       // Assert: Returns empty due to RLS
       expect(result).toEqual([]);
@@ -895,7 +921,7 @@ describe('scheduleService - Multitenancy Data Isolation', () => {
     });
   });
 
-  describe('Edge Cases', () => {
+  describe('Edge Cases (scheduleServiceEnhanced)', () => {
     it('should handle empty string organization_id (returns empty due to no match)', async () => {
       // Arrange
       const mockFrom = mockSupabase.from as ReturnType<typeof vi.fn>;
@@ -916,8 +942,16 @@ describe('scheduleService - Multitenancy Data Isolation', () => {
         }),
       });
 
+      const userContext: UserContext & { organizationId: string } = {
+        userId: 'test-user-id',
+        role: 'nurse',
+        careType: null,
+        departmentId: null,
+        organizationId: '' as any
+      };
+
       // Act
-      const result = await scheduleService.getTodayChecklist('', undefined, mockSupabase);
+      const result = await scheduleServiceEnhanced.getTodayChecklist(false, userContext, mockSupabase);
 
       // Assert: Returns empty due to no match
       expect(result).toEqual([]);
@@ -943,8 +977,16 @@ describe('scheduleService - Multitenancy Data Isolation', () => {
         }),
       });
 
+      const userContext: UserContext & { organizationId: string } = {
+        userId: 'test-user-id',
+        role: 'nurse',
+        careType: null,
+        departmentId: null,
+        organizationId: undefined as any
+      };
+
       // Act
-      const result = await scheduleService.getTodayChecklist(undefined as any, undefined, mockSupabase);
+      const result = await scheduleServiceEnhanced.getTodayChecklist(false, userContext, mockSupabase);
 
       // Assert: Returns empty due to no match
       expect(result).toEqual([]);
@@ -970,12 +1012,16 @@ describe('scheduleService - Multitenancy Data Isolation', () => {
         }),
       });
 
+      const userContext: UserContext & { organizationId: string } = {
+        userId: 'test-user-id',
+        role: 'nurse',
+        careType: null,
+        departmentId: null,
+        organizationId: '99999999-9999-9999-9999-999999999999'
+      };
+
       // Act
-      const result = await scheduleService.getTodayChecklist(
-        '99999999-9999-9999-9999-999999999999',
-        undefined,
-        mockSupabase
-      );
+      const result = await scheduleServiceEnhanced.getTodayChecklist(false, userContext, mockSupabase);
 
       // Assert: Should return empty array, not error
       expect(result).toEqual([]);

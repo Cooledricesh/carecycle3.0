@@ -55,6 +55,8 @@ import { patientService } from '@/services/patientService'
 import { PatientSearchField } from '@/components/patients/patient-search-field'
 import type { Patient } from '@/types/patient'
 import { useProfile, Profile } from '@/hooks/useProfile'
+import { InjectionMetadataForm, type InjectionMetadata } from './InjectionMetadataForm'
+import { Separator } from '@/components/ui/separator'
 
 interface ScheduleCreateModalProps {
   presetPatientId?: string
@@ -83,6 +85,9 @@ export function ScheduleCreateModal({
   const [itemComboOpen, setItemComboOpen] = useState(false)
   const [itemSearchValue, setItemSearchValue] = useState('')
   const [datePopoverOpen, setDatePopoverOpen] = useState(false)
+  const [selectedItemCategory, setSelectedItemCategory] = useState<string | null>(null)
+  const [injectionMetadata, setInjectionMetadata] = useState<InjectionMetadata | null>(null)
+  const [showInjectionForm, setShowInjectionForm] = useState(false)
   const { toast } = useToast()
   const supabase = createClient()
   const { data: profile } = useProfile()

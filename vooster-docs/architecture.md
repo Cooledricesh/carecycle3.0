@@ -262,8 +262,11 @@ src/
 │
 ├── services/                     # API 서비스 계층 (도메인 기반)
 │   ├── patientService.ts       # 환자 CRUD
-│   ├── scheduleService.ts      # 스케줄 CRUD
-│   ├── scheduleServiceEnhanced.ts # 향상된 스케줄 로직
+│   ├── scheduleService.ts      # 스케줄 변경 작업 (Mutations)
+│   │                           # - create, update, delete, markAsCompleted 등
+│   ├── scheduleServiceEnhanced.ts # 스케줄 조회 작업 (Queries)
+│   │                           # - getFilteredSchedules, getTodayChecklist, getUpcomingSchedules
+│   │                           # - 역할 기반 필터링, UserContext 기반 조회
 │   ├── optimizedScheduleService.ts # 최적화된 스케줄 로직
 │   ├── executionService.ts     # 시행 관리
 │   ├── itemService.ts          # 항목 관리
@@ -371,6 +374,15 @@ src/
     - 이전: 이중 캐싱 (scheduleServiceEnhanced Map + React Query)
     - 현재: 단일 캐싱 (React Query only)
     - 효과: 캐시 불일치 리스크 제거, 유지보수 복잡도 감소
+  - **변경사항 (2025-11-10)**: 스케줄 서비스 책임 분리
+    - scheduleService: 변경 작업 (Mutations) 전담
+      - create, update, delete, markAsCompleted 등
+      - getByPatientId, getAllSchedules (단순 조회)
+    - scheduleServiceEnhanced: 조회 작업 (Queries) 전담
+      - getFilteredSchedules, getTodayChecklist, getUpcomingSchedules
+      - UserContext 기반 역할별 필터링
+      - 복잡한 JOIN과 데이터 변환 처리
+    - 효과: 단일 책임 원칙 준수, 코드 중복 제거, 유지보수성 향상
 
 #### 실시간 동기화 패턴
 ```typescript

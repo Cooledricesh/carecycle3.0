@@ -2,7 +2,9 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { scheduleService } from '@/services/scheduleService'
+import { scheduleServiceEnhanced } from '@/services/scheduleServiceEnhanced'
 import type { ScheduleWithDetails } from '@/types/schedule'
+import type { UserContext } from '@/services/filters/types'
 import { useToast } from '@/hooks/use-toast'
 import { mapErrorToUserMessage } from '@/lib/error-mapper'
 import { useAuth } from '@/providers/auth-provider-simple'
@@ -118,11 +120,24 @@ export function useTodayChecklist() {
   return useQuery({
     queryKey: ['schedules', 'today', typedProfile?.organization_id],
     queryFn: async () => {
-      if (!typedProfile?.organization_id) {
-        throw new Error('Organization ID not available')
+      if (!typedProfile?.organization_id || !user) {
+        throw new Error('Organization ID or User not available')
       }
       try {
-        return await scheduleService.getTodayChecklist(typedProfile.organization_id, undefined, supabase)
+        const userContext: UserContext & { organizationId: string } = {
+          userId: user.id,
+          role: typedProfile.role || 'nurse',
+          careType: typedProfile.care_type || null,
+          departmentId: typedProfile.department_id || null,
+          organizationId: typedProfile.organization_id
+        }
+
+        const result = await scheduleServiceEnhanced.getTodayChecklist(
+          false, // showAll
+          userContext,
+          supabase as any
+        )
+        return result
       } catch (error) {
         const message = mapErrorToUserMessage(error)
         toast({
@@ -148,11 +163,25 @@ export function useUpcomingSchedules(daysAhead: number = 7) {
   return useQuery({
     queryKey: ['schedules', 'upcoming', daysAhead, typedProfile?.organization_id],
     queryFn: async () => {
-      if (!typedProfile?.organization_id) {
-        throw new Error('Organization ID not available')
+      if (!typedProfile?.organization_id || !user) {
+        throw new Error('Organization ID or User not available')
       }
       try {
-        return await scheduleService.getUpcomingSchedules(daysAhead, typedProfile.organization_id, undefined, supabase)
+        const userContext: UserContext & { organizationId: string } = {
+          userId: user.id,
+          role: typedProfile.role || 'nurse',
+          careType: typedProfile.care_type || null,
+          departmentId: typedProfile.department_id || null,
+          organizationId: typedProfile.organization_id
+        }
+
+        const result = await scheduleServiceEnhanced.getUpcomingSchedules(
+          daysAhead,
+          false, // showAll
+          userContext,
+          supabase as any
+        )
+        return result
       } catch (error) {
         const message = mapErrorToUserMessage(error)
         toast({
