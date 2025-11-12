@@ -162,8 +162,8 @@ export default function SettingsPage() {
                 자동 보류 기준 일수
                 <span className="text-gray-500 text-sm ml-2">(선택사항)</span>
               </Label>
-              <div className="flex gap-4 items-start">
-                <div className="flex-1 max-w-xs">
+              <div className="space-y-3">
+                <div className="max-w-xs">
                   <Input
                     id="auto-hold-days"
                     type="number"
@@ -173,12 +173,12 @@ export default function SettingsPage() {
                     placeholder="예: 30"
                     aria-label="자동 보류 기준 일수"
                   />
-                  <p className="text-sm text-gray-500 mt-2">
-                    예정일을 기준으로 며칠이 지나면 자동으로 보류할지 설정합니다.
-                    <br />
-                    비워두면 자동 보류 기능이 비활성화됩니다.
-                  </p>
                 </div>
+                <p className="text-sm text-gray-500">
+                  예정일을 기준으로 며칠이 지나면 일정을 보류 항목으로 옮길지 설정합니다.
+                  <br />
+                  비워두면 자동 보류 기능이 비활성화됩니다.
+                </p>
               </div>
             </div>
 
