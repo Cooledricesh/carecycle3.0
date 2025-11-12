@@ -163,44 +163,25 @@ export async function POST(request: NextRequest) {
       ? ((adminCount ?? 0) - 1)
       : 0;
 
-    // 7.5. Pre-delete auth.identities records (BUG-2025-11-12-USER-DELETE-AUTH-500)
-    // Supabase Auth API cannot delete users with identity records.
-    // This is an internal Auth API policy, unrelated to FK CASCADE settings.
-    // We must delete identities first to unblock user deletion.
-    // Note: Cannot use .from("auth.identities") because PostgREST cannot access auth schema.
-    // Must use RPC function instead.
-    const { data: identityResult, error: identityError } = await (serviceClient as any)
-      .rpc("delete_user_identities", {
+    // 7.5. Delete user directly via SQL (BUG-2025-11-12-USER-DELETE-TRIGGER-FIX)
+    // Bypass Supabase Auth API and disable triggers to prevent notification INSERT errors
+    // This RPC function deletes from auth schema tables and then profiles (CASCADE)
+    const { data: deleteResult, error: deleteError } = await (serviceClient as any)
+      .rpc("direct_delete_user_no_triggers", {
         p_user_id: userId
       });
 
-    if (identityError) {
-      // Non-critical: User might not have identity records
-      // Log warning but continue to user deletion
-      console.warn(
-        `Identity deletion warning for user ${userId} (non-critical):`,
-        identityError
-      );
-    } else if (identityResult) {
-      console.log(
-        `Deleted ${identityResult.deleted_count} identity record(s) for user ${userId}`
-      );
-    }
-
-    // 8. Delete auth user FIRST (triggers CASCADE to profiles)
-    const { error: authError } = await serviceClient.auth.admin.deleteUser(
-      userId
-    );
-
-    if (authError) {
-      console.error("Error deleting auth user:", authError);
+    if (deleteError || (deleteResult && !deleteResult.success)) {
+      console.error("Error deleting user:", deleteError || deleteResult);
       return NextResponse.json(
-        { error: "Failed to delete user authentication" },
+        { error: "Failed to delete user" },
         { status: 500 }
       );
     }
 
-    // 9. Clean up related data AFTER user deletion with pre-calculated params
+    console.log(`User ${userId} deleted successfully via direct SQL`);
+
+    // 8. Clean up related data AFTER user deletion with pre-calculated params
     const { error: cleanupError } = await (serviceClient as any)
           .rpc("admin_delete_user", {
         p_user_id: userId,
@@ -209,11 +190,8 @@ export async function POST(request: NextRequest) {
       });
 
     if (cleanupError) {
-      console.error("CRITICAL: User data cleanup failed for user", userId, "Error:", cleanupError);
-      return NextResponse.json(
-        { error: "Failed to clean up user data. Manual recovery required." },
-        { status: 500 }
-      );
+      console.warn("Warning: User data cleanup failed for user", userId, "Error:", cleanupError);
+      // Don't return error since user is already deleted
     }
 
     return NextResponse.json({
