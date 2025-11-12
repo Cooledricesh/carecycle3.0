@@ -66,15 +66,8 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Set care_type based on role (DEPRECATED - kept for transition period)
-    // Admin and doctor roles should always have NULL care_type
-    // Nurse role defaults to '낮병원' if not specified
-    const DEFAULT_NURSE_DEPARTMENT = '낮병원' as const;
-    let finalCareType: string | null = null;
-    if (role === 'nurse') {
-      finalCareType = care_type || DEFAULT_NURSE_DEPARTMENT;
-    }
-    // Admin and doctor remain null (already initialized as null)
+    // care_type has been removed from profiles table (Phase 2.1.5)
+    // Use department_id instead for all roles
 
     // Only insert organization_id if provided (for 2-step signup, it's added later)
     const profileData: any = {
@@ -82,8 +75,7 @@ export async function POST(request: NextRequest) {
       email,
       name,
       role,
-      care_type: finalCareType, // DEPRECATED: will be removed in Phase 2.1.5
-      department_id: finalDepartmentId, // Phase 2: FK to departments table
+      department_id: finalDepartmentId,
       phone: phone || null,
     };
 
