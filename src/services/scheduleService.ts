@@ -189,6 +189,7 @@ export const scheduleService = {
           next_due_date: validatedInput.nextDueDate,
           status: 'active',
           notes: validatedInput.notes,
+          injection_dosage: validatedInput.injectionDosage ?? null,
           priority: 0,
           requires_notification: true,
           notification_days_before: validatedInput.notificationDaysBefore ?? 7, // Use validated value or default to 7

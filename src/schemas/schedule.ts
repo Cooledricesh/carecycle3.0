@@ -305,6 +305,12 @@ export const ScheduleCreateWithCustomItemSchema = z.object({
     .optional()
     .default('other'),
 
+  injectionDosage: z
+    .number()
+    .positive('용량은 양수여야 합니다')
+    .nullable()
+    .optional(),
+
   notificationDaysBefore: z
     .number()
     .int('정수를 입력해주세요')
