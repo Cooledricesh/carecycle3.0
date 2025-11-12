@@ -46,51 +46,59 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create profile using service role client (bypasses RLS)
-    const serviceSupabase = await createServiceClient();
+    // Profile is automatically created by handle_new_user() trigger
+    // Only update additional fields if provided (department, organization, phone)
+    if (department_id || organization_id || phone) {
+      const serviceSupabase = await createServiceClient();
 
-    // Resolve department_id if care_type is provided (backward compatibility)
-    let finalDepartmentId: string | null = department_id || null;
-    if (!finalDepartmentId && care_type && organization_id && role === 'nurse') {
-      // Try to find department by name (migration support)
-      const { data: departmentData } = await serviceSupabase
-        .from('departments')
-        .select('id')
-        .eq('organization_id', organization_id)
-        .eq('name', care_type)
-        .eq('is_active', true)
-        .single();
+      // Resolve department_id if care_type is provided (backward compatibility)
+      let finalDepartmentId: string | null = department_id || null;
+      if (!finalDepartmentId && care_type && organization_id && role === 'nurse') {
+        // Try to find department by name (migration support)
+        const { data: departmentData } = await serviceSupabase
+          .from('departments')
+          .select('id')
+          .eq('organization_id', organization_id)
+          .eq('name', care_type)
+          .eq('is_active', true)
+          .single();
 
-      if (departmentData) {
-        finalDepartmentId = (departmentData as any).id;
+        if (departmentData) {
+          finalDepartmentId = (departmentData as any).id;
+        }
+      }
+
+      // Update profile with additional fields (not managed by trigger)
+      const updateData: any = {};
+
+      if (finalDepartmentId) {
+        updateData.department_id = finalDepartmentId;
+      }
+
+      if (organization_id) {
+        updateData.organization_id = organization_id;
+      }
+
+      if (phone) {
+        updateData.phone = phone;
+      }
+
+      // Only update if there's data to update
+      if (Object.keys(updateData).length > 0) {
+        const { error: profileError } = await (serviceSupabase as any)
+          .from("profiles")
+          .update(updateData)
+          .eq('id', data.user.id);
+
+        if (profileError) {
+          console.error("Error updating profile:", profileError);
+          // Don't fail the signup if profile update fails
+        }
       }
     }
 
-    // care_type has been removed from profiles table (Phase 2.1.5)
-    // Use department_id instead for all roles
-
-    // Only insert organization_id if provided (for 2-step signup, it's added later)
-    const profileData: any = {
-      id: data.user.id,
-      email,
-      name,
-      role,
-      department_id: finalDepartmentId,
-      phone: phone || null,
-    };
-
-    if (organization_id) {
-      profileData.organization_id = organization_id;
-    }
-
-    const { error: profileError } = await (serviceSupabase as any)
-          .from("profiles")
-      .insert(profileData);
-
-    if (profileError) {
-      console.error("Error creating profile:", profileError);
-      // Don't fail the signup if profile creation fails
-    }
+    // Note: Basic profile (id, email, name, role) is created by handle_new_user() trigger
+    // This ensures no duplicate profile creation and consistent name handling
 
     return NextResponse.json({
       user: data.user,
