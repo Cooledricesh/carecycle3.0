@@ -55,6 +55,7 @@ const navigation: NavItem[] = [
 const adminNavigation: NavItem[] = [
   { name: '관리자 대시보드', href: '/admin', icon: Settings, roles: ['admin'] },
   { name: '사용자 관리', href: '/admin/users', icon: UserCog, roles: ['admin'] },
+  { name: '부서 관리', href: '/admin/departments', icon: Building2, roles: ['admin'] },
 ];
 
 const superAdminNavigation: NavItem[] = [

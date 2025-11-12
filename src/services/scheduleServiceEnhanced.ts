@@ -218,6 +218,7 @@ export class ScheduleServiceEnhanced {
       status: rpc.schedule_status,
       priority: rpc.priority,
       notes: rpc.notes,
+      injection_dosage: rpc.injection_dosage,
 
       // Display metadata
       display_type: rpc.display_type,

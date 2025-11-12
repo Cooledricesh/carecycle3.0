@@ -96,6 +96,16 @@ export function SignUpForm({
         throw new Error(data.error || "회원가입 중 오류가 발생했습니다.");
       }
 
+      // Set the session in the browser's Supabase client
+      // This is critical so subsequent API calls are authenticated
+      if (data.session) {
+        const supabase = createClient();
+        await supabase.auth.setSession({
+          access_token: data.session.access_token,
+          refresh_token: data.session.refresh_token
+        });
+      }
+
       // Basic signup successful, now show organization selection
       setUserId(data.user.id);
       setCurrentStep("organization");
