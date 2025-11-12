@@ -163,6 +163,24 @@ export async function POST(request: NextRequest) {
       ? ((adminCount ?? 0) - 1)
       : 0;
 
+    // 7.5. Pre-delete auth.identities records (BUG-2025-11-12-USER-DELETE-AUTH-500)
+    // Supabase Auth API cannot delete users with identity records.
+    // This is an internal Auth API policy, unrelated to FK CASCADE settings.
+    // We must delete identities first to unblock user deletion.
+    const { error: identityError } = await (serviceClient as any)
+      .from("auth.identities")
+      .delete()
+      .eq("user_id", userId);
+
+    if (identityError) {
+      // Non-critical: User might not have identity records (e.g., testdoctor@ddh.com)
+      // Log warning but continue to user deletion
+      console.warn(
+        `Identity deletion warning for user ${userId} (non-critical):`,
+        identityError
+      );
+    }
+
     // 8. Delete auth user FIRST (triggers CASCADE to profiles)
     const { error: authError } = await serviceClient.auth.admin.deleteUser(
       userId
