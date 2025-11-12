@@ -2,39 +2,50 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { NextRequest } from 'next/server'
 import { PATCH, PUT } from '../[id]/route'
 
+// Create mock functions that can be controlled per test
+const mockGetUser = vi.fn()
+const mockFrom = vi.fn()
+
 // Mock Supabase client
 vi.mock('@/lib/supabase/server', () => ({
   createClient: vi.fn(() => ({
     auth: {
-      getUser: vi.fn().mockResolvedValue({
-        data: { user: { id: 'test-user-id' } },
-        error: null,
-      }),
+      getUser: mockGetUser,
     },
-    from: vi.fn(() => ({
-      select: vi.fn().mockReturnThis(),
-      eq: vi.fn().mockReturnThis(),
-      single: vi.fn().mockResolvedValue({
-        data: { role: 'admin', organization_id: 'test-org-id' },
-        error: null,
-      }),
-      update: vi.fn().mockReturnThis(),
-      maybeSingle: vi.fn().mockResolvedValue({
-        data: {
-          id: 'test-dept-id',
-          name: 'Updated Department',
-          description: 'Updated description',
-          display_order: 1,
-          is_active: true,
-          organization_id: 'test-org-id',
-          created_at: '2025-01-01T00:00:00Z',
-          updated_at: '2025-01-01T00:00:00Z',
-        },
-        error: null,
-      }),
-    })),
+    from: mockFrom,
   })),
 }))
+
+// Default successful mock setup
+const setupSuccessfulMocks = () => {
+  mockGetUser.mockResolvedValue({
+    data: { user: { id: 'test-user-id' } },
+    error: null,
+  })
+
+  mockFrom.mockReturnValue({
+    select: vi.fn().mockReturnThis(),
+    eq: vi.fn().mockReturnThis(),
+    single: vi.fn().mockResolvedValue({
+      data: { role: 'admin', organization_id: 'test-org-id' },
+      error: null,
+    }),
+    update: vi.fn().mockReturnThis(),
+    maybeSingle: vi.fn().mockResolvedValue({
+      data: {
+        id: 'test-dept-id',
+        name: 'Updated Department',
+        description: 'Updated description',
+        display_order: 1,
+        is_active: true,
+        organization_id: 'test-org-id',
+        created_at: '2025-01-01T00:00:00Z',
+        updated_at: '2025-01-01T00:00:00Z',
+      },
+      error: null,
+    }),
+  })
+}
 
 describe('Department API - PATCH Method Support', () => {
   const createMockRequest = (body: any) => {
@@ -51,6 +62,7 @@ describe('Department API - PATCH Method Support', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    setupSuccessfulMocks()
   })
 
   it('should handle PATCH request successfully', async () => {
@@ -93,15 +105,11 @@ describe('Department API - PATCH Method Support', () => {
   })
 
   it('should return 401 for unauthorized users', async () => {
-    // Mock unauthorized user
-    vi.mocked(await import('@/lib/supabase/server')).createClient = vi.fn(() => ({
-      auth: {
-        getUser: vi.fn().mockResolvedValue({
-          data: { user: null },
-          error: { message: 'Unauthorized' },
-        }),
-      },
-    })) as any
+    // Override mock for this test to simulate unauthorized user
+    mockGetUser.mockResolvedValueOnce({
+      data: { user: null },
+      error: { message: 'Unauthorized' },
+    })
 
     const request = createMockRequest({
       name: 'Test',
@@ -127,6 +135,7 @@ describe('Department API - Backward Compatibility', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    setupSuccessfulMocks()
   })
 
   it('should support both PUT and PATCH methods', async () => {

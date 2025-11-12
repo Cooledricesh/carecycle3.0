@@ -167,17 +167,23 @@ export async function POST(request: NextRequest) {
     // Supabase Auth API cannot delete users with identity records.
     // This is an internal Auth API policy, unrelated to FK CASCADE settings.
     // We must delete identities first to unblock user deletion.
-    const { error: identityError } = await (serviceClient as any)
-      .from("auth.identities")
-      .delete()
-      .eq("user_id", userId);
+    // Note: Cannot use .from("auth.identities") because PostgREST cannot access auth schema.
+    // Must use RPC function instead.
+    const { data: identityResult, error: identityError } = await (serviceClient as any)
+      .rpc("delete_user_identities", {
+        p_user_id: userId
+      });
 
     if (identityError) {
-      // Non-critical: User might not have identity records (e.g., testdoctor@ddh.com)
+      // Non-critical: User might not have identity records
       // Log warning but continue to user deletion
       console.warn(
         `Identity deletion warning for user ${userId} (non-critical):`,
         identityError
+      );
+    } else if (identityResult) {
+      console.log(
+        `Deleted ${identityResult.deleted_count} identity record(s) for user ${userId}`
       );
     }
 
