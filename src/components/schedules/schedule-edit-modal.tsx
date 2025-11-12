@@ -414,28 +414,33 @@ export function ScheduleEditModal({
               ) : null
             })()}
 
-            {/* Notes */}
-            <FormField
-              control={form.control}
-              name="notes"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>메모</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder="추가 정보나 특이사항을 입력하세요"
-                      className="resize-none"
-                      {...field}
-                      value={field.value || ''}
-                    />
-                  </FormControl>
-                  <FormDescription>
-                    최대 500자까지 입력 가능합니다.
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            {/* Notes - Only show for non-injection categories */}
+            {(() => {
+              const selectedItem = items.find(item => item.name === form.watch('itemName'))
+              return selectedItem?.category !== 'injection' ? (
+                <FormField
+                  control={form.control}
+                  name="notes"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>메모</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="추가 정보나 특이사항을 입력하세요"
+                          className="resize-none"
+                          {...field}
+                          value={field.value || ''}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        최대 500자까지 입력 가능합니다.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              ) : null
+            })()}
 
             <DialogFooter>
               <Button
