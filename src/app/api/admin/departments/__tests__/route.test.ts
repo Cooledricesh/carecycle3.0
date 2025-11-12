@@ -125,6 +125,10 @@ describe('Department API - Backward Compatibility', () => {
 
   const mockParams = Promise.resolve({ id: 'test-dept-id' })
 
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
   it('should support both PUT and PATCH methods', async () => {
     const updateData = {
       name: 'Test Department',
@@ -158,6 +162,8 @@ describe('Department API - Backward Compatibility', () => {
     const patchResponse = await PATCH(patchRequest, { params: mockParams })
     const patchData = await patchResponse.json()
 
+    expect(putData.department).toBeDefined()
+    expect(patchData.department).toBeDefined()
     expect(putData.department.name).toBe(patchData.department.name)
     expect(putData.department.description).toBe(patchData.department.description)
     expect(putData.department.display_order).toBe(patchData.department.display_order)
