@@ -9,8 +9,11 @@ const updateDepartmentSchema = z.object({
   is_active: z.boolean().optional(),
 })
 
-// PUT /api/admin/departments/[id] - Update department
-export async function PUT(
+/**
+ * Common handler for department updates (used by both PUT and PATCH)
+ * Implements partial update logic with validation and authorization
+ */
+async function handleUpdate(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -88,9 +91,25 @@ export async function PUT(
       )
     }
 
-    console.error('PUT /api/admin/departments/[id] error:', error)
+    console.error('Error updating department:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
+}
+
+// PUT /api/admin/departments/[id] - Update department (full update)
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  return handleUpdate(request, { params })
+}
+
+// PATCH /api/admin/departments/[id] - Update department (partial update)
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  return handleUpdate(request, { params })
 }
 
 // DELETE /api/admin/departments/[id] - Delete department (soft delete)
