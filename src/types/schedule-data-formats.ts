@@ -26,6 +26,7 @@ export interface RpcFlatSchedule {
   item_id: string
   next_due_date: string
   interval_weeks: number
+  injection_dosage?: number | null
   priority: number
   schedule_status: string
 
@@ -72,6 +73,7 @@ export interface DbNestedSchedule {
   item_id: string
   next_due_date: string
   interval_weeks: number
+  injection_dosage?: number | null
   status: string
   priority?: number
   notes?: string | null
@@ -132,6 +134,7 @@ export interface UiSchedule {
   // Schedule data
   next_due_date: string
   interval_weeks: number
+  injection_dosage?: number | null
   status: string
   priority?: number
   notes?: string | null

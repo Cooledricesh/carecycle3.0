@@ -62,6 +62,7 @@ export interface ScheduleWithDetails {
   notes?: string | null
   // Additional fields for display
   care_type?: string | null
+  injection_dosage?: number | null
 }
 
 // Form input types

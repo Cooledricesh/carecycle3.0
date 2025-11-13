@@ -46,60 +46,65 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create profile using service role client (bypasses RLS)
-    const serviceSupabase = await createServiceClient();
+    // Profile is automatically created by handle_new_user() trigger
+    // Only update additional fields if provided (department, organization, phone)
+    if (department_id || organization_id || phone) {
+      const serviceSupabase = await createServiceClient();
 
-    // Resolve department_id if care_type is provided (backward compatibility)
-    let finalDepartmentId: string | null = department_id || null;
-    if (!finalDepartmentId && care_type && organization_id && role === 'nurse') {
-      // Try to find department by name (migration support)
-      const { data: departmentData } = await serviceSupabase
-        .from('departments')
-        .select('id')
-        .eq('organization_id', organization_id)
-        .eq('name', care_type)
-        .eq('is_active', true)
-        .single();
+      // Resolve department_id if care_type is provided (backward compatibility)
+      let finalDepartmentId: string | null = department_id || null;
+      if (!finalDepartmentId && care_type && organization_id && role === 'nurse') {
+        // Try to find department by name (migration support)
+        const { data: departmentData } = await serviceSupabase
+          .from('departments')
+          .select('id')
+          .eq('organization_id', organization_id)
+          .eq('name', care_type)
+          .eq('is_active', true)
+          .single();
 
-      if (departmentData) {
-        finalDepartmentId = (departmentData as any).id;
+        if (departmentData && typeof departmentData === 'object' && 'id' in departmentData) {
+          // Type assertion needed due to RLS types
+          finalDepartmentId = String((departmentData as { id: string }).id);
+        }
+      }
+
+      // Update profile with additional fields (not managed by trigger)
+      const updateData: Record<string, unknown> = {};
+
+      if (finalDepartmentId) {
+        updateData.department_id = finalDepartmentId;
+      }
+
+      if (organization_id) {
+        updateData.organization_id = organization_id;
+      }
+
+      if (phone) {
+        updateData.phone = phone;
+      }
+
+      // Only update if there's data to update
+      if (Object.keys(updateData).length > 0) {
+        // Type assertion needed due to RLS types
+        const { error: profileError } = await (serviceSupabase
+          .from("profiles") as any)
+          .update(updateData)
+          .eq('id', data.user.id);
+
+        if (profileError) {
+          console.error("Error updating profile:", profileError);
+          // Don't fail the signup if profile update fails
+        }
       }
     }
 
-    // Set care_type based on role (DEPRECATED - kept for transition period)
-    // Admin and doctor roles should always have NULL care_type
-    // Nurse role defaults to '낮병원' if not specified
-    const DEFAULT_NURSE_DEPARTMENT = '낮병원' as const;
-    let finalCareType: string | null = null;
-    if (role === 'nurse') {
-      finalCareType = care_type || DEFAULT_NURSE_DEPARTMENT;
-    }
-    // Admin and doctor remain null (already initialized as null)
+    // Note: Basic profile (id, email, name, role) is created by handle_new_user() trigger
+    // This ensures no duplicate profile creation and consistent name handling
 
-    // Only insert organization_id if provided (for 2-step signup, it's added later)
-    const profileData: any = {
-      id: data.user.id,
-      email,
-      name,
-      role,
-      care_type: finalCareType, // DEPRECATED: will be removed in Phase 2.1.5
-      department_id: finalDepartmentId, // Phase 2: FK to departments table
-      phone: phone || null,
-    };
-
-    if (organization_id) {
-      profileData.organization_id = organization_id;
-    }
-
-    const { error: profileError } = await (serviceSupabase as any)
-          .from("profiles")
-      .insert(profileData);
-
-    if (profileError) {
-      console.error("Error creating profile:", profileError);
-      // Don't fail the signup if profile creation fails
-    }
-
+    // CRITICAL: Session is automatically set via Supabase SSR cookie handling
+    // The createClient() call uses @supabase/ssr which manages cookies automatically
+    // Client-side should refresh session after signup to ensure consistency
     return NextResponse.json({
       user: data.user,
       session: data.session,

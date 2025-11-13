@@ -9,8 +9,11 @@ const updateDepartmentSchema = z.object({
   is_active: z.boolean().optional(),
 })
 
-// PUT /api/admin/departments/[id] - Update department
-export async function PUT(
+/**
+ * Common handler for department updates (used by both PUT and PATCH)
+ * Implements partial update logic with validation and authorization
+ */
+async function handleUpdate(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -54,6 +57,14 @@ export async function PUT(
     if (validatedData.display_order !== undefined) updateData.display_order = validatedData.display_order
     if (validatedData.is_active !== undefined) updateData.is_active = validatedData.is_active
 
+    // Check if there are any fields to update
+    if (Object.keys(updateData).length === 0) {
+      return NextResponse.json(
+        { error: 'No updatable fields provided' },
+        { status: 400 }
+      )
+    }
+
     // Update department (RLS will ensure organization_id match)
     const { data: department, error } = await (supabase
       .from('departments') as any)
@@ -88,9 +99,25 @@ export async function PUT(
       )
     }
 
-    console.error('PUT /api/admin/departments/[id] error:', error)
+    console.error('Error updating department:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
+}
+
+// PUT /api/admin/departments/[id] - Update department (full update)
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  return handleUpdate(request, { params })
+}
+
+// PATCH /api/admin/departments/[id] - Update department (partial update)
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  return handleUpdate(request, { params })
 }
 
 // DELETE /api/admin/departments/[id] - Delete department (soft delete)

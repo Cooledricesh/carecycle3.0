@@ -56,6 +56,7 @@ export class AdminFilterStrategy implements FilterStrategy {
           execution_id: item.execution_id,
           executed_by: item.executed_by,
           notes: item.execution_notes,
+          injection_dosage: item.injection_dosage,
           doctor_id_at_completion: item.doctor_id_at_completion,
           care_type_at_completion: item.care_type_at_completion
         }))
@@ -99,6 +100,7 @@ export class AdminFilterStrategy implements FilterStrategy {
         interval_weeks,
         status,
         notes,
+        injection_dosage,
         priority,
         created_at,
         updated_at,
@@ -186,7 +188,8 @@ export class AdminFilterStrategy implements FilterStrategy {
       status: s.status,
       created_at: s.created_at,
       updated_at: s.updated_at,
-      notes: s.notes || null
+      notes: s.notes || null,
+      injection_dosage: s.injection_dosage ?? null
     }))
 
     console.log('[AdminFilterStrategy] Fallback result:', transformedData.length, 'items')

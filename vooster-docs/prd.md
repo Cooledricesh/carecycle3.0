@@ -214,6 +214,29 @@
   - UUID 기반 부서 필터링으로 타입 안전성 향상
 - **영향**: 대시보드 필터가 조직/부서 범위 내에서 정확히 작동, 환자 수 표시 오류 해결
 
+### 12.8 사용자 삭제 시스템 아키텍처 단순화 (2025년 11월 13일)
+- **5-Layer → 2-Layer 아키텍처 전환**:
+  - 이전: API → RPC 3개 (delete_user_identities, direct_delete_user_no_triggers, admin_delete_user) → FK CASCADE
+  - 현재: API → Supabase Auth API → Database (BEFORE DELETE 트리거 + FK CASCADE + AFTER DELETE 트리거)
+  - 레이어 복잡도 60% 감소 (5개 → 2개)
+- **코드 단순화**:
+  - API 라우트 70% 코드 감소 (~50줄 → ~15줄)
+  - RPC 함수 3개 완전 제거 (350줄 SQL 제거)
+  - 보호 로직과 정리 로직을 DB 트리거로 통합
+- **BEFORE DELETE 트리거 추가**:
+  - `check_last_admin()`: 마지막 관리자 삭제 방지 (데이터베이스 레벨 보호)
+  - `anonymize_user_audit_logs()`: 감사 로그 익명화 (user_id → NULL, 사용자 정보 보존)
+- **트리거 활성화 정책 변경**:
+  - 이전: `SET session_replication_role = replica`로 모든 트리거 비활성화
+  - 현재: 모든 트리거 활성화 (BEFORE/AFTER DELETE 모두 실행)
+  - NULL 안전성: `calculate_next_due_date` 트리거에 NULL 체크 추가로 에러 방지
+- **데이터 무결성 강화**:
+  - updated_at 타임스탬프 유지 (트리거 활성화)
+  - 알림 자동 정리 (FK CASCADE)
+  - 일정의 created_by 자동 NULL 설정 (FK ON DELETE SET NULL)
+  - 감사 로그 보존 (익명화 후 유지)
+- **영향**: 사용자 삭제 로직이 크게 단순화되어 유지보수 용이, 데이터 무결성 향상
+
 ## 13. 🚀 추가 구현 기능 (원 요구사항 외)
 
 ### 13.1 권한 관리 시스템

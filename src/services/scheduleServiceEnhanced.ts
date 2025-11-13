@@ -218,6 +218,7 @@ export class ScheduleServiceEnhanced {
       status: rpc.schedule_status,
       priority: rpc.priority,
       notes: rpc.notes,
+      injection_dosage: rpc.injection_dosage,
 
       // Display metadata
       display_type: rpc.display_type,
@@ -288,6 +289,7 @@ export class ScheduleServiceEnhanced {
       status: db.status,
       priority: db.priority,
       notes: db.notes,
+      injection_dosage: db.injection_dosage,
 
       // Audit (provide defaults if missing)
       created_at: db.created_at || new Date().toISOString(),
@@ -345,6 +347,7 @@ export class ScheduleServiceEnhanced {
           next_due_date,
           interval_weeks,
           notes,
+          injection_dosage,
           status,
           created_at,
           updated_at,
@@ -471,6 +474,7 @@ export class ScheduleServiceEnhanced {
           next_due_date,
           interval_weeks,
           notes,
+          injection_dosage,
           status,
           created_at,
           updated_at,

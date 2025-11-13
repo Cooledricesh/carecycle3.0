@@ -28,6 +28,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
+import { useDepartments } from '@/hooks/useDepartments';
 
 interface InviteUserModalProps {
   open: boolean;
@@ -39,13 +40,13 @@ const inviteSchema = z.object({
   role: z.enum(['admin', 'doctor', 'nurse'], {
     errorMap: () => ({ message: '역할을 선택해주세요' }),
   }),
-  care_type: z.enum(['외래', '입원', '낮병원'], {
+  care_type: z.string({
     errorMap: () => ({ message: '케어 타입을 선택해주세요' }),
   }).optional(),
 }).refine((data) => {
   // nurse 역할인 경우 care_type 필수
   if (data.role === 'nurse') {
-    return data.care_type !== undefined;
+    return data.care_type !== undefined && data.care_type !== '';
   }
   return true;
 }, {
@@ -56,12 +57,13 @@ const inviteSchema = z.object({
 type InviteFormData = {
   email: string;
   role: 'admin' | 'doctor' | 'nurse' | '';
-  care_type?: '외래' | '입원' | '낮병원';
+  care_type?: string;
 };
 
 export function InviteUserModal({ open, onOpenChange }: InviteUserModalProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { data: departments = [], isLoading: departmentsLoading } = useDepartments();
 
   const [formData, setFormData] = useState<InviteFormData>({
     email: '',
@@ -214,16 +216,19 @@ export function InviteUserModal({ open, onOpenChange }: InviteUserModalProps) {
               <Select
                 value={formData.care_type || ''}
                 onValueChange={(value) =>
-                  setFormData({ ...formData, care_type: value as '외래' | '입원' | '낮병원' })
+                  setFormData({ ...formData, care_type: value })
                 }
+                disabled={departmentsLoading}
               >
                 <SelectTrigger className={errors.care_type ? 'border-red-500' : ''}>
-                  <SelectValue placeholder="케어 타입을 선택하세요" />
+                  <SelectValue placeholder={departmentsLoading ? '로딩 중...' : '케어 타입을 선택하세요'} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="외래">외래</SelectItem>
-                  <SelectItem value="입원">입원</SelectItem>
-                  <SelectItem value="낮병원">낮병원</SelectItem>
+                  {departments.map((dept) => (
+                    <SelectItem key={dept.id} value={dept.name}>
+                      {dept.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
               {errors.care_type ? <p className="text-sm text-red-500">{errors.care_type}</p> : null}

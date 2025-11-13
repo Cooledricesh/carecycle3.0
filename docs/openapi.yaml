@@ -1134,8 +1134,29 @@ paths:
     post:
       tags:
         - Admin
-      summary: Delete user
-      description: Permanently delete a user account. Admin role required. Cannot delete own account or last admin.
+      summary: Delete user (2-Layer Architecture)
+      description: |
+        Permanently delete a user account using simplified 2-layer architecture.
+
+        **Architecture (Phase 8 - Nov 2025)**:
+        - Layer 1: API Route → Single Supabase Auth API call
+        - Layer 2: Database → Automatic triggers and FK CASCADE
+
+        **Automatic Processing**:
+        1. BEFORE DELETE Triggers:
+           - `check_last_admin()`: Prevents deletion of last admin
+           - `anonymize_user_audit_logs()`: Preserves audit trail
+        2. FK CASCADE: Auto-cleanup (notifications, schedule references)
+        3. AFTER DELETE Triggers: All active (data integrity)
+
+        **Requirements**:
+        - Admin role required
+        - Cannot delete own account
+        - Cannot delete last admin (database-level protection)
+
+        **Data Preservation**:
+        - Audit logs anonymized (not deleted)
+        - Schedule history preserved with NULL references
       requestBody:
         required: true
         content:

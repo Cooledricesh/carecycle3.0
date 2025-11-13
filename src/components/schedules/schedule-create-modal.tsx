@@ -195,19 +195,10 @@ export function ScheduleCreateModal({
       const selectedItem = items.find(item => item.name === data.itemName)
       const category = selectedItem?.category as 'injection' | 'test' | 'other' | undefined
 
-      // Prepare notes with injection metadata if applicable
-      let finalNotes = data.notes || ''
-      if (category === 'injection' && injectionMetadata) {
-        const metadataParts = []
-        if (injectionMetadata.dosage) {
-          metadataParts.push(`용량: ${injectionMetadata.dosage}`)
-        }
-        if (metadataParts.length > 0) {
-          finalNotes = finalNotes
-            ? `${finalNotes}\n\n[용량]\n${metadataParts.join('\n')}`
-            : `[용량]\n${metadataParts.join('\n')}`
-        }
-      }
+      // Extract injection dosage from metadata (if applicable)
+      const injectionDosage = category === 'injection' && injectionMetadata?.dosage
+        ? parseFloat(injectionMetadata.dosage.replace(/[^0-9.]/g, '')) || undefined
+        : undefined
 
       // Create schedule
       await scheduleService.createWithCustomItem({
@@ -218,9 +209,10 @@ export function ScheduleCreateModal({
         intervalValue: data.intervalValue,
         startDate: formatDateForDB(data.firstPerformedAt),
         nextDueDate: formatDateForDB(firstDueDate), // Use first performed date as first due date
-        notes: finalNotes || null,
+        notes: data.notes || null,
         category: category || 'other', // Use item's category or default to 'other'
-        notificationDaysBefore: 7 // Default notification days
+        notificationDaysBefore: 7, // Default notification days
+        injectionDosage // Add injection dosage field
       }, typedProfile.organization_id)
 
       // Clear cache and emit event for real-time updates

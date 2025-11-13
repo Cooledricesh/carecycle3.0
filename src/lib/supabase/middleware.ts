@@ -78,7 +78,8 @@ export async function updateSession(request: NextRequest) {
       .single();
 
     // Redirect to complete signup if user doesn't have organization
-    if (profile && !profile.organization_id) {
+    // EXCEPTION: super_admin can have null organization_id
+    if (profile && !profile.organization_id && profile.role !== 'super_admin') {
       return NextResponse.redirect(new URL("/complete-signup", request.url));
     }
 

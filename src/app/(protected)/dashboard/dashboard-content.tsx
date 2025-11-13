@@ -362,6 +362,12 @@ export default function DashboardContent() {
                         <span className={`px-2 py-0.5 rounded-full text-xs ${getScheduleCategoryBgColor(schedule.item_category)} ${getScheduleCategoryColor(schedule.item_category)}`}>
                           {getScheduleCategoryLabel(schedule.item_category)}
                         </span>
+                        {/* 주사 용량 표시 */}
+                        {schedule.item_category === 'injection' && schedule.injection_dosage && (
+                          <span className="text-xs text-blue-600 font-medium">
+                            용량: {schedule.injection_dosage}mg
+                          </span>
+                        )}
                       </div>
                       <p className="text-xs text-red-600">
                         예정일: {safeFormatDate(schedule.next_due_date, 'yyyy년 MM월 dd일')}
@@ -481,6 +487,12 @@ export default function DashboardContent() {
                         <span className={`px-2 py-0.5 rounded-full text-xs ${getScheduleCategoryBgColor(schedule.item_category)} ${getScheduleCategoryColor(schedule.item_category)}`}>
                           {getScheduleCategoryLabel(schedule.item_category)}
                         </span>
+                        {/* 주사 용량 표시 */}
+                        {schedule.item_category === 'injection' && schedule.injection_dosage && (
+                          <span className="text-xs text-blue-600 font-medium">
+                            용량: {schedule.injection_dosage}mg
+                          </span>
+                        )}
                       </div>
                       <p className="text-xs text-gray-500">
                         예정일: {safeFormatDate(schedule.next_due_date, 'yyyy년 MM월 dd일')}

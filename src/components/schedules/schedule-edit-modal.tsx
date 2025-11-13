@@ -100,7 +100,8 @@ export function ScheduleEditModal({
       itemName: schedule.item_name || '',
       intervalWeeks: schedule.interval_weeks || 1,
       nextDueDate: schedule.next_due_date || undefined,
-      notes: schedule.notes || ''
+      notes: schedule.notes || '',
+      injection_dosage: schedule.injection_dosage ?? null
     }
   })
 
@@ -113,7 +114,8 @@ export function ScheduleEditModal({
         itemName: schedule.item_name || '',
         intervalWeeks: schedule.interval_weeks || 1,
         nextDueDate: schedule.next_due_date || undefined,
-        notes: schedule.notes || ''
+        notes: schedule.notes || '',
+        injection_dosage: schedule.injection_dosage ?? null
       })
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -377,28 +379,68 @@ export function ScheduleEditModal({
               )}
             />
 
-            {/* Notes */}
-            <FormField
-              control={form.control}
-              name="notes"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>메모</FormLabel>
-                  <FormControl>
-                    <Textarea 
-                      placeholder="추가 정보나 특이사항을 입력하세요"
-                      className="resize-none"
-                      {...field}
-                      value={field.value || ''}
-                    />
-                  </FormControl>
-                  <FormDescription>
-                    최대 500자까지 입력 가능합니다.
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            {/* Injection Dosage - Only show for injection category */}
+            {(() => {
+              const selectedItem = items.find(item => item.name === form.watch('itemName'))
+              return selectedItem?.category === 'injection' ? (
+                <FormField
+                  control={form.control}
+                  name="injection_dosage"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>주사 용량</FormLabel>
+                      <FormControl>
+                        <div className="flex items-center gap-2">
+                          <Input
+                            type="number"
+                            min="0"
+                            step="0.1"
+                            placeholder="150"
+                            {...field}
+                            value={field.value ?? ''}
+                            onChange={e => field.onChange(e.target.value ? parseFloat(e.target.value) : null)}
+                            className="flex-1"
+                          />
+                          <span className="text-sm font-medium">mg</span>
+                        </div>
+                      </FormControl>
+                      <FormDescription>
+                        주사제의 용량을 입력하세요 (mg 단위)
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              ) : null
+            })()}
+
+            {/* Notes - Only show for non-injection categories */}
+            {(() => {
+              const selectedItem = items.find(item => item.name === form.watch('itemName'))
+              return selectedItem?.category !== 'injection' ? (
+                <FormField
+                  control={form.control}
+                  name="notes"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>메모</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="추가 정보나 특이사항을 입력하세요"
+                          className="resize-none"
+                          {...field}
+                          value={field.value || ''}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        최대 500자까지 입력 가능합니다.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              ) : null
+            })()}
 
             <DialogFooter>
               <Button

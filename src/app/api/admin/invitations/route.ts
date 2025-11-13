@@ -24,15 +24,15 @@ const createInvitationSchema = z.object({
   role: z.enum(['admin', 'doctor', 'nurse'], {
     errorMap: () => ({ message: 'Invalid role. Must be admin, doctor, or nurse' }),
   }),
-  care_type: z.enum(['외래', '입원', '낮병원']).optional(),
+  care_type: z.string().optional(),
 }).refine((data) => {
   // nurse 역할인 경우 care_type 필수
   if (data.role === 'nurse') {
-    return data.care_type !== undefined;
+    return data.care_type !== undefined && data.care_type !== '';
   }
   // admin/doctor 역할인 경우 care_type이 없어야 함
   if (data.role === 'admin' || data.role === 'doctor') {
-    return data.care_type === undefined;
+    return data.care_type === undefined || data.care_type === '';
   }
   return true;
 }, {
@@ -139,6 +139,24 @@ export async function POST(request: NextRequest) {
         { error: 'Email already registered in the system' },
         { status: 409 }
       );
+    }
+
+    // Validate care_type against departments table for nurse role
+    if (role === 'nurse' && care_type) {
+      const { data: departmentExists, error: deptError } = await supabase
+        .from('departments')
+        .select('id')
+        .eq('organization_id', userProfile.organization_id!)
+        .eq('name', care_type)
+        .eq('is_active', true)
+        .single();
+
+      if (deptError || !departmentExists) {
+        return NextResponse.json(
+          { error: `Invalid care_type: ${care_type} is not a valid department for this organization` },
+          { status: 400 }
+        );
+      }
     }
 
     // Generate token and calculate expiry
