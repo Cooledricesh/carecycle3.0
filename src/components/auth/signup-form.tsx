@@ -30,6 +30,14 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useRef } from "react";
+import { z } from "zod";
+
+// Validation schema matching the original API route
+const signupSchema = z.object({
+  email: z.string().email("올바른 이메일 형식이 아닙니다"),
+  password: z.string().min(6, "비밀번호는 최소 6자 이상이어야 합니다"),
+  name: z.string().min(1, "이름을 입력해주세요").trim(),
+});
 
 // Helper function for rate limit retry with exponential backoff
 async function retryWithBackoff<T>(
@@ -105,19 +113,25 @@ export function SignUpForm({
     setError(null);
 
     try {
+      // CRITICAL: Validate input with Zod to prevent bounce rate issues
+      // This prevents malformed emails from reaching Supabase
+      const validationResult = signupSchema.safeParse({
+        email: email.trim(),
+        password,
+        name: name.trim(),
+      });
+
+      if (!validationResult.success) {
+        const firstError = validationResult.error.errors[0];
+        throw new Error(firstError.message);
+      }
+
       if (password !== repeatPassword) {
-        setError("비밀번호가 일치하지 않습니다.");
-        return;
+        throw new Error("비밀번호가 일치하지 않습니다.");
       }
 
-      const trimmedName = name.trim();
-
-      if (!trimmedName) {
-        setError("이름을 입력해주세요.");
-        return;
-      }
-
-      setName(trimmedName);
+      const { email: validatedEmail, name: validatedName } = validationResult.data;
+      setName(validatedName);
 
       // CRITICAL: Call signUp directly from client for proper session management
       // @supabase/ssr's createBrowserClient automatically handles localStorage persistence
@@ -127,11 +141,11 @@ export function SignUpForm({
       const { data, error } = await retryWithBackoff(
         () =>
           supabase.auth.signUp({
-            email,
+            email: validatedEmail, // Use validated email
             password,
             options: {
               data: {
-                name: trimmedName,
+                name: validatedName, // Use validated name
                 role,
               },
             },
