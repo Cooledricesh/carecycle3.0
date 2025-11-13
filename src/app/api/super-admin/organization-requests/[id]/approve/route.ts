@@ -73,7 +73,6 @@ export async function POST(
     }
 
     // Step 4: Call RPC to approve request and create organization (atomic transaction)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: rpcResult, error: rpcError } = await (supabase as any).rpc(
       'approve_org_request',
       {

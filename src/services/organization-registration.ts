@@ -2,23 +2,7 @@
 
 import { createClient } from '@/lib/supabase/client'
 import { z } from 'zod'
-
-/**
- * Validation Schemas
- */
-export const NewOrgRegistrationSchema = z.object({
-  organizationName: z.string().min(2, '기관명은 최소 2자 이상이어야 합니다').max(100),
-  organizationDescription: z.string().max(500).optional(),
-  requesterName: z.string().min(2, '이름은 최소 2자 이상이어야 합니다').max(50),
-  requesterEmail: z.string().email('유효한 이메일 주소를 입력하세요'),
-  password: z.string().min(8, '비밀번호는 최소 8자 이상이어야 합니다'),
-  passwordConfirm: z.string(),
-}).refine((data) => data.password === data.passwordConfirm, {
-  message: '비밀번호가 일치하지 않습니다',
-  path: ['passwordConfirm'],
-})
-
-export type NewOrgRegistrationInput = z.infer<typeof NewOrgRegistrationSchema>
+import { NewOrgRegistrationSchema, type NewOrgRegistrationInput } from '@/lib/validations/organization-registration'
 
 /**
  * Submit new organization registration request
@@ -86,7 +70,6 @@ export async function submitOrganizationRequest(
     }
 
     // Step 3: Insert organization request
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: insertData, error: insertError } = await (supabase
       .from('organization_requests') as any)
       .insert({

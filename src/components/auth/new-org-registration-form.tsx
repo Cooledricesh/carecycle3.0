@@ -11,7 +11,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Building2, User, Mail, Lock, AlertCircle } from 'lucide-react'
-import { NewOrgRegistrationSchema, submitOrganizationRequest, type NewOrgRegistrationInput } from '@/services/organization-registration'
+import { submitOrganizationRequest } from '@/services/organization-registration'
+import { NewOrgRegistrationSchema, type NewOrgRegistrationInput } from '@/lib/validations/organization-registration'
 
 export function NewOrgRegistrationForm() {
   const router = useRouter()

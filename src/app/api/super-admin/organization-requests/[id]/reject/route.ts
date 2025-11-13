@@ -34,7 +34,6 @@ export async function POST(
     }
 
     // Call RPC to reject request
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: rpcResult, error: rpcError } = await (supabase as any).rpc(
       'reject_org_request',
       {
