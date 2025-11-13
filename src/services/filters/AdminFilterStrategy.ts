@@ -189,7 +189,7 @@ export class AdminFilterStrategy implements FilterStrategy {
       created_at: s.created_at,
       updated_at: s.updated_at,
       notes: s.notes || null,
-      injection_dosage: s.injection_dosage || null
+      injection_dosage: s.injection_dosage ?? null
     }))
 
     console.log('[AdminFilterStrategy] Fallback result:', transformedData.length, 'items')

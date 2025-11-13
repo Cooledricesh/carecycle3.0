@@ -60,9 +60,9 @@ export function CreateOrganizationDialog({
         .from('profiles')
         .select('id, name, organization_id')
         .eq('id', user.id)
-        .single()
+        .single<{ id: string; name: string | null; organization_id: string | null }>()
 
-      if (profileError) {
+      if (profileError || !profile) {
         throw new Error('사용자 정보를 가져올 수 없습니다')
       }
 
@@ -78,8 +78,8 @@ export function CreateOrganizationDialog({
           p_user_id: user.id,
           p_user_name: profile.name,
           p_user_role: 'admin'
-        }
-      )
+        } as any
+      ) as { data: string | null; error: any }
 
       if (rpcError) {
         console.error('RPC error:', rpcError)
@@ -88,6 +88,10 @@ export function CreateOrganizationDialog({
           throw new Error('이미 존재하는 조직 이름입니다')
         }
         throw new Error('조직 생성에 실패했습니다')
+      }
+
+      if (!organizationId) {
+        throw new Error('조직 ID를 받지 못했습니다')
       }
 
       // Success - notify parent component

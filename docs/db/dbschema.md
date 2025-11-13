@@ -2,7 +2,7 @@
 
 **Last Updated**: November 13, 2025
 **Schema Version**: 3.1.0 (Current Production State - Phase 8 Completed)
-**Migration Count**: 65 migrations applied
+**Migration Count**: 35 migrations applied
 **Direct DB Verification**: 2025-11-05
 **Latest Update**: 2025-11-13 (User Deletion Architecture Simplification)
 
@@ -689,19 +689,33 @@ Applied to all major tables for automatic timestamp updates:
 **Created**: 2025-11-13
 **Logic**: Raises exception if deleting the last admin user
 ```sql
-CREATE FUNCTION public.check_last_admin() RETURNS trigger AS $$
+CREATE OR REPLACE FUNCTION public.check_last_admin()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'public'
+AS $$
 DECLARE
     admin_count INTEGER;
 BEGIN
+    -- Only check if the user being deleted is an admin
     IF OLD.role = 'admin' THEN
+        -- Count remaining admins (excluding the one being deleted)
         SELECT COUNT(*) INTO admin_count
         FROM profiles
-        WHERE role = 'admin' AND id != OLD.id;
+        WHERE role = 'admin'
+          AND id != OLD.id;
 
+        -- Prevent deletion if this is the last admin
         IF admin_count = 0 THEN
-            RAISE EXCEPTION 'Cannot delete the last admin user';
+            RAISE EXCEPTION 'Cannot delete the last admin user'
+                USING HINT = 'At least one admin must remain in the system',
+                      ERRCODE = 'restrict_violation';
         END IF;
+
+        RAISE NOTICE 'Admin deletion allowed: % remaining admin(s) after deletion', admin_count;
     END IF;
+
     RETURN OLD;
 END;
 $$;
@@ -719,7 +733,8 @@ BEGIN
     UPDATE audit_logs
     SET user_id = NULL,
         user_email = 'deleted-user@system.local',
-        user_name = 'Deleted User'
+        user_name = 'Deleted User',
+        user_role = 'deleted'
     WHERE user_id = OLD.id;
 
     RAISE NOTICE 'Anonymized audit logs for user %', OLD.id;
@@ -899,7 +914,7 @@ CREATE TYPE appointment_type AS ENUM ('consultation', 'treatment', 'follow_up', 
 - **Code Reduction**: API route simplified from ~50 lines to ~15 lines (70% reduction)
 - **Benefits**: Improved maintainability, enhanced data integrity, simplified debugging
 
-**Total Migrations**: 65 applied migrations (3 new in Phase 8)
+**Total Migrations**: 35 applied migrations (3 new in Phase 8)
 **Current Status**: Production-ready with simplified user deletion architecture
 **Database Verification**: Direct verification performed on 2025-11-05
 

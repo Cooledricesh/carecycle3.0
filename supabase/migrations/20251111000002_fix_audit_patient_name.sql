@@ -201,6 +201,43 @@ BEGIN
                 END IF;
             END IF;
 
+        WHEN 'patient_schedules' THEN
+            IF TG_OP IN ('DELETE', 'UPDATE') THEN
+                safe_old_record := jsonb_build_object(
+                    'id', OLD.id,
+                    'patient_name', OLD.patient_name,
+                    'nurse_id', OLD.nurse_id,
+                    'appointment_type', OLD.appointment_type,
+                    'scheduled_date', OLD.scheduled_date,
+                    'scheduled_time', OLD.scheduled_time,
+                    'duration_minutes', OLD.duration_minutes,
+                    'notes', OLD.notes,
+                    'department', OLD.department,
+                    'room_number', OLD.room_number,
+                    'created_by', OLD.created_by,
+                    'created_at', OLD.created_at,
+                    'updated_at', OLD.updated_at
+                );
+            END IF;
+
+            IF TG_OP IN ('INSERT', 'UPDATE') THEN
+                safe_new_record := jsonb_build_object(
+                    'id', NEW.id,
+                    'patient_name', NEW.patient_name,
+                    'nurse_id', NEW.nurse_id,
+                    'appointment_type', NEW.appointment_type,
+                    'scheduled_date', NEW.scheduled_date,
+                    'scheduled_time', NEW.scheduled_time,
+                    'duration_minutes', NEW.duration_minutes,
+                    'notes', NEW.notes,
+                    'department', NEW.department,
+                    'room_number', NEW.room_number,
+                    'created_by', NEW.created_by,
+                    'created_at', NEW.created_at,
+                    'updated_at', NEW.updated_at
+                );
+            END IF;
+
         ELSE
             -- For unwhitelisted tables, use empty jsonb to prevent PHI/PII exposure
             IF TG_OP IN ('DELETE', 'UPDATE') THEN

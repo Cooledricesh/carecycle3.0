@@ -111,9 +111,9 @@ export function CalendarDayCard({
                 </span>
               )}
               {/* 주사 용량 표시 */}
-              {category === 'injection' && (schedule as any).injection_dosage && (
+              {category === 'injection' && schedule.injection_dosage && (
                 <span className="text-xs text-blue-600 font-medium">
-                  용량: {(schedule as any).injection_dosage}mg
+                  용량: {schedule.injection_dosage}mg
                 </span>
               )}
             </div>

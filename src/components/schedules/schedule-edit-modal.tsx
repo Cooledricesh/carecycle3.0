@@ -101,7 +101,7 @@ export function ScheduleEditModal({
       intervalWeeks: schedule.interval_weeks || 1,
       nextDueDate: schedule.next_due_date || undefined,
       notes: schedule.notes || '',
-      injection_dosage: (schedule as any).injection_dosage || null
+      injection_dosage: schedule.injection_dosage ?? null
     }
   })
 
@@ -115,7 +115,7 @@ export function ScheduleEditModal({
         intervalWeeks: schedule.interval_weeks || 1,
         nextDueDate: schedule.next_due_date || undefined,
         notes: schedule.notes || '',
-        injection_dosage: (schedule as any).injection_dosage || null
+        injection_dosage: schedule.injection_dosage ?? null
       })
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps

@@ -236,8 +236,8 @@ WHERE schemaname = 'public'
 ORDER BY self_time DESC
 LIMIT 15;
 
--- Query 6.2: User deletion function performance
--- Track admin_delete_user and direct_delete_user_no_triggers
+-- Query 6.2: User deletion and audit function performance
+-- Track check_last_admin, anonymize_user_audit_logs, and other critical functions
 SELECT
   funcname as function_name,
   calls,
@@ -246,8 +246,8 @@ SELECT
   ROUND((self_time / NULLIF(calls, 0))::numeric, 2) as avg_time_ms
 FROM pg_stat_user_functions
 WHERE funcname IN (
-  'admin_delete_user',
-  'direct_delete_user_no_triggers',
+  'check_last_admin',
+  'anonymize_user_audit_logs',
   'calculate_next_due_date'
 )
 ORDER BY funcname;

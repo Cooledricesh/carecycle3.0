@@ -212,7 +212,7 @@ export class DoctorFilterStrategy implements FilterStrategy {
       created_at: s.created_at,
       updated_at: s.updated_at,
       notes: s.notes || null,
-      injection_dosage: s.injection_dosage || null
+      injection_dosage: s.injection_dosage ?? null
     }))
 
     console.log('[DoctorFilterStrategy] Fallback query result:', {
