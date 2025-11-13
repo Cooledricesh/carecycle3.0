@@ -29,7 +29,7 @@ import {
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { OrganizationSearchDialog } from "./OrganizationSearchDialog";
 import { CreateOrganizationDialog } from "./CreateOrganizationDialog";
 import { Building2, UserPlus, Search } from "lucide-react";
@@ -55,28 +55,40 @@ export function SignUpForm({
   const [awaitingApproval, setAwaitingApproval] = useState(false);
   const router = useRouter();
 
+  // Ref flag to prevent duplicate submissions
+  // This ensures protection even during React's async state update delays
+  const isSubmittingRef = useRef(false);
+
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Guard: Prevent duplicate submissions
+    if (isSubmittingRef.current) {
+      console.warn('[SignUp] Duplicate submission blocked');
+      return;
+    }
+
+    // Set flag immediately (synchronous, not affected by React batching)
+    isSubmittingRef.current = true;
+
     setIsLoading(true);
     setError(null);
 
-    if (password !== repeatPassword) {
-      setError("비밀번호가 일치하지 않습니다.");
-      setIsLoading(false);
-      return;
-    }
-
-    const trimmedName = name.trim();
-
-    if (!trimmedName) {
-      setError("이름을 입력해주세요.");
-      setIsLoading(false);
-      return;
-    }
-
-    setName(trimmedName);
-
     try {
+      if (password !== repeatPassword) {
+        setError("비밀번호가 일치하지 않습니다.");
+        return;
+      }
+
+      const trimmedName = name.trim();
+
+      if (!trimmedName) {
+        setError("이름을 입력해주세요.");
+        return;
+      }
+
+      setName(trimmedName);
+
       // CRITICAL: Call signUp directly from client for proper session management
       // @supabase/ssr's createBrowserClient automatically handles localStorage persistence
       const supabase = createClient();
@@ -109,6 +121,8 @@ export function SignUpForm({
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : "회원가입 중 오류가 발생했습니다.");
     } finally {
+      // Always reset flag to allow retry after error
+      isSubmittingRef.current = false;
       setIsLoading(false);
     }
   };
