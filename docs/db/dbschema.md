@@ -1,9 +1,10 @@
 # Comprehensive Database Schema Documentation
 
-**Last Updated**: November 5, 2025
-**Schema Version**: 3.0.0 (Current Production State - Verified)
-**Migration Count**: 60 migrations applied
+**Last Updated**: November 13, 2025
+**Schema Version**: 3.1.0 (Current Production State - Phase 8 Completed)
+**Migration Count**: 65 migrations applied
 **Direct DB Verification**: 2025-11-05
+**Latest Update**: 2025-11-13 (User Deletion Architecture Simplification)
 
 ## Overview
 
@@ -457,11 +458,6 @@ This document provides a complete and accurate description of the medical schedu
 
 ### Admin Functions
 
-#### admin_delete_user(p_user_id, p_admin_id)
-**Purpose**: Admin function to delete users with cascade
-**Security**: Admin only, prevents self-deletion
-**Created**: September 2025
-
 #### update_user_role(p_user_id, p_new_role)
 **Purpose**: Admin function to change user roles
 **Security**: Admin only
@@ -469,6 +465,11 @@ This document provides a complete and accurate description of the medical schedu
 #### update_user_care_type(p_user_id, p_care_type)
 **Purpose**: Update user's care type assignment
 **Security**: Admin only
+
+**Removed Functions** (2025-11-13):
+- `admin_delete_user()`: Removed in favor of Supabase Auth API
+- `direct_delete_user_no_triggers()`: Removed in favor of database triggers
+- `delete_user_identities()`: Removed in favor of Supabase Auth API
 
 ---
 
@@ -659,6 +660,7 @@ Applied to all major tables for automatic timestamp updates:
 **Table**: schedule_executions
 **Purpose**: Automatically calculate next due date when execution is completed
 **Enhanced**: 2025-09-02 - Uses interval_weeks
+**Enhanced**: 2025-11-13 - Added NULL safety for recipient_id
 
 #### trigger_schedule_state_change
 **Table**: schedules
@@ -677,6 +679,54 @@ Applied to all major tables for automatic timestamp updates:
 **Table**: auth.users
 **Purpose**: Create profile on user signup
 **Enhanced**: 2025-09-02 - Defaults to inactive/pending approval
+
+### Data Protection Triggers (BEFORE DELETE)
+
+#### prevent_last_admin_deletion
+**Table**: profiles
+**Function**: check_last_admin()
+**Purpose**: Prevent deletion of the last admin user
+**Created**: 2025-11-13
+**Logic**: Raises exception if deleting the last admin user
+```sql
+CREATE FUNCTION public.check_last_admin() RETURNS trigger AS $$
+DECLARE
+    admin_count INTEGER;
+BEGIN
+    IF OLD.role = 'admin' THEN
+        SELECT COUNT(*) INTO admin_count
+        FROM profiles
+        WHERE role = 'admin' AND id != OLD.id;
+
+        IF admin_count = 0 THEN
+            RAISE EXCEPTION 'Cannot delete the last admin user';
+        END IF;
+    END IF;
+    RETURN OLD;
+END;
+$$;
+```
+
+#### anonymize_audit_before_delete
+**Table**: profiles
+**Function**: anonymize_user_audit_logs()
+**Purpose**: Anonymize audit logs before user deletion (preserve audit trail)
+**Created**: 2025-11-13
+**Logic**: Sets user_id to NULL and replaces user info with deleted-user placeholders
+```sql
+CREATE FUNCTION public.anonymize_user_audit_logs() RETURNS trigger AS $$
+BEGIN
+    UPDATE audit_logs
+    SET user_id = NULL,
+        user_email = 'deleted-user@system.local',
+        user_name = 'Deleted User'
+    WHERE user_id = OLD.id;
+
+    RAISE NOTICE 'Anonymized audit logs for user %', OLD.id;
+    RETURN OLD;
+END;
+$$;
+```
 
 ### Audit Triggers
 
@@ -827,8 +877,30 @@ CREATE TYPE appointment_type AS ENUM ('consultation', 'treatment', 'follow_up', 
 - **Simplified Item Categories**: Reduced from 5 to 3 categories (injection, test, other)
 - **Custom Item Creation**: Enhanced validation and schema for item management
 
-**Total Migrations**: 62 applied migrations
-**Current Status**: Production-ready with calendar integration and execution tracking
+### Phase 8: User Deletion Architecture Simplification (November 13, 2025)
+- **5-Layer → 2-Layer Architecture**: Reduced deletion system complexity from 5 layers to 2 layers
+  - Before: API → 3 RPC functions (delete_user_identities, direct_delete_user_no_triggers, admin_delete_user) → FK CASCADE
+  - After: API → Supabase Auth API → Database (BEFORE DELETE triggers + FK CASCADE + AFTER DELETE triggers)
+- **RPC Functions Removed** (350 lines SQL eliminated):
+  - `admin_delete_user()`: Replaced by Supabase Auth API
+  - `direct_delete_user_no_triggers()`: Replaced by database triggers
+  - `delete_user_identities()`: Replaced by Supabase Auth API
+- **BEFORE DELETE Triggers Added**:
+  - `check_last_admin()`: Database-level protection preventing last admin deletion
+  - `anonymize_user_audit_logs()`: Preserves audit trail by anonymizing instead of deleting
+- **Trigger Activation Policy Change**:
+  - Before: All triggers disabled with `SET session_replication_role = replica`
+  - After: All triggers active (BEFORE/AFTER DELETE fully functional)
+- **NULL Safety Enhancement**: Added NULL checks to `calculate_next_due_date` trigger
+- **Data Integrity Improvements**:
+  - Automatic cleanup via FK CASCADE (notifications, schedule references)
+  - Audit log preservation through anonymization
+  - Updated_at timestamps maintained (triggers active)
+- **Code Reduction**: API route simplified from ~50 lines to ~15 lines (70% reduction)
+- **Benefits**: Improved maintainability, enhanced data integrity, simplified debugging
+
+**Total Migrations**: 65 applied migrations (3 new in Phase 8)
+**Current Status**: Production-ready with simplified user deletion architecture
 **Database Verification**: Direct verification performed on 2025-11-05
 
 ---
@@ -909,7 +981,7 @@ supabase functions list
 3. **Advanced Notifications**: Email and push notification implementation
 4. **Enhanced Reporting**: Additional materialized views for reporting
 
-### Technical Debt (Updated 2025-11-10)
+### Technical Debt (Updated 2025-11-13)
 1. **RLS Policy Enhancement** 🚨 HIGH PRIORITY: Add organization_id filtering to INSERT/UPDATE policies (see RLS section above)
 2. **Edge Function Cron Deployment** 🚨 HIGH PRIORITY: Deploy auto-hold-overdue-schedules with scheduling
 3. **Type Definition Consolidation**: Unify and update TypeScript types
@@ -918,16 +990,24 @@ supabase functions list
 6. **Function Optimization**: Review and optimize database functions
 7. **Index Analysis**: Review index usage and optimize
 
+### Technical Debt Resolved (2025-11-13)
+- ✅ **User Deletion Complexity**: Simplified from 5-layer to 2-layer architecture (Phase 8)
+- ✅ **RPC Function Bloat**: Removed 3 obsolete functions (350 lines SQL)
+- ✅ **Trigger Activation Issues**: All triggers now properly active with NULL safety
+
 ---
 
-**Document Version**: 3.0.0
+**Document Version**: 3.1.0
 **Schema Accuracy**: Directly verified against production database
 **Last Verified**: November 5, 2025
+**Latest Changes**: November 13, 2025 (User Deletion Architecture Simplification)
 **Verification Method**: Direct SQL queries against production database via Supabase MCP
 
-*This document reflects the actual production database state as verified through direct database inspection on 2025-11-05. Major updates since v2.7.0 include:*
+*This document reflects the actual production database state as verified through direct database inspection on 2025-11-05 with Phase 8 updates on 2025-11-13. Major updates since v2.7.0 include:*
 - *Calendar integration system with execution history tracking*
 - *Execution context preservation (doctor/care_type at completion)*
 - *Enhanced admin user management functions*
 - *Monthly statistics views for dashboard*
 - *Comprehensive performance indexes for calendar queries*
+- *User deletion architecture simplification (5-layer → 2-layer)*
+- *BEFORE DELETE triggers for data protection and audit preservation*
