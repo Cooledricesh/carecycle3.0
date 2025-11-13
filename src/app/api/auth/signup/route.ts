@@ -100,6 +100,9 @@ export async function POST(request: NextRequest) {
     // Note: Basic profile (id, email, name, role) is created by handle_new_user() trigger
     // This ensures no duplicate profile creation and consistent name handling
 
+    // CRITICAL: Session is automatically set via Supabase SSR cookie handling
+    // The createClient() call uses @supabase/ssr which manages cookies automatically
+    // Client-side should refresh session after signup to ensure consistency
     return NextResponse.json({
       user: data.user,
       session: data.session,

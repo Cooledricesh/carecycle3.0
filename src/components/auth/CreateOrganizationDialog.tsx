@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
+import { createClient } from '@/lib/supabase/client'
 import { z } from 'zod'
 
 const organizationNameSchema = z.string()
@@ -43,29 +44,53 @@ export function CreateOrganizationDialog({
     setIsLoading(true)
 
     try {
-      const response = await fetch('/api/organizations/create', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: validation.data
-        })
-      })
+      const supabase = createClient()
 
-      const data = await response.json()
+      // Get current session (more reliable right after signup than getUser)
+      const { data: { session }, error: authError } = await supabase.auth.getSession()
 
-      if (!response.ok) {
-        // Handle duplicate name error
-        if (response.status === 409) {
+      if (authError || !session?.user) {
+        throw new Error('인증이 필요합니다. 다시 로그인해주세요.')
+      }
+
+      const user = session.user
+
+      // Get user profile
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('id, name, organization_id')
+        .eq('id', user.id)
+        .single()
+
+      if (profileError) {
+        throw new Error('사용자 정보를 가져올 수 없습니다')
+      }
+
+      if (profile.organization_id) {
+        throw new Error('이미 조직에 소속되어 있습니다')
+      }
+
+      // Call RPC function to create organization and register user
+      const { data: organizationId, error: rpcError } = await supabase.rpc(
+        'create_organization_and_register_user',
+        {
+          p_organization_name: validation.data,
+          p_user_id: user.id,
+          p_user_name: profile.name,
+          p_user_role: 'admin'
+        }
+      )
+
+      if (rpcError) {
+        console.error('RPC error:', rpcError)
+        // Handle duplicate organization name
+        if (rpcError.code === '23505' || rpcError.message?.includes('duplicate')) {
           throw new Error('이미 존재하는 조직 이름입니다')
         }
-        throw new Error(data.error || '조직 생성에 실패했습니다')
+        throw new Error('조직 생성에 실패했습니다')
       }
 
       // Success - notify parent component
-      // API returns { data: { organization_id, profile } }
-      const organizationId = data.data?.organization_id || data.organization_id
       onSuccess(organizationId, validation.data)
       onOpenChange(false)
       setOrganizationName('')

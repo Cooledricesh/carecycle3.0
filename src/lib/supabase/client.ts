@@ -25,5 +25,10 @@ export function createClient() {
   return clientInstance;
 }
 
+// Reset singleton - call this after setSession to ensure new session is recognized
+export function resetClient() {
+  clientInstance = null;
+}
+
 // Type export for use in other files
 export type SupabaseClient = ReturnType<typeof createClient>

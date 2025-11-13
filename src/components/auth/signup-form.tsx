@@ -77,34 +77,31 @@ export function SignUpForm({
     setName(trimmedName);
 
     try {
-      const response = await fetch("/api/auth/signup", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
+      // CRITICAL: Call signUp directly from client for proper session management
+      // @supabase/ssr's createBrowserClient automatically handles localStorage persistence
+      const supabase = createClient();
+
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            name: trimmedName,
+            role,
+          },
         },
-        body: JSON.stringify({
-          email,
-          password,
-          name: trimmedName,
-          role,
-        }),
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "회원가입 중 오류가 발생했습니다.");
+      if (error) {
+        throw new Error(error.message);
       }
 
-      // Set the session in the browser's Supabase client
-      // This is critical so subsequent API calls are authenticated
-      if (data.session) {
-        const supabase = createClient();
-        await supabase.auth.setSession({
-          access_token: data.session.access_token,
-          refresh_token: data.session.refresh_token
-        });
+      if (!data.user) {
+        throw new Error("회원가입 중 오류가 발생했습니다.");
       }
+
+      // Session is automatically stored in localStorage by @supabase/ssr
+      // No need for manual setSession or resetClient calls
 
       // Basic signup successful, now show organization selection
       setUserId(data.user.id);
