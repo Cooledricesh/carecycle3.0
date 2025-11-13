@@ -1,112 +1,129 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { AlertCircle, Clock, LogOut } from 'lucide-react'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Clock, Mail, AlertCircle, LogOut } from 'lucide-react'
+import { ApprovalStatusBadge } from '@/components/shared/approval-status-badge'
+import { getOrganizationRequestByUserId } from '@/services/organization-registration'
 
-interface UserProfile {
+interface OrganizationRequest {
   id: string
-  email: string
-  name: string
-  role: string
-  approval_status: 'pending' | 'approved' | 'rejected' | null
-  is_active: boolean
-  created_at: string | null
-  updated_at?: string | null
-  organization_id?: string
-  care_type?: string | null
-  phone?: string | null
-  approved_at?: string | null
-  approved_by?: string | null
+  organization_name: string
+  requester_name: string
+  requester_email: string
+  status: 'pending' | 'approved' | 'rejected'
   rejection_reason?: string | null
+  created_at: string
+  reviewed_at?: string | null
 }
 
-export default function ApprovalPendingPage() {
-  return <ApprovalPendingPageContent />
-}
-
-function ApprovalPendingPageContent() {
-  const [profile, setProfile] = useState<UserProfile | null>(null)
+function ApprovalPendingContent() {
+  const [request, setRequest] = useState<OrganizationRequest | null>(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const router = useRouter()
   const supabase = createClient()
 
-  // Effect for checking initial user status
+  // Effect for checking initial request status
   useEffect(() => {
-    const checkUserStatus = async () => {
+    const fetchRequest = async () => {
       try {
         const { data: { user } } = await supabase.auth.getUser()
-        
+
         if (!user) {
           router.push('/auth/signin')
           return
         }
 
-        // Get user profile with approval status
-        const { data: profileData, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', user.id)
-          .single()
+        const data = await getOrganizationRequestByUserId(user.id)
 
-        if (error) {
-          console.error('Error fetching profile:', error)
+        if (!data) {
+          setError('등록 신청 정보를 찾을 수 없습니다')
           setLoading(false)
           return
         }
 
-        const typedProfile = profileData as UserProfile
-        setProfile(typedProfile)
+        setRequest(data)
 
-        // If user is approved and active, redirect to dashboard
-        if (typedProfile?.approval_status === 'approved' && typedProfile?.is_active) {
-          router.push('/dashboard')
-          return
+        // If approved, redirect to signin
+        if (data.status === 'approved') {
+          setTimeout(() => {
+            router.push('/auth/signin?approved=true')
+          }, 3000)
         }
-      } catch (error) {
-        console.error('Error checking user status:', error)
+      } catch (err) {
+        console.error('Failed to fetch request:', err)
+        setError('정보를 불러오는 중 오류가 발생했습니다')
       } finally {
         setLoading(false)
       }
     }
 
-    checkUserStatus()
+    fetchRequest()
   }, [router, supabase])
 
-  // Separate effect for real-time subscription that depends on profile.id
+  // Real-time subscription for status updates
   useEffect(() => {
-    // Skip subscription if profile or profile.id is not available
-    if (!profile?.id) {
-      return
-    }
+    if (!request?.id) return
 
-    // Set up real-time subscription for profile changes
     const channel = supabase
-      .channel(`profile-changes-${profile.id}`)
+      .channel(`org-request-${request.id}`)
       .on('postgres_changes', {
         event: 'UPDATE',
         schema: 'public',
-        table: 'profiles',
-        filter: `id=eq.${profile.id}`
+        table: 'organization_requests',
+        filter: `id=eq.${request.id}`,
       }, (payload) => {
-        const updatedProfile = payload.new as UserProfile
-        setProfile(updatedProfile)
-        
-        // If approved and activated, redirect to dashboard
-        if (updatedProfile.approval_status === 'approved' && updatedProfile.is_active) {
-          router.push('/dashboard')
+        const updated = payload.new as OrganizationRequest
+        setRequest(updated)
+
+        // Auto redirect on approval
+        if (updated.status === 'approved') {
+          setTimeout(() => {
+            router.push('/auth/signin?approved=true')
+          }, 3000)
         }
       })
       .subscribe()
 
-    // Cleanup function to unsubscribe when profile.id changes or component unmounts
     return () => {
       channel.unsubscribe()
     }
-  }, [profile?.id, router, supabase])
+  }, [request?.id, router, supabase])
+
+  // Polling fallback (30 seconds interval)
+  useEffect(() => {
+    if (!request?.id) return
+
+    const pollInterval = setInterval(async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) return
+
+        const data = await getOrganizationRequestByUserId(user.id)
+        if (data) {
+          setRequest(data)
+
+          if (data.status === 'approved') {
+            clearInterval(pollInterval)
+            setTimeout(() => {
+              router.push('/auth/signin?approved=true')
+            }, 3000)
+          }
+        }
+      } catch (err) {
+        console.error('Polling error:', err)
+      }
+    }, 30000) // 30 seconds
+
+    return () => {
+      clearInterval(pollInterval)
+    }
+  }, [request?.id, router, supabase])
 
   const handleSignOut = async () => {
     try {
@@ -117,44 +134,6 @@ function ApprovalPendingPageContent() {
     }
   }
 
-  const getStatusMessage = () => {
-    if (!profile) return { title: 'Loading...', description: '', icon: Clock, variant: 'default' as const }
-
-    switch (profile.approval_status) {
-      case 'pending':
-        return {
-          title: 'Awaiting Approval',
-          description: 'Your account has been created successfully, but it needs to be approved by an administrator before you can access the medical scheduling system.',
-          icon: Clock,
-          variant: 'default' as const
-        }
-      case 'rejected':
-        return {
-          title: 'Account Rejected',
-          description: 'Unfortunately, your account has been rejected by an administrator. Please contact your supervisor or IT support for assistance.',
-          icon: AlertCircle,
-          variant: 'destructive' as const
-        }
-      case 'approved':
-        if (!profile.is_active) {
-          return {
-            title: 'Account Deactivated',
-            description: 'Your account has been deactivated by an administrator. Please contact your supervisor or IT support to reactivate your account.',
-            icon: AlertCircle,
-            variant: 'destructive' as const
-          }
-        }
-        break
-    }
-
-    return {
-      title: 'Account Status Unknown',
-      description: 'There seems to be an issue with your account status. Please contact IT support.',
-      icon: AlertCircle,
-      variant: 'destructive' as const
-    }
-  }
-
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -162,7 +141,7 @@ function ApprovalPendingPageContent() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-center">
               <Clock className="h-8 w-8 animate-spin text-blue-600" />
-              <span className="ml-2 text-lg">Loading...</span>
+              <span className="ml-2 text-lg">로딩 중...</span>
             </div>
           </CardContent>
         </Card>
@@ -170,86 +149,187 @@ function ApprovalPendingPageContent() {
     )
   }
 
-  const status = getStatusMessage()
+  if (error || !request) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+        <Card className="w-full max-w-lg">
+          <CardHeader>
+            <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+            <CardTitle className="text-center">오류 발생</CardTitle>
+            <CardDescription className="text-center">
+              {error || '요청 정보를 찾을 수 없습니다'}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button
+              variant="outline"
+              onClick={() => router.push('/auth/signup')}
+              className="w-full"
+            >
+              가입 페이지로 돌아가기
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
       <Card className="w-full max-w-lg">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
-            <status.icon className={`h-16 w-16 ${
-              status.variant === 'destructive' ? 'text-red-500' : 'text-blue-500'
-            }`} />
+            <Clock className="h-16 w-16 text-blue-500" />
           </div>
           <CardTitle className="text-2xl font-bold">
-            {status.title}
+            승인 대기 중
           </CardTitle>
           <CardDescription className="text-base mt-2">
-            {status.description}
+            신규 기관 등록 신청이 접수되었습니다
           </CardDescription>
         </CardHeader>
-        
+
         <CardContent className="space-y-6">
-          {profile && (
-            <div className="bg-gray-50 p-4 rounded-lg space-y-2">
-              <h3 className="font-semibold text-gray-900">Account Information</h3>
-              <div className="text-sm text-gray-600 space-y-1">
-                <p><span className="font-medium">Name:</span> {profile.name}</p>
-                <p><span className="font-medium">Email:</span> {profile.email}</p>
-                <p><span className="font-medium">Role:</span> {profile.role}</p>
-                <p><span className="font-medium">Registered:</span> {profile.created_at ? new Date(profile.created_at).toLocaleDateString() : 'N/A'}</p>
-                <p>
-                  <span className="font-medium">Status:</span>{' '}
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                    profile.approval_status === 'approved' 
-                      ? 'bg-green-100 text-green-800'
-                      : profile.approval_status === 'rejected'
-                      ? 'bg-red-100 text-red-800'
-                      : 'bg-yellow-100 text-yellow-800'
-                  }`}>
-                    {profile.approval_status ? profile.approval_status.charAt(0).toUpperCase() + profile.approval_status.slice(1) : 'Pending'}
-                  </span>
-                </p>
-              </div>
+          {/* Request Information */}
+          <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+            <h3 className="font-semibold text-gray-900">신청 정보</h3>
+            <div className="text-sm text-gray-600 space-y-1">
+              <p><span className="font-medium">기관명:</span> {request.organization_name}</p>
+              <p><span className="font-medium">이름:</span> {request.requester_name}</p>
+              <p><span className="font-medium">이메일:</span> {request.requester_email}</p>
+              <p><span className="font-medium">신청일:</span> {new Date(request.created_at).toLocaleDateString('ko-KR')}</p>
+              <p className="flex items-center gap-2">
+                <span className="font-medium">상태:</span>
+                <ApprovalStatusBadge status={request.status} size="sm" />
+              </p>
             </div>
+          </div>
+
+          {/* Status-specific Messages */}
+          {request.status === 'pending' && (
+            <Alert className="bg-blue-50 border-blue-200">
+              <Clock className="h-4 w-4 text-blue-600" />
+              <AlertDescription className="text-blue-700">
+                <h4 className="font-semibold mb-2">검토 진행 중</h4>
+                <p className="text-sm mb-2">
+                  프로그램 관리자가 등록 신청을 검토하고 있습니다.
+                  승인이 완료되면 등록하신 이메일로 안내 메일을 보내드립니다.
+                </p>
+                <p className="text-sm">
+                  2~3일 이내에 답변이 오지 않는다면{' '}
+                  <a
+                    href="mailto:carescheduler7@gmail.com"
+                    className="font-semibold underline"
+                  >
+                    carescheduler7@gmail.com
+                  </a>
+                  으로 연락 주시기 바랍니다.
+                </p>
+              </AlertDescription>
+            </Alert>
           )}
 
-          <div className="space-y-3">
-            {profile?.approval_status === 'pending' && (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <h4 className="font-semibold text-blue-900 mb-2">What happens next?</h4>
-                <ul className="text-sm text-blue-700 space-y-1">
-                  <li>• An administrator will review your account</li>
-                  <li>• You&apos;ll receive an email notification when approved</li>
-                  <li>• This page will automatically update when your status changes</li>
-                  <li>• Approval typically takes 1-2 business days</li>
-                </ul>
-              </div>
-            )}
+          {request.status === 'approved' && (
+            <Alert className="bg-green-50 border-green-200">
+              <AlertCircle className="h-4 w-4 text-green-600" />
+              <AlertDescription className="text-green-700">
+                <h4 className="font-semibold mb-2">승인 완료!</h4>
+                <p className="text-sm">
+                  신청이 승인되었습니다. 잠시 후 로그인 페이지로 이동합니다.
+                </p>
+              </AlertDescription>
+            </Alert>
+          )}
 
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-              <h4 className="font-semibold text-yellow-900 mb-2">Need Help?</h4>
-              <p className="text-sm text-yellow-700">
-                If you have questions about your account status, please contact:
+          {request.status === 'rejected' && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                <h4 className="font-semibold mb-2">신청 거부됨</h4>
+                <p className="text-sm mb-2">
+                  죄송합니다. 신청이 거부되었습니다.
+                </p>
+                {request.rejection_reason && (
+                  <p className="text-sm">
+                    <span className="font-medium">거부 사유:</span> {request.rejection_reason}
+                  </p>
+                )}
+                <p className="text-sm mt-2">
+                  자세한 내용은{' '}
+                  <a
+                    href="mailto:carescheduler7@gmail.com"
+                    className="font-semibold underline"
+                  >
+                    carescheduler7@gmail.com
+                  </a>
+                  으로 문의해주세요.
+                </p>
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {/* Contact Information */}
+          <Alert>
+            <Mail className="h-4 w-4" />
+            <AlertDescription className="text-sm">
+              <h4 className="font-semibold mb-2">문의하기</h4>
+              <p>
+                신청 상태나 기타 문의 사항이 있으신 경우{' '}
+                <a
+                  href="mailto:carescheduler7@gmail.com"
+                  className="font-semibold text-blue-600 underline"
+                >
+                  carescheduler7@gmail.com
+                </a>
+                으로 연락 주시기 바랍니다.
               </p>
-              <ul className="text-sm text-yellow-700 mt-2 space-y-1">
-                <li>• Your department supervisor</li>
-                <li>• IT Support: staff@hospital.com</li>
-                <li>• Hospital Administration</li>
-              </ul>
-            </div>
+            </AlertDescription>
+          </Alert>
 
-            <Button 
-              variant="outline" 
+          {/* Action Buttons */}
+          {request.status === 'approved' && (
+            <Button
+              onClick={() => router.push('/auth/signin')}
+              className="w-full"
+            >
+              로그인하러 가기
+            </Button>
+          )}
+
+          {request.status === 'rejected' && (
+            <Button
+              variant="outline"
+              onClick={() => router.push('/auth/signup')}
+              className="w-full"
+            >
+              다시 신청하기
+            </Button>
+          )}
+
+          {request.status === 'pending' && (
+            <Button
+              variant="outline"
               onClick={handleSignOut}
               className="w-full"
             >
               <LogOut className="h-4 w-4 mr-2" />
-              Sign Out
+              로그아웃
             </Button>
-          </div>
+          )}
         </CardContent>
       </Card>
     </div>
+  )
+}
+
+export default function ApprovalPendingPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <Clock className="h-8 w-8 animate-spin text-blue-600" />
+      </div>
+    }>
+      <ApprovalPendingContent />
+    </Suspense>
   )
 }

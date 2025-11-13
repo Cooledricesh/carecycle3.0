@@ -1,11 +1,11 @@
-import { SignUpForm } from "@/components/auth/signup-form";
+import { NewOrgRegistrationForm } from "@/components/auth/new-org-registration-form";
 
+/**
+ * Signup Page - New Organization Registration Only
+ *
+ * This page is for NEW organizations only. Existing organization members
+ * should be invited through the join-request system.
+ */
 export default function SignUpPage() {
-  return (
-    <div className="flex min-h-screen w-full items-center justify-center p-6 md:p-10">
-      <div className="w-full max-w-sm">
-        <SignUpForm />
-      </div>
-    </div>
-  );
+  return <NewOrgRegistrationForm />;
 }
