@@ -63,13 +63,14 @@ export async function POST(request: NextRequest) {
           .eq('is_active', true)
           .single();
 
-        if (departmentData) {
-          finalDepartmentId = (departmentData as any).id;
+        if (departmentData && typeof departmentData === 'object' && 'id' in departmentData) {
+          // Type assertion needed due to RLS types
+          finalDepartmentId = String((departmentData as { id: string }).id);
         }
       }
 
       // Update profile with additional fields (not managed by trigger)
-      const updateData: any = {};
+      const updateData: Record<string, unknown> = {};
 
       if (finalDepartmentId) {
         updateData.department_id = finalDepartmentId;
@@ -85,8 +86,9 @@ export async function POST(request: NextRequest) {
 
       // Only update if there's data to update
       if (Object.keys(updateData).length > 0) {
-        const { error: profileError } = await (serviceSupabase as any)
-          .from("profiles")
+        // Type assertion needed due to RLS types
+        const { error: profileError } = await (serviceSupabase
+          .from("profiles") as any)
           .update(updateData)
           .eq('id', data.user.id);
 

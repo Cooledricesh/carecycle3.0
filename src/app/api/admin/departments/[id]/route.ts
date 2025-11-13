@@ -57,6 +57,14 @@ async function handleUpdate(
     if (validatedData.display_order !== undefined) updateData.display_order = validatedData.display_order
     if (validatedData.is_active !== undefined) updateData.is_active = validatedData.is_active
 
+    // Check if there are any fields to update
+    if (Object.keys(updateData).length === 0) {
+      return NextResponse.json(
+        { error: 'No updatable fields provided' },
+        { status: 400 }
+      )
+    }
+
     // Update department (RLS will ensure organization_id match)
     const { data: department, error } = await (supabase
       .from('departments') as any)

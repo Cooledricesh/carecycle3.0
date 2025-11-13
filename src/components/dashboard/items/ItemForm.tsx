@@ -222,7 +222,7 @@ export function ItemForm({
               value={formData.description || ''}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               placeholder="항목에 대한 메모나 특이사항을 입력하세요"
-              rows={isMobile ? 3 : 3}
+              rows={3}
             />
           </div>
         )}

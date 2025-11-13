@@ -222,11 +222,36 @@ export function SignUpForm({
     setError(null);
 
     try {
-      // User is automatically assigned as admin when creating organization
-      // Just redirect to dashboard
+      // Verify organization was created and user is assigned
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+
+      if (!user) {
+        throw new Error("사용자 인증에 실패했습니다.");
+      }
+
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('organization_id, role')
+        .eq('id', user.id)
+        .single();
+
+      if (profileError) {
+        throw new Error("프로필 조회에 실패했습니다.");
+      }
+
+      // Type assertion needed due to RLS types
+      const typedProfile = profile as { organization_id?: string | null; role?: string } | null;
+      if (!typedProfile || !typedProfile.organization_id) {
+        throw new Error("조직 할당에 실패했습니다.");
+      }
+
+      // Successfully created and assigned, redirect to dashboard
       router.push("/dashboard");
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : "조직 생성에 실패했습니다.");
+      // Reopen dialog on error to allow retry
+      setShowOrgCreate(true);
     } finally {
       setIsLoading(false);
     }

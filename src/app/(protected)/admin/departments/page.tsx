@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { createClient } from '@/lib/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -68,7 +67,6 @@ export default function DepartmentsPage() {
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const supabase = createClient();
 
   // Fetch departments
   const { data: departments = [], isLoading } = useQuery({
@@ -93,7 +91,7 @@ export default function DepartmentsPage() {
       });
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || 'Failed to create department');
+        throw new Error(error?.error?.message || error?.error || error?.message || 'Failed to create department');
       }
       return response.json();
     },
@@ -126,7 +124,7 @@ export default function DepartmentsPage() {
       });
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || 'Failed to update department');
+        throw new Error(error?.error?.message || error?.error || error?.message || 'Failed to update department');
       }
       return response.json();
     },
@@ -158,7 +156,7 @@ export default function DepartmentsPage() {
       });
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || 'Failed to delete department');
+        throw new Error(error?.error?.message || error?.error || error?.message || 'Failed to delete department');
       }
       return response.json();
     },
@@ -392,6 +390,7 @@ export default function DepartmentsPage() {
               <Input
                 id="create-order"
                 type="number"
+                min="0"
                 value={formData.display_order}
                 onChange={(e) =>
                   setFormData({ ...formData, display_order: parseInt(e.target.value) || 0 })
@@ -447,6 +446,7 @@ export default function DepartmentsPage() {
               <Input
                 id="edit-order"
                 type="number"
+                min="0"
                 value={formData.display_order}
                 onChange={(e) =>
                   setFormData({ ...formData, display_order: parseInt(e.target.value) || 0 })
