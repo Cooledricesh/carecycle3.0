@@ -30,6 +30,36 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useRef } from "react";
+
+// Helper function for rate limit retry with exponential backoff
+async function retryWithBackoff<T>(
+  fn: () => Promise<T>,
+  maxRetries: number = 3,
+  baseDelay: number = 1000
+): Promise<T> {
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      return await fn();
+    } catch (error: any) {
+      const isRateLimitError =
+        error?.status === 429 ||
+        error?.message?.includes("rate limit") ||
+        error?.message?.includes("429");
+
+      const isLastRetry = i === maxRetries - 1;
+
+      if (!isRateLimitError || isLastRetry) {
+        throw error;
+      }
+
+      // Exponential backoff: 1s, 2s, 4s
+      const delay = baseDelay * Math.pow(2, i);
+      console.log(`Rate limit hit, retrying in ${delay}ms...`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+  throw new Error("Max retries reached");
+}
 import { OrganizationSearchDialog } from "./OrganizationSearchDialog";
 import { CreateOrganizationDialog } from "./CreateOrganizationDialog";
 import { Building2, UserPlus, Search } from "lucide-react";
@@ -93,18 +123,31 @@ export function SignUpForm({
       // @supabase/ssr's createBrowserClient automatically handles localStorage persistence
       const supabase = createClient();
 
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            name: trimmedName,
-            role,
-          },
-        },
-      });
+      // Use retry with backoff for transient rate limit errors
+      const { data, error } = await retryWithBackoff(
+        () =>
+          supabase.auth.signUp({
+            email,
+            password,
+            options: {
+              data: {
+                name: trimmedName,
+                role,
+              },
+            },
+          }),
+        2, // Max 2 retries (total 3 attempts)
+        2000 // Start with 2s delay
+      );
 
       if (error) {
+        // Handle rate limit error with user-friendly message
+        if (error.message?.includes("rate limit") || error.message?.includes("429") || error.status === 429) {
+          throw new Error(
+            "일시적으로 회원가입 요청이 제한되었습니다. 잠시 후 (약 1시간) 다시 시도해주세요. " +
+            "문제가 지속되면 관리자에게 문의해주세요."
+          );
+        }
         throw new Error(error.message);
       }
 
