@@ -187,7 +187,7 @@ describe('SignUpForm - 중복 제출 방지', () => {
     await user.click(submitButton);
 
     await waitFor(() => {
-      expect(screen.getByText(/Email rate limit exceeded/i)).toBeInTheDocument();
+      expect(screen.getByText(/일시적으로 회원가입 요청이 제한되었습니다/i)).toBeInTheDocument();
     });
   });
 
