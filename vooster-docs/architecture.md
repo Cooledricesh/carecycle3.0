@@ -900,6 +900,301 @@ private transformRpcToUi(rpc: RpcFlatSchedule): UiSchedule {
 - 데이터 변환 로직의 신뢰성 보장
 - 향후 필드 추가 시 자동 타입 체크
 
+## 3.7 사용자 삭제 시스템 아키텍처 (User Deletion Architecture)
+
+**최종 업데이트**: 2025년 11월 13일
+**현재 버전**: 2-Layer Architecture (Phase 8)
+
+### 아키텍처 진화 과정
+
+#### Before: 5-Layer Complex Architecture (제거됨)
+```
+┌─────────────────────────────────────────────────────────────┐
+│ Layer 1: API Route                                          │
+│  - 권한 검증 (Admin only)                                     │
+│  - 마지막 관리자 체크                                          │
+│  - 입력 검증                                                  │
+└──────────────────┬──────────────────────────────────────────┘
+                   ↓
+┌─────────────────────────────────────────────────────────────┐
+│ Layer 2: delete_user_identities RPC                        │
+│  - auth.identities 테이블 정리                               │
+│  - SSO/OAuth 연결 제거                                        │
+└──────────────────┬──────────────────────────────────────────┘
+                   ↓
+┌─────────────────────────────────────────────────────────────┐
+│ Layer 3: direct_delete_user_no_triggers RPC                │
+│  - SET session_replication_role = replica                  │
+│  - 모든 트리거 비활성화                                        │
+│  - DELETE FROM auth.users                                   │
+└──────────────────┬──────────────────────────────────────────┘
+                   ↓
+┌─────────────────────────────────────────────────────────────┐
+│ Layer 4: admin_delete_user RPC                             │
+│  - 관련 데이터 수동 정리                                       │
+│  - notifications DELETE                                     │
+│  - schedules.created_by NULL 설정                            │
+└──────────────────┬──────────────────────────────────────────┘
+                   ↓
+┌─────────────────────────────────────────────────────────────┐
+│ Layer 5: Foreign Key CASCADE (트리거 비활성화 상태)            │
+│  - profiles CASCADE                                         │
+│  - audit_logs CASCADE (데이터 손실!)                          │
+│  - 기타 관련 데이터                                            │
+└─────────────────────────────────────────────────────────────┘
+
+문제점:
+- ❌ 350줄의 복잡한 RPC 함수 3개
+- ❌ 트리거 비활성화로 데이터 무결성 손상
+- ❌ audit_logs 완전 삭제 (감사 추적 손실)
+- ❌ 유지보수 어려움 (5개 계층)
+- ❌ 디버깅 복잡도 높음
+```
+
+#### After: 2-Layer Simple Architecture (현재)
+```
+┌─────────────────────────────────────────────────────────────┐
+│ Layer 1: API Route (15 lines)                              │
+│  - 권한 검증 (Admin only)                                     │
+│  - supabase.auth.admin.deleteUser(userId)                  │
+│  - 에러 처리                                                  │
+└──────────────────┬──────────────────────────────────────────┘
+                   ↓
+┌─────────────────────────────────────────────────────────────┐
+│ Layer 2: Database (Automatic)                              │
+│                                                             │
+│ ┌─────────────────────────────────────────────────────┐   │
+│ │ BEFORE DELETE Triggers (Protection Layer)           │   │
+│ │  1. check_last_admin()                              │   │
+│ │     → Raises exception if last admin                │   │
+│ │  2. anonymize_user_audit_logs()                     │   │
+│ │     → user_id = NULL                                │   │
+│ │     → user_email = 'deleted-user@system.local'      │   │
+│ │     → user_name = 'Deleted User'                    │   │
+│ └─────────────────────────────────────────────────────┘   │
+│                      ↓                                      │
+│ ┌─────────────────────────────────────────────────────┐   │
+│ │ Foreign Key CASCADE (Automatic Cleanup)             │   │
+│ │  - notifications: ON DELETE CASCADE                 │   │
+│ │  - schedules.created_by: ON DELETE SET NULL         │   │
+│ │  - schedules.assigned_nurse_id: ON DELETE SET NULL  │   │
+│ │  - invitations.invited_by: ON DELETE SET NULL       │   │
+│ └─────────────────────────────────────────────────────┘   │
+│                      ↓                                      │
+│ ┌─────────────────────────────────────────────────────┐   │
+│ │ AFTER DELETE Triggers (All Active)                  │   │
+│ │  - calculate_next_due_date() (NULL-safe)            │   │
+│ │  - updated_at timestamps                             │   │
+│ │  - other business logic triggers                     │   │
+│ └─────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────┘
+
+장점:
+- ✅ 70% 코드 감소 (~50줄 → ~15줄)
+- ✅ RPC 함수 3개 제거 (350줄 SQL)
+- ✅ 모든 트리거 활성화 (데이터 무결성 보장)
+- ✅ audit_logs 보존 (익명화)
+- ✅ 데이터베이스 레벨 보호 (check_last_admin)
+- ✅ 자동 정리 (FK CASCADE)
+- ✅ 유지보수 용이
+```
+
+### 핵심 컴포넌트
+
+#### 1. API Route (`/app/api/admin/delete-user/route.ts`)
+```typescript
+// Before: ~50 lines
+// After: ~15 lines
+
+export async function POST(request: Request) {
+  // 1. 권한 검증 (Admin only)
+  if (userRole !== 'admin') {
+    return NextResponse.json({ error: "권한이 없습니다" }, { status: 403 })
+  }
+
+  // 2. 단일 API 호출
+  const { error } = await serviceClient.auth.admin.deleteUser(userId)
+
+  if (error) {
+    return NextResponse.json(
+      { error: "사용자 삭제 중 오류가 발생했습니다" },
+      { status: 500 }
+    )
+  }
+
+  // 3. 데이터베이스가 자동으로 처리:
+  //    - check_last_admin() BEFORE DELETE
+  //    - anonymize_audit_logs() BEFORE DELETE
+  //    - FK CASCADE (notifications, schedules, etc.)
+  //    - All AFTER DELETE triggers
+
+  return NextResponse.json({ success: true })
+}
+```
+
+#### 2. BEFORE DELETE Triggers (Database-Level Protection)
+
+**check_last_admin()**:
+```sql
+CREATE OR REPLACE FUNCTION public.check_last_admin()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $function$
+DECLARE
+    admin_count INTEGER;
+BEGIN
+    -- 삭제하려는 사용자가 admin인 경우
+    IF OLD.role = 'admin' THEN
+        -- 다른 admin이 있는지 확인
+        SELECT COUNT(*) INTO admin_count
+        FROM profiles
+        WHERE role = 'admin' AND id != OLD.id;
+
+        -- 마지막 admin이면 삭제 방지
+        IF admin_count = 0 THEN
+            RAISE EXCEPTION 'Cannot delete the last admin user';
+        END IF;
+    END IF;
+
+    RETURN OLD;
+END;
+$function$;
+
+CREATE TRIGGER prevent_last_admin_deletion
+    BEFORE DELETE ON profiles
+    FOR EACH ROW
+    EXECUTE FUNCTION check_last_admin();
+```
+
+**anonymize_user_audit_logs()**:
+```sql
+CREATE OR REPLACE FUNCTION public.anonymize_user_audit_logs()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $function$
+BEGIN
+    -- audit_logs를 삭제하지 않고 익명화
+    UPDATE audit_logs
+    SET
+        user_id = NULL,
+        user_email = 'deleted-user@system.local',
+        user_name = 'Deleted User'
+    WHERE user_id = OLD.id;
+
+    RAISE NOTICE 'Anonymized audit logs for user %', OLD.id;
+    RETURN OLD;
+END;
+$function$;
+
+CREATE TRIGGER anonymize_audit_before_delete
+    BEFORE DELETE ON profiles
+    FOR EACH ROW
+    EXECUTE FUNCTION anonymize_user_audit_logs();
+```
+
+#### 3. Foreign Key Cascade (Automatic Cleanup)
+```sql
+-- notifications 자동 삭제
+ALTER TABLE notifications
+ADD CONSTRAINT notifications_recipient_id_fkey
+FOREIGN KEY (recipient_id) REFERENCES auth.users(id)
+ON DELETE CASCADE;
+
+-- schedules.created_by NULL 설정
+ALTER TABLE schedules
+ADD CONSTRAINT schedules_created_by_fkey
+FOREIGN KEY (created_by) REFERENCES auth.users(id)
+ON DELETE SET NULL;
+
+-- schedules.assigned_nurse_id NULL 설정
+ALTER TABLE schedules
+ADD CONSTRAINT schedules_assigned_nurse_id_fkey
+FOREIGN KEY (assigned_nurse_id) REFERENCES auth.users(id)
+ON DELETE SET NULL;
+```
+
+#### 4. NULL Safety Enhancement
+```sql
+-- calculate_next_due_date 트리거 개선
+CREATE OR REPLACE FUNCTION public.calculate_next_due_date()
+RETURNS trigger AS $function$
+DECLARE
+    v_schedule RECORD;
+    v_recipient_id UUID;
+BEGIN
+    IF NEW.status = 'completed'::execution_status THEN
+        SELECT * INTO v_schedule FROM schedules WHERE id = NEW.schedule_id;
+
+        -- NULL-safe recipient 결정
+        v_recipient_id := COALESCE(
+            v_schedule.assigned_nurse_id,
+            v_schedule.created_by
+        );
+
+        -- recipient가 있을 때만 알림 생성
+        IF v_recipient_id IS NOT NULL THEN
+            INSERT INTO notifications (...);
+        ELSE
+            RAISE NOTICE 'Skipping notification creation - no valid recipient';
+        END IF;
+    END IF;
+
+    RETURN NEW;
+END;
+$function$;
+```
+
+### 마이그레이션 이력
+
+**Phase 8 Migrations** (2025-11-13):
+1. `20251113100000_fix_all_triggers_null_safety.sql`
+   - calculate_next_due_date 트리거에 NULL 체크 추가
+   - recipient_id COALESCE 로직 개선
+   - 알림 생성 에러 방지
+
+2. `20251113100001_create_before_delete_triggers.sql`
+   - check_last_admin() 함수 및 트리거 생성
+   - anonymize_user_audit_logs() 함수 및 트리거 생성
+   - 데이터베이스 레벨 보호 로직 구현
+
+3. `20251113100002_remove_old_rpc_functions.sql`
+   - admin_delete_user() 제거
+   - direct_delete_user_no_triggers() 제거
+   - delete_user_identities() 제거
+
+### 성능 및 유지보수 이점
+
+#### 성능
+- **API 응답 시간**: 변화 없음 (단일 Supabase Auth API 호출)
+- **데이터베이스 부하**: 감소 (3개 RPC 호출 → 1개 Auth API)
+- **트리거 실행**: 정상 작동 (데이터 무결성 향상)
+
+#### 유지보수
+- **코드 복잡도**: 5-layer → 2-layer (60% 감소)
+- **디버깅 용이성**: 단순한 호출 스택
+- **테스트 용이성**: 트리거 로직 독립 테스트 가능
+- **문서화**: 명확한 데이터 흐름
+
+#### 데이터 무결성
+- **감사 추적 보존**: audit_logs 익명화 (삭제 안 함)
+- **관계 데이터 정리**: FK CASCADE 자동 처리
+- **비즈니스 로직 유지**: 모든 트리거 활성화
+- **데이터베이스 레벨 보호**: check_last_admin 트리거
+
+### 향후 확장성
+
+**현재 아키텍처는 다음 확장을 지원**:
+1. 추가 BEFORE DELETE 트리거 (예: 특정 조건 검증)
+2. 추가 데이터 익명화 로직 (GDPR 준수)
+3. 소프트 삭제 구현 (is_deleted 플래그)
+4. 삭제 취소 기능 (타임스탬프 기반)
+
+**아키텍처 원칙**:
+- 데이터베이스가 비즈니스 로직을 담당
+- API 계층은 얇게 유지 (Thin Layer)
+- 트리거로 데이터 무결성 보장
+- FK CASCADE로 자동 정리
+
 ## 4. 성능 & 최적화 전략
 
 ### 구현된 최적화

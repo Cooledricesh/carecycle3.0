@@ -158,41 +158,31 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 7. Calculate remaining admin count (for deletion guard in RPC)
-    const remainingAdmins = targetProfile.role === "admin"
-      ? ((adminCount ?? 0) - 1)
-      : 0;
+    // 7. Delete user via Supabase Auth API
+    // This triggers the 2-layer architecture:
+    //   Layer 1: Auth API deletes auth.users
+    //   Layer 2: FK CASCADE deletes profiles, which triggers:
+    //     - check_last_admin() BEFORE DELETE (protection)
+    //     - anonymize_user_audit_logs() BEFORE DELETE (cleanup)
+    //     - FK CASCADE on profiles deletion (notifications, SET NULL on schedules, etc.)
+    //     - set_updated_at() AFTER UPDATE (timestamps)
+    //     - All other triggers remain active
+    const { error: deleteError } = await serviceClient.auth.admin.deleteUser(
+      userId
+    );
 
-    // 7.5. Delete user directly via SQL (BUG-2025-11-12-USER-DELETE-TRIGGER-FIX)
-    // Bypass Supabase Auth API and disable triggers to prevent notification INSERT errors
-    // This RPC function deletes from auth schema tables and then profiles (CASCADE)
-    const { data: deleteResult, error: deleteError } = await (serviceClient as any)
-      .rpc("direct_delete_user_no_triggers", {
-        p_user_id: userId
-      });
-
-    if (deleteError || (deleteResult && !deleteResult.success)) {
-      console.error("Error deleting user:", deleteError || deleteResult);
+    if (deleteError) {
+      console.error("User deletion error:", deleteError);
       return NextResponse.json(
-        { error: "Failed to delete user" },
+        {
+          error: "사용자 삭제 중 오류가 발생했습니다",
+          details: deleteError.message,
+        },
         { status: 500 }
       );
     }
 
-    console.log(`User ${userId} deleted successfully via direct SQL`);
-
-    // 8. Clean up related data AFTER user deletion with pre-calculated params
-    const { error: cleanupError } = await (serviceClient as any)
-          .rpc("admin_delete_user", {
-        p_user_id: userId,
-        p_target_role: targetProfile.role,
-        p_remaining_admins: remainingAdmins,
-      });
-
-    if (cleanupError) {
-      console.warn("Warning: User data cleanup failed for user", userId, "Error:", cleanupError);
-      // Don't return error since user is already deleted
-    }
+    console.log(`User ${userId} deleted successfully via Auth API`);
 
     return NextResponse.json({
       message: "User deleted successfully",
