@@ -1,6 +1,6 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/client'
+import { createServiceClient } from '@/lib/supabase/server'
 import { z } from 'zod'
 import { NewOrgRegistrationSchema, type NewOrgRegistrationInput } from '@/lib/validations/organization-registration'
 
@@ -19,7 +19,7 @@ export async function submitOrganizationRequest(
     // Validate input
     const validated = NewOrgRegistrationSchema.parse(input)
 
-    const supabase = createClient()
+    const supabase = await createServiceClient()
 
     // Step 1: Create auth user with Supabase Auth (unconfirmed email, pending status)
     const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
@@ -131,7 +131,7 @@ export async function getOrganizationRequestByUserId(
   created_at: string
   reviewed_at?: string | null
 } | null> {
-  const supabase = createClient()
+  const supabase = await createServiceClient()
 
   const { data, error } = await supabase
     .from('organization_requests')
@@ -163,7 +163,7 @@ export async function getOrganizationRequestByEmail(
   created_at: string
   reviewed_at?: string | null
 } | null> {
-  const supabase = createClient()
+  const supabase = await createServiceClient()
 
   const { data, error } = await supabase
     .from('organization_requests')

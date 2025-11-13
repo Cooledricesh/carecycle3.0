@@ -15,14 +15,14 @@ import { createServiceClient } from '@/lib/supabase/server'
  */
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Step 1: Verify Super Admin access
     const { user } = await requireSuperAdmin()
 
     const supabase = await createServiceClient()
-    const requestId = params.id
+    const { id: requestId } = await params
 
     // Step 2: Get request details
     const { data: orgRequest, error: fetchError } = await supabase

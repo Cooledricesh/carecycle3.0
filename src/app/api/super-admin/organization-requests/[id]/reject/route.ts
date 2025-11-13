@@ -13,14 +13,14 @@ const RejectRequestSchema = z.object({
  */
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Verify Super Admin access
     const { user } = await requireSuperAdmin()
 
     const supabase = await createServiceClient()
-    const requestId = params.id
+    const { id: requestId } = await params
 
     // Parse request body
     const body = await request.json()
