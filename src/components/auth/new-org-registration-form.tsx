@@ -89,7 +89,7 @@ export function NewOrgRegistrationForm() {
                     <FormItem>
                       <FormLabel>기관명 *</FormLabel>
                       <FormControl>
-                        <Input placeholder="예: 00의원, 00병원" {...field} />
+                        <Input placeholder="예: oo의원, oo병원" {...field} />
                       </FormControl>
                       <FormDescription>
                         정식 기관 명칭을 입력하세요
