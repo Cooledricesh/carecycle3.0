@@ -46,7 +46,7 @@ export interface ScheduleWithDetails {
   schedule_id: string
   patient_id: string
   patient_name: string
-  patient_care_type: string
+  patient_care_type: string // From departments.name (via View/RPC alias)
   patient_number: string
   doctor_id: string | null
   doctor_name: string | null
@@ -59,10 +59,10 @@ export interface ScheduleWithDetails {
   priority?: number
   created_at: string
   updated_at: string
-  notes?: string | null
+  notes?: string | null // Schedule memo from schedules table
   // Additional fields for display
-  care_type?: string | null
   injection_dosage?: number | null
+  execution_notes?: string | null // Execution memo from schedule_executions table (실행 시 작성한 메모)
 }
 
 // Form input types

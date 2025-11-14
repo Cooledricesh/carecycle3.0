@@ -576,8 +576,10 @@ export function CalendarView({ className }: CalendarViewProps) {
                     <div className={`font-medium ${
                       isMobile ? 'text-xs' : 'text-sm'
                     } ${
-                      isToday(day.date) ? 'text-blue-700' : 
+                      isToday(day.date) ? 'text-blue-700' :
                       day.isCurrentMonth ? 'text-gray-900' : 'text-gray-400'
+                    } ${
+                      isToday(day.date) ? 'bg-blue-600 text-white rounded-full w-6 h-6 flex items-center justify-center font-bold' : ''
                     }`}>
                       {format(day.date, 'd')}
                     </div>

@@ -3,6 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { SignUpForm } from '../signup-form';
 import { createClient } from '@/lib/supabase/client';
+import { MOCK_TEST_DATA } from '@/lib/test-helpers/mock-data';
 
 // Mock Next.js router
 vi.mock('next/navigation', () => ({
@@ -27,8 +28,8 @@ describe('SignUpForm - 중복 제출 방지', () => {
     mockSignUp = vi.fn().mockResolvedValue({
       data: {
         user: {
-          id: 'test-user-id',
-          email: 'test@example.com',
+          id: MOCK_TEST_DATA.userId,
+          email: MOCK_TEST_DATA.email,
         },
       },
       error: null,
@@ -46,10 +47,10 @@ describe('SignUpForm - 중복 제출 방지', () => {
     render(<SignUpForm />);
 
     // Fill form
-    await user.type(screen.getByLabelText(/이름/i), '테스트유저');
-    await user.type(screen.getByLabelText(/이메일/i), 'test@example.com');
-    await user.type(screen.getByLabelText(/^비밀번호$/i), 'Test123!@#');
-    await user.type(screen.getByLabelText(/비밀번호 확인/i), 'Test123!@#');
+    await user.type(screen.getByLabelText(/이름/i), MOCK_TEST_DATA.name);
+    await user.type(screen.getByLabelText(/이메일/i), MOCK_TEST_DATA.email);
+    await user.type(screen.getByLabelText(/^비밀번호$/i), MOCK_TEST_DATA.password);
+    await user.type(screen.getByLabelText(/비밀번호 확인/i), MOCK_TEST_DATA.password);
 
     const submitButton = screen.getByRole('button', { name: /다음 단계/i });
 
@@ -70,8 +71,8 @@ describe('SignUpForm - 중복 제출 방지', () => {
         setTimeout(() => resolve({
           data: {
             user: {
-              id: 'test-user-id',
-              email: 'test@example.com',
+              id: MOCK_TEST_DATA.userId,
+              email: MOCK_TEST_DATA.email,
             },
           },
           error: null,
@@ -83,10 +84,10 @@ describe('SignUpForm - 중복 제출 방지', () => {
     render(<SignUpForm />);
 
     // Fill form
-    await user.type(screen.getByLabelText(/이름/i), '테스트유저');
-    await user.type(screen.getByLabelText(/이메일/i), 'test@example.com');
-    await user.type(screen.getByLabelText(/^비밀번호$/i), 'Test123!@#');
-    await user.type(screen.getByLabelText(/비밀번호 확인/i), 'Test123!@#');
+    await user.type(screen.getByLabelText(/이름/i), MOCK_TEST_DATA.name);
+    await user.type(screen.getByLabelText(/이메일/i), MOCK_TEST_DATA.email);
+    await user.type(screen.getByLabelText(/^비밀번호$/i), MOCK_TEST_DATA.password);
+    await user.type(screen.getByLabelText(/비밀번호 확인/i), MOCK_TEST_DATA.password);
 
     const submitButton = screen.getByRole('button', { name: /다음 단계/i });
 
@@ -107,10 +108,10 @@ describe('SignUpForm - 중복 제출 방지', () => {
     render(<SignUpForm />);
 
     // Fill form
-    await user.type(screen.getByLabelText(/이름/i), '테스트유저');
-    await user.type(screen.getByLabelText(/이메일/i), 'test@example.com');
-    await user.type(screen.getByLabelText(/^비밀번호$/i), 'Test123!@#');
-    await user.type(screen.getByLabelText(/비밀번호 확인/i), 'Test123!@#');
+    await user.type(screen.getByLabelText(/이름/i), MOCK_TEST_DATA.name);
+    await user.type(screen.getByLabelText(/이메일/i), MOCK_TEST_DATA.email);
+    await user.type(screen.getByLabelText(/^비밀번호$/i), MOCK_TEST_DATA.password);
+    await user.type(screen.getByLabelText(/비밀번호 확인/i), MOCK_TEST_DATA.password);
 
     const submitButton = screen.getByRole('button', { name: /다음 단계/i });
 
@@ -134,8 +135,8 @@ describe('SignUpForm - 중복 제출 방지', () => {
     mockSignUp.mockResolvedValueOnce({
       data: {
         user: {
-          id: 'test-user-id',
-          email: 'test@example.com',
+          id: MOCK_TEST_DATA.userId,
+          email: MOCK_TEST_DATA.email,
         },
       },
       error: null,
@@ -145,10 +146,10 @@ describe('SignUpForm - 중복 제출 방지', () => {
     render(<SignUpForm />);
 
     // Fill form
-    await user.type(screen.getByLabelText(/이름/i), '테스트유저');
-    await user.type(screen.getByLabelText(/이메일/i), 'test@example.com');
-    await user.type(screen.getByLabelText(/^비밀번호$/i), 'Test123!@#');
-    await user.type(screen.getByLabelText(/비밀번호 확인/i), 'Test123!@#');
+    await user.type(screen.getByLabelText(/이름/i), MOCK_TEST_DATA.name);
+    await user.type(screen.getByLabelText(/이메일/i), MOCK_TEST_DATA.email);
+    await user.type(screen.getByLabelText(/^비밀번호$/i), MOCK_TEST_DATA.password);
+    await user.type(screen.getByLabelText(/비밀번호 확인/i), MOCK_TEST_DATA.password);
 
     const submitButton = screen.getByRole('button', { name: /다음 단계/i });
 
@@ -177,10 +178,10 @@ describe('SignUpForm - 중복 제출 방지', () => {
     render(<SignUpForm />);
 
     // Fill form
-    await user.type(screen.getByLabelText(/이름/i), '테스트유저');
-    await user.type(screen.getByLabelText(/이메일/i), 'test@example.com');
-    await user.type(screen.getByLabelText(/^비밀번호$/i), 'Test123!@#');
-    await user.type(screen.getByLabelText(/비밀번호 확인/i), 'Test123!@#');
+    await user.type(screen.getByLabelText(/이름/i), MOCK_TEST_DATA.name);
+    await user.type(screen.getByLabelText(/이메일/i), MOCK_TEST_DATA.email);
+    await user.type(screen.getByLabelText(/^비밀번호$/i), MOCK_TEST_DATA.password);
+    await user.type(screen.getByLabelText(/비밀번호 확인/i), MOCK_TEST_DATA.password);
 
     const submitButton = screen.getByRole('button', { name: /다음 단계/i });
 
@@ -196,10 +197,10 @@ describe('SignUpForm - 중복 제출 방지', () => {
     render(<SignUpForm />);
 
     // Fill form
-    await user.type(screen.getByLabelText(/이름/i), '테스트유저');
-    await user.type(screen.getByLabelText(/이메일/i), 'test@example.com');
-    await user.type(screen.getByLabelText(/^비밀번호$/i), 'Test123!@#');
-    await user.type(screen.getByLabelText(/비밀번호 확인/i), 'Test123!@#');
+    await user.type(screen.getByLabelText(/이름/i), MOCK_TEST_DATA.name);
+    await user.type(screen.getByLabelText(/이메일/i), MOCK_TEST_DATA.email);
+    await user.type(screen.getByLabelText(/^비밀번호$/i), MOCK_TEST_DATA.password);
+    await user.type(screen.getByLabelText(/비밀번호 확인/i), MOCK_TEST_DATA.password);
 
     const submitButton = screen.getByRole('button', { name: /다음 단계/i });
 
@@ -208,11 +209,11 @@ describe('SignUpForm - 중복 제출 방지', () => {
     await waitFor(() => {
       expect(mockSignUp).toHaveBeenCalledTimes(1);
       expect(mockSignUp).toHaveBeenCalledWith({
-        email: 'test@example.com',
-        password: 'Test123!@#',
+        email: MOCK_TEST_DATA.email,
+        password: MOCK_TEST_DATA.password,
         options: {
           data: {
-            name: '테스트유저',
+            name: MOCK_TEST_DATA.name,
             role: 'nurse',
           },
         },

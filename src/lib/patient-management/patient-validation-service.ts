@@ -23,7 +23,6 @@ export interface ConflictDetails {
     id: string
     name: string
     patientNumber: string
-    careType?: string | null
   }
   inactivePatient?: InactivePatient
   message: string
@@ -149,7 +148,7 @@ export class PatientValidationService {
       // Check for active patient
       const { data: activePatient, error: activeError } = await (this.supabase as any)
           .from('patients')
-        .select('id, name, patient_number, care_type')
+        .select('id, name, patient_number')
         .eq('patient_number', patientNumber)
         .eq('is_active', true)
         .eq('archived', false)
@@ -170,8 +169,7 @@ export class PatientValidationService {
             activePatient: {
               id: activePatient.id,
               name: activePatient.name,
-              patientNumber: activePatient.patient_number,
-              careType: activePatient.care_type
+              patientNumber: activePatient.patient_number
             },
             message: '이미 등록된 환자번호입니다',
             canRestore: false,

@@ -9,24 +9,25 @@ import {
   type InvitationInfo,
   type SignupRequest,
 } from '../signup-transformation-service';
+import { MOCK_TEST_DATA } from '@/lib/test-helpers/mock-data';
 
 describe('buildProfileData', () => {
   it('should correctly transform invitation and signup data into profile data', () => {
     const invitation: InvitationInfo = {
-      email: 'test@example.com',
+      email: MOCK_TEST_DATA.email,
       role: 'doctor',
       organization_id: 'org-123',
     };
 
     const signupRequest: SignupRequest = {
       name: 'John Doe',
-      password: 'password123', // Password is not included in profile data
+      password: 'mock-password-123', // Password is not included in profile data
     };
 
     const result = buildProfileData(invitation, signupRequest);
 
     expect(result).toEqual({
-      email: 'test@example.com',
+      email: MOCK_TEST_DATA.email,
       role: 'doctor',
       organization_id: 'org-123',
       approval_status: 'approved',
@@ -36,14 +37,14 @@ describe('buildProfileData', () => {
 
   it('should set approval_status to approved for all roles', () => {
     const invitation: InvitationInfo = {
-      email: 'nurse@example.com',
+      email: 'mock-nurse@example.test',
       role: 'nurse',
       organization_id: 'org-456',
     };
 
     const signupRequest: SignupRequest = {
       name: 'Jane Smith',
-      password: 'password123',
+      password: 'mock-password-123',
     };
 
     const result = buildProfileData(invitation, signupRequest);
@@ -53,14 +54,14 @@ describe('buildProfileData', () => {
 
   it('should preserve all invitation data', () => {
     const invitation: InvitationInfo = {
-      email: 'admin@example.com',
+      email: 'mock-admin@example.test',
       role: 'admin',
       organization_id: 'org-789',
     };
 
     const signupRequest: SignupRequest = {
       name: 'Admin User',
-      password: 'securepass',
+      password: 'mock-secure-pass',
     };
 
     const result = buildProfileData(invitation, signupRequest);

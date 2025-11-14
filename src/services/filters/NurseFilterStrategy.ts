@@ -64,7 +64,8 @@ export class NurseFilterStrategy implements FilterStrategy {
           display_type: item.display_type,
           execution_id: item.execution_id,
           executed_by: item.executed_by,
-          notes: item.execution_notes,
+          notes: item.notes, // ✅ FIXED: Use notes from schedules table (not execution_notes)
+          execution_notes: item.execution_notes, // Keep execution_notes separate
           injection_dosage: item.injection_dosage,
           doctor_id_at_completion: item.doctor_id_at_completion,
           care_type_at_completion: item.care_type_at_completion

@@ -138,7 +138,6 @@ export interface UiSchedule {
   status: string
   priority?: number
   notes?: string | null
-  care_type?: string | null
 
   // Display metadata
   display_type?: 'scheduled' | 'completed'
@@ -157,8 +156,6 @@ export interface UiSchedule {
   patient?: {
     id: string
     name: string
-    care_type: string
-    careType?: string  // camelCase variant
     patient_number: string
     patientNumber?: string  // camelCase variant
     doctor_id: string | null

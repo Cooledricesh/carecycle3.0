@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Building2, Users, UserPlus } from 'lucide-react';
 import { useSuperAdminStats } from '@/hooks/useSuperAdminStats';
+import { PendingOrganizationList } from '@/components/super-admin/pending-organization-list';
 
 export default function SuperAdminDashboard() {
   const { data, isLoading: loading, error } = useSuperAdminStats();
@@ -122,6 +123,12 @@ export default function SuperAdminDashboard() {
             </div>
           </CardContent>
         </Card>
+      </div>
+
+      {/* Organization Registration Requests */}
+      <div className="mt-8">
+        <h2 className="text-2xl font-bold tracking-tight mb-4">신규 기관 등록 신청</h2>
+        <PendingOrganizationList />
       </div>
     </div>
   );

@@ -41,7 +41,7 @@ const inviteSchema = z.object({
     errorMap: () => ({ message: '역할을 선택해주세요' }),
   }),
   care_type: z.string({
-    errorMap: () => ({ message: '케어 타입을 선택해주세요' }),
+    errorMap: () => ({ message: '소속을 선택해주세요' }),
   }).optional(),
 }).refine((data) => {
   // nurse 역할인 경우 care_type 필수
@@ -50,7 +50,7 @@ const inviteSchema = z.object({
   }
   return true;
 }, {
-  message: '케어 타입을 선택해주세요',
+  message: '소속을 선택해주세요',
   path: ['care_type'],
 });
 
@@ -212,7 +212,7 @@ export function InviteUserModal({ open, onOpenChange }: InviteUserModalProps) {
 
           {formData.role === 'nurse' && (
             <div className="space-y-2">
-              <Label htmlFor="care_type">케어 타입</Label>
+              <Label htmlFor="care_type">소속</Label>
               <Select
                 value={formData.care_type || ''}
                 onValueChange={(value) =>
@@ -221,7 +221,7 @@ export function InviteUserModal({ open, onOpenChange }: InviteUserModalProps) {
                 disabled={departmentsLoading}
               >
                 <SelectTrigger className={errors.care_type ? 'border-red-500' : ''}>
-                  <SelectValue placeholder={departmentsLoading ? '로딩 중...' : '케어 타입을 선택하세요'} />
+                  <SelectValue placeholder={departmentsLoading ? '로딩 중...' : '소속을 선택하세요'} />
                 </SelectTrigger>
                 <SelectContent>
                   {departments.map((dept) => (

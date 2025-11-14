@@ -139,10 +139,10 @@ export function CalendarDayCard({
           </div>
 
           {/* 소속 정보 */}
-          {(schedule.care_type || schedule.patient_care_type) && (
+          {schedule.patient_care_type && (
             <div className="flex items-center gap-2 text-gray-500">
               <span className="text-xs text-gray-600">
-                소속: {schedule.care_type || schedule.patient_care_type || '미지정'}
+                소속: {schedule.patient_care_type || '미지정'}
               </span>
             </div>
           )}
