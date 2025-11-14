@@ -12,6 +12,7 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { TokenService } from '@/services/invitation-token-service';
+import { MOCK_TEST_DATA } from '@/lib/test-helpers/mock-data';
 
 describe('TokenService - RED PHASE', () => {
   let tokenService: TokenService;
@@ -85,7 +86,7 @@ describe('TokenService - RED PHASE', () => {
       const validInvitation = {
         id: 'test-id',
         organization_id: 'org-id',
-        email: 'test@example.com',
+        email: MOCK_TEST_DATA.email,
         role: 'nurse' as const,
         token: 'valid-token',
         status: 'pending',
@@ -104,7 +105,7 @@ describe('TokenService - RED PHASE', () => {
       const usedInvitation = {
         id: 'test-id',
         organization_id: 'org-id',
-        email: 'test@example.com',
+        email: MOCK_TEST_DATA.email,
         role: 'nurse' as const,
         token: 'used-token',
         status: 'accepted',
@@ -123,7 +124,7 @@ describe('TokenService - RED PHASE', () => {
       const cancelledInvitation = {
         id: 'test-id',
         organization_id: 'org-id',
-        email: 'test@example.com',
+        email: MOCK_TEST_DATA.email,
         role: 'doctor' as const,
         token: 'cancelled-token',
         status: 'cancelled',
@@ -142,7 +143,7 @@ describe('TokenService - RED PHASE', () => {
       const expiredInvitation = {
         id: 'test-id',
         organization_id: 'org-id',
-        email: 'test@example.com',
+        email: MOCK_TEST_DATA.email,
         role: 'admin' as const,
         token: 'expired-token',
         status: 'pending',
@@ -162,7 +163,7 @@ describe('TokenService - RED PHASE', () => {
       const multiInvalidInvitation = {
         id: 'test-id',
         organization_id: 'org-id',
-        email: 'test@example.com',
+        email: MOCK_TEST_DATA.email,
         role: 'nurse' as const,
         token: 'multi-invalid',
         status: 'cancelled',

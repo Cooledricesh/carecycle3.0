@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { activityService } from '../activityService'
 import type { AuditLog } from '@/types/activity'
+import { MOCK_TEST_DATA } from '@/lib/test-helpers/mock-data'
 
 describe('ActivityService - BUG-2025-11-12-ACTIVITY-LOG-UNKNOWN-USER', () => {
   describe('generateDescription - Unknown User Bug', () => {
@@ -14,7 +15,7 @@ describe('ActivityService - BUG-2025-11-12-ACTIVITY-LOG-UNKNOWN-USER', () => {
         oldValues: { status: 'active' },
         newValues: { status: 'paused' },
         userId: 'user-123',
-        userEmail: 'testuser@example.com',
+        userEmail: 'mock-testuser@example.test',
         userName: null, // 문제 상황: name이 NULL
         userRole: 'nurse',
         timestamp: new Date().toISOString(),
@@ -25,9 +26,9 @@ describe('ActivityService - BUG-2025-11-12-ACTIVITY-LOG-UNKNOWN-USER', () => {
       const description = activityService.generateDescription(log)
 
       // 현재 실패: "알 수 없음님이..."로 표시됨
-      // 기대: "testuser님이..." 또는 email 앞부분 표시
+      // 기대: "mock-testuser님이..." 또는 email 앞부분 표시
       expect(description).not.toContain('알 수 없음')
-      expect(description).toContain('testuser')
+      expect(description).toContain('mock-testuser')
     })
 
     it('should fallback to email username when both userName and userEmail are available', () => {
@@ -39,7 +40,7 @@ describe('ActivityService - BUG-2025-11-12-ACTIVITY-LOG-UNKNOWN-USER', () => {
         oldValues: null,
         newValues: { patient_name: '홍길동' },
         userId: 'user-123',
-        userEmail: 'doctor.kim@hospital.com',
+        userEmail: 'mock-doctor.kim@hospital.test',
         userName: null,
         userRole: 'doctor',
         timestamp: new Date().toISOString(),
@@ -49,7 +50,7 @@ describe('ActivityService - BUG-2025-11-12-ACTIVITY-LOG-UNKNOWN-USER', () => {
 
       const description = activityService.generateDescription(log)
 
-      expect(description).toContain('doctor.kim')
+      expect(description).toContain('mock-doctor.kim')
       expect(description).not.toContain('알 수 없음')
     })
 
@@ -85,7 +86,7 @@ describe('ActivityService - BUG-2025-11-12-ACTIVITY-LOG-UNKNOWN-USER', () => {
         oldValues: {},
         newValues: {},
         userId: 'user-123',
-        userEmail: 'test@example.com',
+        userEmail: MOCK_TEST_DATA.email,
         userName: '김철수', // name이 있으면 우선 사용
         userRole: 'admin',
         timestamp: new Date().toISOString(),
@@ -96,7 +97,7 @@ describe('ActivityService - BUG-2025-11-12-ACTIVITY-LOG-UNKNOWN-USER', () => {
       const description = activityService.generateDescription(log)
 
       expect(description).toContain('김철수')
-      expect(description).not.toContain('test')
+      expect(description).not.toContain('mock-test')
     })
   })
 })

@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { MOCK_TEST_DATA } from '@/lib/test-helpers/mock-data';
 
 describe('POST /api/auth/signup - care_type removal', () => {
   it('should fail: current code includes care_type field', () => {
@@ -7,7 +8,7 @@ describe('POST /api/auth/signup - care_type removal', () => {
 
     const currentProfileData = {
       id: 'test-id',
-      email: 'test@example.com',
+      email: MOCK_TEST_DATA.email,
       name: 'Test User',
       role: 'nurse',
       care_type: '낮병원', // This field causes 401 error in production
@@ -25,7 +26,7 @@ describe('POST /api/auth/signup - care_type removal', () => {
 
     const fixedProfileData = {
       id: 'test-id',
-      email: 'test@example.com',
+      email: MOCK_TEST_DATA.email,
       name: 'Test User',
       role: 'nurse',
       department_id: 'dept-123',
@@ -39,7 +40,7 @@ describe('POST /api/auth/signup - care_type removal', () => {
   it('should pass after fix: admin profile without care_type', () => {
     const fixedAdminProfile = {
       id: 'admin-id',
-      email: 'admin@example.com',
+      email: 'mock-admin@example.test',
       name: 'Admin User',
       role: 'admin',
       department_id: null,

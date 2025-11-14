@@ -35,8 +35,12 @@ export function useApproveOrganization(): UseMutationResult<
       )
 
       if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || 'Failed to approve request')
+        const errorBody = await response.json()
+        const errorMessage =
+          errorBody?.error?.message ||
+          errorBody?.error ||
+          '승인 요청 처리에 실패했습니다'
+        throw new Error(errorMessage)
       }
 
       return response.json()
@@ -75,8 +79,12 @@ export function useRejectOrganization(): UseMutationResult<
       )
 
       if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || 'Failed to reject request')
+        const errorBody = await response.json()
+        const errorMessage =
+          errorBody?.error?.message ||
+          errorBody?.error ||
+          '거부 요청 처리에 실패했습니다'
+        throw new Error(errorMessage)
       }
 
       return response.json()

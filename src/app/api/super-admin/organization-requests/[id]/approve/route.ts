@@ -85,7 +85,7 @@ export async function POST(
       // Step 5: Rollback - Deactivate user again
       console.error('RPC error, rolling back user activation:', rpcError)
 
-      await supabase.auth.admin.updateUserById(
+      const { error: rollbackError } = await supabase.auth.admin.updateUserById(
         orgRequest.requester_user_id,
         {
           email_confirm: false,
@@ -95,6 +95,14 @@ export async function POST(
           },
         }
       )
+
+      if (rollbackError) {
+        console.error('CRITICAL: Rollback failed, user may be in inconsistent state:', {
+          userId: orgRequest.requester_user_id,
+          requestId: requestId,
+          rollbackError,
+        })
+      }
 
       return NextResponse.json(
         { error: rpcError.message || 'Failed to approve request' },

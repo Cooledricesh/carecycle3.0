@@ -33,6 +33,20 @@ export async function POST(
       )
     }
 
+    // Get request details before rejection
+    const { data: orgRequest, error: fetchError } = await supabase
+      .from('organization_requests')
+      .select('requester_user_id')
+      .eq('id', requestId)
+      .single<{ requester_user_id: string }>()
+
+    if (fetchError || !orgRequest) {
+      return NextResponse.json(
+        { error: 'Request not found' },
+        { status: 404 }
+      )
+    }
+
     // Call RPC to reject request
     const { data: rpcResult, error: rpcError } = await (supabase as any).rpc(
       'reject_org_request',
@@ -49,6 +63,20 @@ export async function POST(
         { error: rpcError.message },
         { status: 500 }
       )
+    }
+
+    // Delete the auth.users account for rejected requests
+    const { error: deleteUserError } = await supabase.auth.admin.deleteUser(
+      orgRequest.requester_user_id
+    )
+
+    if (deleteUserError) {
+      console.error('Failed to delete user account after rejection:', {
+        userId: orgRequest.requester_user_id,
+        requestId,
+        error: deleteUserError,
+      })
+      // Log error but don't fail the rejection - RPC already updated the status
     }
 
     // TODO: Send rejection notification email

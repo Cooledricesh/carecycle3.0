@@ -527,7 +527,7 @@ export const scheduleService = {
             item_category: items?.category || '',
             // Keep nested objects for backward compatibility
             patient: patients ? snakeToCamel(patients) : null,
-            item: items ? snakeToCamel(patients) : null
+            item: items ? snakeToCamel(items) : null
           } as ScheduleWithDetails
         })
 
