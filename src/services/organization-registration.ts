@@ -69,6 +69,18 @@ export async function submitOrganizationRequest(
       }
     }
 
+    // Step 2.5: Sign in the user automatically (admin.createUser doesn't set session)
+    // This ensures the user can view the approval-pending page without manual login
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: validated.requesterEmail,
+      password: validated.password,
+    })
+
+    if (signInError) {
+      console.error('Auto sign-in failed:', signInError)
+      // Don't fail the registration - user can log in manually
+    }
+
     // Step 3: Insert organization request
     const { data: insertData, error: insertError } = await (supabase
       .from('organization_requests') as any)
