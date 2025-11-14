@@ -39,17 +39,16 @@ export async function submitOrganizationRequest(
       }
     }
 
-    // Step 2: Create auth user with Supabase Auth (unconfirmed email, pending status)
+    // Step 2: Create auth user with Admin API (bypasses RLS, allows user creation from server)
     // Only create user AFTER duplicate check passes
-    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+    // Use auth.admin.createUser() instead of auth.signUp() to avoid RLS permission issues
+    const { data: signUpData, error: signUpError } = await supabase.auth.admin.createUser({
       email: validated.requesterEmail,
       password: validated.password,
-      options: {
-        emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/approval-pending`,
-        data: {
-          name: validated.requesterName,
-          approval_status: 'pending_organization',
-        },
+      email_confirm: false, // Will be confirmed after organization approval
+      user_metadata: {
+        name: validated.requesterName,
+        approval_status: 'pending_organization',
       },
     })
 
