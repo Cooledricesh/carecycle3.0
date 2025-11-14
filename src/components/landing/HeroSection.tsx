@@ -33,7 +33,7 @@ export function HeroSection({ onGetStarted, onLearnMore, showAuthButtons = true 
             {/* Subtitle */}
             <p className="mt-4 sm:mt-6 text-base sm:text-lg leading-7 sm:leading-8 text-secondary">
               자동 일정 생성과 초간단 체크리스트로 업무 시간을 줄이세요.
-              중형 병원 스텝을 위한 스마트 스케줄링 시스템.
+              스마트 스케줄링 시스템.
             </p>
 
             {/* CTA Buttons */}

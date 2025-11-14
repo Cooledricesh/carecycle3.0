@@ -372,7 +372,7 @@ export default function DepartmentsPage() {
                 id="create-name"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="예: 내과, 외과, 소아과"
+                placeholder="예: 외래, 병동, 낮병원"
               />
             </div>
             <div className="space-y-2">
@@ -428,7 +428,7 @@ export default function DepartmentsPage() {
                 id="edit-name"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="예: 내과, 외과, 소아과"
+                placeholder="예: 외래, 병동, 낮병원"
               />
             </div>
             <div className="space-y-2">

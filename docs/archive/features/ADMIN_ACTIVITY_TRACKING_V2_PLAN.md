@@ -946,7 +946,7 @@ WHERE table_name = 'audit_logs' AND column_name = 'user_name';
 ```sql
 -- 테스트 데이터 삽입 (본인 hospital_id 사용)
 INSERT INTO patients (hospital_id, patient_number, name, department)
-VALUES ('[your-hospital-id]', 'TEST001', '테스트환자', '내과');
+VALUES ('[your-hospital-id]', 'TEST001', '테스트환자', '외래');
 
 -- audit_logs 확인
 SELECT * FROM audit_logs ORDER BY timestamp DESC LIMIT 1;

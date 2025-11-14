@@ -228,7 +228,7 @@ export const activityService = {
         changes.push(`이름: ${oldValues.name} → ${newValues.name}`)
       }
       if (oldValues.department_id !== newValues.department_id) {
-        changes.push(`진료과 변경`)
+        changes.push(`소속 변경`)
       }
       if (oldValues.doctor_id !== newValues.doctor_id) {
         changes.push(`담당의 변경`)
@@ -301,7 +301,7 @@ export const activityService = {
         changes.push(`역할: ${oldValues.role} → ${newValues.role}`)
       }
       if (oldValues.department_id !== newValues.department_id) {
-        changes.push(`진료과 변경`)
+        changes.push(`소속 변경`)
       }
       if (oldValues.approval_status !== newValues.approval_status) {
         changes.push(`승인상태: ${oldValues.approval_status} → ${newValues.approval_status}`)
