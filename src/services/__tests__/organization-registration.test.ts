@@ -157,6 +157,7 @@ describe('submitOrganizationRequest', () => {
         requesterName: '홍길동',
         requesterEmail: 'test@example.com',
         password: 'Test123!@#',
+        passwordConfirm: 'Test123!@#',
       })
 
       // Assert: deleteUser should NOT be called (no user was created)
