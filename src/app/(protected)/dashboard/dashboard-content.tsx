@@ -382,7 +382,7 @@ export default function DashboardContent() {
                           주치의: {schedule.doctor_name || (schedule.doctor_id ? '지정됨' : '미지정')}
                         </span>
                         <span>
-                          소속: {schedule.care_type || schedule.patient_care_type || '미지정'}
+                          소속: {schedule.patient_care_type || '미지정'}
                         </span>
                       </div>
                       {schedule.notes && (
@@ -507,7 +507,7 @@ export default function DashboardContent() {
                           주치의: {schedule.doctor_name || (schedule.doctor_id ? '지정됨' : '미지정')}
                         </span>
                         <span>
-                          소속: {schedule.care_type || schedule.patient_care_type || '미지정'}
+                          소속: {schedule.patient_care_type || '미지정'}
                         </span>
                       </div>
                       {schedule.notes && (

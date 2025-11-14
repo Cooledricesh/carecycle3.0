@@ -237,8 +237,6 @@ export class ScheduleServiceEnhanced {
       patient: {
         id: rpc.patient_id,
         name: rpc.patient_name,
-        care_type: rpc.patient_care_type || '',
-        careType: rpc.patient_care_type || '',
         patient_number: rpc.patient_number,
         patientNumber: rpc.patient_number,
         doctor_id: rpc.doctor_id,
@@ -299,8 +297,6 @@ export class ScheduleServiceEnhanced {
       patient: patient ? {
         id: patient.id,
         name: patient.name,
-        care_type: patient.departments?.name || '',
-        careType: patient.departments?.name || '',
         patient_number: patient.patient_number,
         patientNumber: patient.patient_number,
         doctor_id: patient.doctor_id || null,

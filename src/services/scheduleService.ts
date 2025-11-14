@@ -247,7 +247,7 @@ export const scheduleService = {
           .from('schedules')
         .select(`
           *,
-          patients (*),
+          patients (*, departments(name)),
           items (*)
         `)
         .eq('patient_id', patientId)
@@ -273,11 +273,11 @@ export const scheduleService = {
   async getById(id: string, organizationId: string, supabase?: SupabaseClient): Promise<ScheduleWithDetails | null> {
     const client = supabase || createClient()
     try {
-      const { data, error } = await (client as any)
+      const { data, error} = await (client as any)
           .from('schedules')
         .select(`
           *,
-          patients (*),
+          patients (*, departments(name)),
           items (*)
         `)
         .eq('id', id)
@@ -436,7 +436,7 @@ export const scheduleService = {
           .from('schedules')
         .select(`
           *,
-          patients (*),
+          patients (*, departments(name)),
           items (*)
         `)
         .eq('status', 'active')
@@ -471,7 +471,7 @@ export const scheduleService = {
           .from('schedules')
           .select(`
             *,
-            patients (*),
+            patients (*, departments(name)),
             items (*)
           `)
           .in('status', ['active', 'paused'])  // Only show active and paused schedules, exclude cancelled and deleted
@@ -519,7 +519,7 @@ export const scheduleService = {
             schedule_id: item.id,
             // Add flat fields for UI compatibility (matching scheduleServiceEnhanced pattern)
             patient_name: patients?.name || '',
-            patient_care_type: patients?.care_type || '',
+            patient_care_type: patients?.departments?.name || '',
             patient_number: patients?.patient_number || '',
             doctor_id: patients?.doctor_id || null,
             doctor_name: patients?.doctor_name || '',
@@ -527,23 +527,17 @@ export const scheduleService = {
             item_category: items?.category || '',
             // Keep nested objects for backward compatibility
             patient: patients ? snakeToCamel(patients) : null,
-            item: items ? snakeToCamel(items) : null
+            item: items ? snakeToCamel(patients) : null
           } as ScheduleWithDetails
         })
 
         // Apply client-side filters for nested patient data
         if (filters) {
-          // Filter by care types
+          // Filter by department IDs
           if (filters.department_ids && filters.department_ids.length > 0) {
             schedules = schedules.filter((schedule: any) => {
-              // departmentId 우선 사용, 없으면 레거시 careType 사용
               const departmentId = (schedule as any).patient?.departmentId ?? null
-              if (departmentId) {
-                return filters.department_ids.includes(departmentId)
-              }
-              // Fallback to legacy care_type
-              const legacyCareType = schedule.patient_care_type || (schedule as any).patient?.careType
-              return legacyCareType ? filters.department_ids.includes(legacyCareType) : false
+              return departmentId ? filters.department_ids.includes(departmentId) : false
             })
           }
 
@@ -943,17 +937,11 @@ export const scheduleService = {
 
       // Apply client-side filters if provided
       if (filters) {
-        // Filter by care types
+        // Filter by department IDs
         if (filters.department_ids && filters.department_ids.length > 0) {
           schedules = schedules.filter((schedule: any) => {
-            // departmentId 우선 사용, 없으면 레거시 careType 사용
             const departmentId = (schedule as any).patient?.departmentId ?? null
-            if (departmentId) {
-              return filters.department_ids.includes(departmentId)
-            }
-            // Fallback to legacy care_type
-            const legacyCareType = schedule.patient_care_type || (schedule as any).patient?.careType
-            return legacyCareType ? filters.department_ids.includes(legacyCareType) : false
+            return departmentId ? filters.department_ids.includes(departmentId) : false
           })
         }
 
