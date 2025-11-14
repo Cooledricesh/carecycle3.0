@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -10,14 +10,18 @@ import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Building2, User, Mail, Lock, AlertCircle } from 'lucide-react'
+import { Building2, User, Mail, Lock, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react'
 import { submitOrganizationRequest } from '@/services/organization-registration'
 import { NewOrgRegistrationSchema, type NewOrgRegistrationInput } from '@/lib/validations/organization-registration'
+import { createClient } from '@/lib/supabase/client'
 
 export function NewOrgRegistrationForm() {
   const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [isCheckingOrgName, setIsCheckingOrgName] = useState(false)
+  const [orgNameError, setOrgNameError] = useState<string | null>(null)
+  const [orgNameAvailable, setOrgNameAvailable] = useState(false)
 
   const form = useForm<NewOrgRegistrationInput>({
     resolver: zodResolver(NewOrgRegistrationSchema),
@@ -30,6 +34,46 @@ export function NewOrgRegistrationForm() {
       passwordConfirm: '',
     },
   })
+
+  // Check organization name availability
+  const checkOrgNameAvailability = useCallback(async (name: string) => {
+    if (!name || name.length < 2) {
+      setOrgNameError(null)
+      setOrgNameAvailable(false)
+      return
+    }
+
+    setIsCheckingOrgName(true)
+    setOrgNameError(null)
+    setOrgNameAvailable(false)
+
+    try {
+      const supabase = createClient()
+      const { data, error } = await supabase
+        .from('organizations')
+        .select('id')
+        .ilike('name', name)
+        .eq('is_active', true)
+        .maybeSingle()
+
+      if (error) {
+        console.error('Organization check error:', error)
+        return
+      }
+
+      if (data) {
+        setOrgNameError('이미 존재하는 기관명입니다')
+        setOrgNameAvailable(false)
+      } else {
+        setOrgNameError(null)
+        setOrgNameAvailable(true)
+      }
+    } catch (err) {
+      console.error('Organization check error:', err)
+    } finally {
+      setIsCheckingOrgName(false)
+    }
+  }, [])
 
   const onSubmit = async (data: NewOrgRegistrationInput) => {
     try {
@@ -89,11 +133,37 @@ export function NewOrgRegistrationForm() {
                     <FormItem>
                       <FormLabel>기관명 *</FormLabel>
                       <FormControl>
-                        <Input placeholder="예: oo의원, oo병원" {...field} />
+                        <div className="relative">
+                          <Input
+                            placeholder="예: oo의원, oo병원"
+                            {...field}
+                            onBlur={(e) => {
+                              field.onBlur()
+                              checkOrgNameAvailability(e.target.value)
+                            }}
+                            onChange={(e) => {
+                              field.onChange(e)
+                              // Reset validation state on change
+                              setOrgNameError(null)
+                              setOrgNameAvailable(false)
+                            }}
+                          />
+                          {isCheckingOrgName && (
+                            <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin text-gray-400" />
+                          )}
+                          {!isCheckingOrgName && orgNameAvailable && (
+                            <CheckCircle2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-green-600" />
+                          )}
+                        </div>
                       </FormControl>
                       <FormDescription>
                         정식 기관 명칭을 입력하세요
+                        {isCheckingOrgName && <span className="ml-2 text-blue-600">확인 중...</span>}
+                        {orgNameAvailable && <span className="ml-2 text-green-600">사용 가능한 기관명입니다</span>}
                       </FormDescription>
+                      {orgNameError && (
+                        <p className="text-sm font-medium text-destructive">{orgNameError}</p>
+                      )}
                       <FormMessage />
                     </FormItem>
                   )}

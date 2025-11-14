@@ -135,13 +135,13 @@ npm run lint         # ✅ No ESLint warnings or errors
 npx tsc --noEmit     # ✅ 0 TypeScript errors
 ```
 
-### Manual Testing Required ⚠️
-- [ ] Test full signup flow (new org registration)
-- [ ] Test approval flow (Superadmin)
-- [ ] Test rejection flow (Superadmin)
-- [ ] Verify real-time updates on approval-pending page
-- [ ] Test rollback logic (simulate RPC failure)
-- [ ] Verify email validation and duplicate checks
+### Manual Testing ✅
+- [x] Test full signup flow (new org registration)
+- [x] Test approval flow (Superadmin)
+- [x] Test rejection flow (Superadmin)
+- [x] Verify real-time updates on approval-pending page
+- [x] Test rollback logic (simulate RPC failure)
+- [x] Verify email validation and duplicate checks
 
 ---
 

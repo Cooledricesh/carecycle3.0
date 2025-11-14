@@ -25,11 +25,17 @@ export function PendingOrganizationList() {
   const [selectedRequest, setSelectedRequest] = useState<string | null>(null)
   const [dialogAction, setDialogAction] = useState<'approve' | 'reject' | null>(null)
 
+  // Always fetch all requests for accurate statistics
   const { data, isLoading } = useOrganizationRequests({
-    status: filter === 'all' ? null : filter,
+    status: null, // Fetch all statuses
   })
 
-  const requests = data?.requests || []
+  const allRequests = data?.requests || []
+
+  // Filter requests on client side
+  const requests = filter === 'all'
+    ? allRequests
+    : allRequests.filter(r => r.status === filter)
 
   const handleApproveClick = (requestId: string) => {
     setSelectedRequest(requestId)
@@ -55,10 +61,10 @@ export function PendingOrganizationList() {
     )
   }
 
-  // Calculate statistics
-  const pendingCount = requests.filter(r => r.status === 'pending').length
-  const approvedCount = requests.filter(r => r.status === 'approved').length
-  const rejectedCount = requests.filter(r => r.status === 'rejected').length
+  // Calculate statistics from all requests (not filtered)
+  const pendingCount = allRequests.filter(r => r.status === 'pending').length
+  const approvedCount = allRequests.filter(r => r.status === 'approved').length
+  const rejectedCount = allRequests.filter(r => r.status === 'rejected').length
 
   return (
     <div className="space-y-6">
@@ -67,7 +73,7 @@ export function PendingOrganizationList() {
         <Card>
           <CardHeader className="pb-3">
             <CardDescription>전체 신청</CardDescription>
-            <CardTitle className="text-2xl">{requests.length}</CardTitle>
+            <CardTitle className="text-2xl">{allRequests.length}</CardTitle>
           </CardHeader>
         </Card>
         <Card>
@@ -100,7 +106,7 @@ export function PendingOrganizationList() {
               : 'border-transparent text-gray-600 hover:text-gray-900'
           }`}
         >
-          전체 ({requests.length})
+          전체 ({allRequests.length})
         </button>
         <button
           onClick={() => setFilter('pending')}
