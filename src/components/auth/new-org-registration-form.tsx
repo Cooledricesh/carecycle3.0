@@ -7,6 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -14,6 +15,8 @@ import { Building2, User, Mail, Lock, AlertCircle, CheckCircle2, Loader2 } from 
 import { submitOrganizationRequest } from '@/services/organization-registration'
 import { NewOrgRegistrationSchema, type NewOrgRegistrationInput } from '@/lib/validations/organization-registration'
 import { createClient } from '@/lib/supabase/client'
+import { TermsDialog } from '@/components/auth/TermsDialog'
+import { PrivacyPolicyDialog } from '@/components/auth/PrivacyPolicyDialog'
 
 export function NewOrgRegistrationForm() {
   const router = useRouter()
@@ -32,6 +35,8 @@ export function NewOrgRegistrationForm() {
       requesterEmail: '',
       password: '',
       passwordConfirm: '',
+      termsAgreed: false,
+      privacyPolicyAgreed: false,
     },
   })
 
@@ -74,6 +79,10 @@ export function NewOrgRegistrationForm() {
       setIsCheckingOrgName(false)
     }
   }, [])
+
+  // Watch terms agreement fields for button state
+  const termsAgreed = form.watch('termsAgreed')
+  const privacyPolicyAgreed = form.watch('privacyPolicyAgreed')
 
   const onSubmit = async (data: NewOrgRegistrationInput) => {
     try {
@@ -281,11 +290,68 @@ export function NewOrgRegistrationForm() {
                 </AlertDescription>
               </Alert>
 
+              {/* Terms Agreement */}
+              <div className="space-y-4 border rounded-lg p-4 bg-gray-50">
+                <div className="space-y-3">
+                  <FormField
+                    control={form.control}
+                    name="termsAgreed"
+                    render={({ field }) => (
+                      <FormItem className="flex items-start gap-3 space-y-0">
+                        <FormControl>
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                        <div className="flex-1">
+                          <FormLabel className="text-sm font-medium leading-none">
+                            <TermsDialog>
+                              <button type="button" className="underline hover:text-blue-600">
+                                서비스 이용약관
+                              </button>
+                            </TermsDialog>
+                            에 동의합니다 (필수)
+                          </FormLabel>
+                          <FormMessage />
+                        </div>
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="privacyPolicyAgreed"
+                    render={({ field }) => (
+                      <FormItem className="flex items-start gap-3 space-y-0">
+                        <FormControl>
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                        <div className="flex-1">
+                          <FormLabel className="text-sm font-medium leading-none">
+                            <PrivacyPolicyDialog>
+                              <button type="button" className="underline hover:text-blue-600">
+                                개인정보처리방침
+                              </button>
+                            </PrivacyPolicyDialog>
+                            에 동의합니다 (필수)
+                          </FormLabel>
+                          <FormMessage />
+                        </div>
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </div>
+
               {/* Submit Button */}
               <Button
                 type="submit"
                 className="w-full"
-                disabled={isSubmitting}
+                disabled={isSubmitting || !termsAgreed || !privacyPolicyAgreed}
               >
                 {isSubmitting ? '제출 중...' : '등록 신청'}
               </Button>

@@ -8,9 +8,7 @@ const UserUpdateSchema = z.object({
   role: z.enum(['admin', 'nurse', 'doctor'], {
     errorMap: () => ({ message: 'Role must be admin, nurse, or doctor' })
   }).optional(),
-  care_type: z.enum(['외래', '입원', '낮병원'], {
-    errorMap: () => ({ message: 'Care type must be 외래, 입원, or 낮병원' })
-  }).nullable().optional()
+  department_id: z.string().uuid('Invalid department ID format').nullable().optional()
 });
 
 export async function POST(request: NextRequest) {
@@ -48,7 +46,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { userId, role, care_type } = validationResult.data;
+    const { userId, role, department_id } = validationResult.data;
 
     // Prevent admins from changing their own role
     if (userId === user.id && role !== undefined) {
@@ -64,8 +62,8 @@ export async function POST(request: NextRequest) {
       updateData.role = role;
     }
 
-    if (care_type !== undefined) {
-      updateData.care_type = care_type;
+    if (department_id !== undefined) {
+      updateData.department_id = department_id;
     }
 
     // Use service client to bypass RLS for admin operations

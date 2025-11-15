@@ -72,6 +72,7 @@ export async function submitOrganizationRequest(
     // Step 3: Insert organization request
     // Note: User account is created but not signed in (server actions can't set client sessions)
     // User must log in manually after registration
+    const now = new Date().toISOString()
     const { data: insertData, error: insertError } = await (supabase
       .from('organization_requests') as any)
       .insert({
@@ -81,6 +82,8 @@ export async function submitOrganizationRequest(
         requester_email: validated.requesterEmail,
         requester_name: validated.requesterName,
         status: 'pending',
+        terms_agreed_at: validated.termsAgreed ? now : null,
+        privacy_policy_agreed_at: validated.privacyPolicyAgreed ? now : null,
       })
       .select('id')
       .single()

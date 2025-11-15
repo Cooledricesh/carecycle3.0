@@ -13,8 +13,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle, CheckCircle } from 'lucide-react';
+import { TermsDialog } from '@/components/auth/TermsDialog';
+import { PrivacyPolicyDialog } from '@/components/auth/PrivacyPolicyDialog';
 
 interface PageProps {
   params: Promise<{ token: string }>;
@@ -53,6 +56,8 @@ export default function AcceptInvitationPage({ params }: PageProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [termsAgreed, setTermsAgreed] = useState(false);
+  const [privacyPolicyAgreed, setPrivacyPolicyAgreed] = useState(false);
 
   useEffect(() => {
     const verifyToken = async () => {
@@ -118,6 +123,8 @@ export default function AcceptInvitationPage({ params }: PageProps) {
           token,
           name: formData.name,
           password: formData.password,
+          termsAgreed,
+          privacyPolicyAgreed,
         }),
       });
 
@@ -269,6 +276,53 @@ export default function AcceptInvitationPage({ params }: PageProps) {
               ) : null}
             </div>
 
+            {/* Terms Agreement */}
+            <div className="space-y-4 border rounded-lg p-4 bg-gray-50">
+              <div className="space-y-3">
+                <div className="flex items-start gap-3">
+                  <Checkbox
+                    id="terms-agree"
+                    checked={termsAgreed}
+                    onCheckedChange={(checked) => setTermsAgreed(checked === true)}
+                  />
+                  <div className="flex-1">
+                    <label
+                      htmlFor="terms-agree"
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                    >
+                      <TermsDialog>
+                        <button type="button" className="underline hover:text-blue-600">
+                          서비스 이용약관
+                        </button>
+                      </TermsDialog>
+                      에 동의합니다 (필수)
+                    </label>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <Checkbox
+                    id="privacy-agree"
+                    checked={privacyPolicyAgreed}
+                    onCheckedChange={(checked) => setPrivacyPolicyAgreed(checked === true)}
+                  />
+                  <div className="flex-1">
+                    <label
+                      htmlFor="privacy-agree"
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                    >
+                      <PrivacyPolicyDialog>
+                        <button type="button" className="underline hover:text-blue-600">
+                          개인정보처리방침
+                        </button>
+                      </PrivacyPolicyDialog>
+                      에 동의합니다 (필수)
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             {submitError ? (
               <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4" />
@@ -276,7 +330,7 @@ export default function AcceptInvitationPage({ params }: PageProps) {
               </Alert>
             ) : null}
 
-            <Button type="submit" className="w-full" disabled={isSubmitting}>
+            <Button type="submit" className="w-full" disabled={isSubmitting || !termsAgreed || !privacyPolicyAgreed}>
               {isSubmitting ? '계정 생성 중...' : '계정 생성'}
             </Button>
           </form>
