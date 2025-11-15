@@ -18,7 +18,7 @@ export function Footer() {
               rel="noopener noreferrer"
               className="text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
-              도움말
+              사용 설명서
             </a>
             <PrivacyPolicyDialog>
               <button className="text-sm text-muted-foreground hover:text-foreground transition-colors">
