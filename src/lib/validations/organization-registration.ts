@@ -10,6 +10,12 @@ export const NewOrgRegistrationSchema = z.object({
   requesterEmail: z.string().email('유효한 이메일 주소를 입력하세요'),
   password: z.string().min(8, '비밀번호는 최소 8자 이상이어야 합니다'),
   passwordConfirm: z.string(),
+  termsAgreed: z.boolean().refine((val) => val === true, {
+    message: '서비스 이용약관에 동의해야 합니다',
+  }),
+  privacyPolicyAgreed: z.boolean().refine((val) => val === true, {
+    message: '개인정보처리방침에 동의해야 합니다',
+  }),
 }).refine((data) => data.password === data.passwordConfirm, {
   message: '비밀번호가 일치하지 않습니다',
   path: ['passwordConfirm'],

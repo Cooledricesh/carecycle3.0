@@ -27,6 +27,12 @@ const signupSchema = z.object({
   token: z.string().min(1, 'Token is required'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
   name: z.string().min(2, 'Name must be at least 2 characters'),
+  termsAgreed: z.boolean().refine((val) => val === true, {
+    message: 'Terms agreement is required',
+  }),
+  privacyPolicyAgreed: z.boolean().refine((val) => val === true, {
+    message: 'Privacy policy agreement is required',
+  }),
 });
 
 /**
@@ -51,7 +57,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { token, password, name } = validation.data;
+    const { token, password, name, termsAgreed, privacyPolicyAgreed } = validation.data;
     console.log('[Signup] Validation passed');
 
     // Use service client for database operations (public endpoint)
@@ -167,6 +173,7 @@ export async function POST(request: NextRequest) {
 
     // Create profile
     // Note: department_id is required for nurses, NULL for admin/doctor/super_admin
+    const now = new Date().toISOString();
     const profilePayload: any = {
       id: userId,
       email: profileData.email,
@@ -176,6 +183,8 @@ export async function POST(request: NextRequest) {
       name: profileData.name,
       is_active: true,
       department_id: departmentId,
+      terms_agreed_at: termsAgreed ? now : null,
+      privacy_policy_agreed_at: privacyPolicyAgreed ? now : null,
     };
 
     console.log('[Signup] Upserting profile with payload:', JSON.stringify(profilePayload, null, 2));
