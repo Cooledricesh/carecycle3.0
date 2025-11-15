@@ -1,5 +1,8 @@
 'use client';
 
+import { TermsDialog } from '@/components/auth/TermsDialog';
+import { PrivacyPolicyDialog } from '@/components/auth/PrivacyPolicyDialog';
+
 export function Footer() {
   return (
     <footer className="border-t bg-background">
@@ -10,23 +13,23 @@ export function Footer() {
           </p>
           <div className="flex items-center gap-4">
             <a
-              href="#"
+              href="https://carescheduler.my.canva.site/usermanual"
+              target="_blank"
+              rel="noopener noreferrer"
               className="text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
-              도움말
+              사용 설명서
             </a>
-            <a
-              href="#"
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-            >
-              개인정보처리방침
-            </a>
-            <a
-              href="#"
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-            >
-              이용약관
-            </a>
+            <PrivacyPolicyDialog>
+              <button className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                개인정보처리방침
+              </button>
+            </PrivacyPolicyDialog>
+            <TermsDialog>
+              <button className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                이용약관
+              </button>
+            </TermsDialog>
           </div>
         </div>
       </div>

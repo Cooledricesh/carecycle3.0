@@ -71,7 +71,7 @@ export function HeroSection({ onGetStarted, onLearnMore, showAuthButtons = true 
               </div>
               <div className="flex items-center gap-2">
                 <Users className="h-4 w-4 text-primary flex-shrink-0" aria-hidden="true" />
-                <span>100+ 병원 사용</span>
+                <span>손쉬운 일정 관리</span>
               </div>
             </div>
           </div>

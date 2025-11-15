@@ -73,6 +73,15 @@ export default function LandingPage() {
               >
                 보안
               </a>
+              <a
+                href="https://carescheduler.my.canva.site/usermanual"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-gray-600 hover:text-gray-900 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded px-2 py-1"
+                aria-label="사용 설명서 페이지로 이동 (새 창)"
+              >
+                사용 설명서
+              </a>
             </nav>
 
             <div className="flex items-center space-x-2 sm:space-x-3">
@@ -188,8 +197,19 @@ export default function LandingPage() {
               <h3 className="font-semibold mb-4">지원</h3>
               <ul className="space-y-2 text-gray-400" role="list">
                 <li>
-                  <Link 
-                    href="/auth/signin" 
+                  <a
+                    href="https://carescheduler.my.canva.site/usermanual"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900 rounded px-2 py-1 inline-block"
+                    aria-label="사용 설명서 페이지로 이동 (새 창)"
+                  >
+                    사용 설명서
+                  </a>
+                </li>
+                <li>
+                  <Link
+                    href="/auth/signin"
                     className="hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900 rounded px-2 py-1 inline-block"
                     aria-label="로그인 페이지로 이동"
                   >
@@ -197,8 +217,8 @@ export default function LandingPage() {
                   </Link>
                 </li>
                 <li>
-                  <Link 
-                    href="/auth/signup" 
+                  <Link
+                    href="/auth/signup"
                     className="hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900 rounded px-2 py-1 inline-block"
                     aria-label="회원가입 페이지로 이동"
                   >
@@ -207,8 +227,8 @@ export default function LandingPage() {
                 </li>
                 {user && (
                   <li>
-                    <Link 
-                      href="/dashboard" 
+                    <Link
+                      href="/dashboard"
                       className="hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900 rounded px-2 py-1 inline-block"
                       aria-label="대시보드로 이동"
                     >
